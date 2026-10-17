@@ -1,0 +1,37 @@
+
+# =====================================
+# HARUHAY - GITIGNORE
+# =====================================
+
+# Node.js / React
+**/node_modules/
+**/dist/
+**/build/
+**/.vite/
+
+# Spring Boot / Maven
+**/target/
+**/*.class
+
+# Environment variables and secrets
+**/.env
+**/.env.*
+!**/.env.example
+
+# Local Spring Boot configuration
+**/application-local.properties
+**/application-local.yaml
+**/application-local.yml
+
+# IDE
+.vscode/
+.idea/
+*.iml
+
+# Logs
+*.log
+npm-debug.log*
+
+# Operating system files
+.DS_Store
+Thumbs.db

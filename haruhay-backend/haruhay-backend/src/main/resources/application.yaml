@@ -1,0 +1,32 @@
+
+# ==========================================
+# HARUHAY - BACKEND CONFIGURATION
+# ==========================================
+
+spring:
+  application:
+    name: haruhay-backend
+
+  # PostgreSQL Database
+  datasource:
+    url: jdbc:postgresql://localhost:5432/haruhay_db
+    username: postgres
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+
+  # Hibernate / JPA
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: true
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+
+  # Database Migrations
+  flyway:
+    enabled: true
+
+server:
+  port: 8080
