@@ -1,75 +1,42 @@
-# React + TypeScript + Vite
+# Haruhay frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React + TypeScript + Vite implementation of the Haruhay web landing page (18:20) and authentication screens from Figma: login (18:106), registration (18:158), and password reset (18:217).
 
-Currently, two official plugins are available:
+## Preview without a backend or database
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Open a terminal in this `frontend` folder and run:
 
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
+```bash
+npm ci
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://npmx.dev/package/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://npmx.dev/package/eslint-plugin-react-dom) for React-specific lint rules:
+Open the localhost URL printed by Vite (normally http://localhost:5173).
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+- Landing page (default): http://localhost:5173/
+- Login: http://localhost:5173/#/login
+- Registration: http://localhost:5173/#/register
+- Password reset: http://localhost:5173/#/forgot-password
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+Use the links in the forms to switch screens. Browser Back and Forward also work.
+Stop the preview with Ctrl+C. Do not open index.html directly; Vite serves the TypeScript application.
 
+No Spring Boot server, database, API keys, or environment files are needed.
+These forms validate locally and display preview confirmation messages. They do not authenticate, create accounts, send emails, or save credentials. The property dropdown contains one clearly labeled demo property. The administrator link explains that its workspace is outside this preview.
+
+Try a valid email and any non-empty password for login; registration requires a name, valid email, password of at least eight characters, and demo property. Password visibility can be toggled. Check the layout at desktop and mobile widths.
+
+## Checks and production preview
+
+```bash
+npm run lint
+npm run build
+npm run preview
 ```
+
+The production preview URL is normally http://localhost:4173. It also runs without the backend.
+The existing Vite /api proxy is retained for future integration; these screens never call it.
+
+## Assets
+
+Figma artwork is stored locally in public/assets/auth and public/assets/landing. DM Sans is bundled locally with its OFL license, so the UI does not depend on a font CDN.

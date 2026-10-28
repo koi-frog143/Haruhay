@@ -1,0 +1,34 @@
+{
+  "login": {
+    "HaruhayFinalWebFallbackMark": "/assets/auth/login-HaruhayFinalWebFallbackMark.png",
+    "HaruhayFinalWebFallbackWordmark": "/assets/auth/login-HaruhayFinalWebFallbackWordmark.png",
+    "DecorativeCircle": "/assets/auth/login-DecorativeCircle.svg",
+    "DecorativeCircle1": "/assets/auth/login-DecorativeCircle1.svg",
+    "IconShield": "/assets/auth/login-IconShield.svg",
+    "BackgroundMotifStars": "/assets/auth/login-BackgroundMotifStars.svg",
+    "IconMail": "/assets/auth/login-IconMail.svg",
+    "IconLock": "/assets/auth/login-IconLock.svg",
+    "IconShield1": "/assets/auth/login-IconShield1.svg"
+  },
+  "register": {
+    "HaruhayFinalWebFallbackMark": "/assets/auth/register-HaruhayFinalWebFallbackMark.png",
+    "HaruhayFinalWebFallbackWordmark": "/assets/auth/register-HaruhayFinalWebFallbackWordmark.png",
+    "DecorativeCircle": "/assets/auth/register-DecorativeCircle.svg",
+    "DecorativeCircle1": "/assets/auth/register-DecorativeCircle1.svg",
+    "IconShield": "/assets/auth/register-IconShield.svg",
+    "BackgroundMotifStars": "/assets/auth/register-BackgroundMotifStars.svg",
+    "IconUser": "/assets/auth/register-IconUser.svg",
+    "IconMail": "/assets/auth/register-IconMail.svg",
+    "IconLock": "/assets/auth/register-IconLock.svg",
+    "IconBuilding": "/assets/auth/register-IconBuilding.svg"
+  },
+  "reset": {
+    "HaruhayFinalWebFallbackMark": "/assets/auth/reset-HaruhayFinalWebFallbackMark.png",
+    "HaruhayFinalWebFallbackWordmark": "/assets/auth/reset-HaruhayFinalWebFallbackWordmark.png",
+    "DecorativeCircle": "/assets/auth/reset-DecorativeCircle.svg",
+    "DecorativeCircle1": "/assets/auth/reset-DecorativeCircle1.svg",
+    "IconShield": "/assets/auth/reset-IconShield.svg",
+    "BackgroundMotifStars": "/assets/auth/reset-BackgroundMotifStars.svg",
+    "IconMail": "/assets/auth/reset-IconMail.svg"
+  }
+}
