@@ -3,12 +3,17 @@ import type { FormEvent, InputHTMLAttributes } from 'react'
 import artwork from './auth-artwork.json'
 import './App.css'
 import LandingPage from './LandingPage'
+import ResidentDashboard from './ResidentDashboard'
 
 type Screen = 'login' | 'register' | 'reset'
-type Route = Screen | 'home'
+type Route = Screen | 'home' | 'resident-dashboard'
 function currentScreen(): Route {
   const route = window.location.hash.replace('#', '')
-  return route === '/register' ? 'register' : route === '/forgot-password' ? 'reset' : route === '/login' ? 'login' : 'home'
+  return route === '/register' ? 'register'
+    : route === '/forgot-password' ? 'reset'
+      : route === '/login' ? 'login'
+        : route === '/resident/dashboard' ? 'resident-dashboard'
+          : 'home'
 }
 const copy = {
   login: { badge: 'WELCOME HOME', title: 'Welcome back', subtitle: 'Sign in to manage your stay and stay in touch.', action: 'Sign in to Haruhay' },
@@ -81,6 +86,7 @@ function AuthForm({ screen }: { screen: Screen }) {
         : 'Reset preview complete. Your email is valid; no reset email was sent.')
     const password = event.currentTarget.elements.namedItem('password')
     if (password instanceof HTMLInputElement) password.value = ''
+    if (screen === 'login') window.location.hash = '/resident/dashboard'
   }
 
   return <section className={'form-panel ' + screen} aria-labelledby="auth-title">
@@ -133,6 +139,7 @@ export default function App() {
     if (screen !== 'home' || !['#haruhay-way', '#features', '#community'].includes(window.location.hash)) window.scrollTo(0, 0)
   }, [screen])
   if (screen === 'home') return <LandingPage />
+  if (screen === 'resident-dashboard') return <ResidentDashboard />
   return <main className="auth-shell">
     <WelcomePanel screen={screen} />
     <AuthForm key={screen} screen={screen} />
