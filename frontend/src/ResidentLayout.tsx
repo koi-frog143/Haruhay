@@ -9,7 +9,7 @@ export type ResidentSection = 'Dashboard' | 'Logbook' | 'Maintenance' | 'Holding
 const navigation: Array<{ label: ResidentSection; icon: string; href?: string }> = [
   { label: 'Dashboard', icon: 'icon-home.svg', href: '#/resident/dashboard' },
   { label: 'Logbook', icon: 'icon-book-nav.svg', href: '#/resident/logbook' },
-  { label: 'Maintenance', icon: 'icon-ticket-nav.svg' },
+  { label: 'Maintenance', icon: 'icon-ticket-nav.svg', href: '#/resident/maintenance' },
   { label: 'Holding station', icon: 'icon-box-nav.svg' },
   { label: 'Payments', icon: 'icon-wallet-nav.svg' },
   { label: 'Community', icon: 'icon-heart-nav.svg' },
