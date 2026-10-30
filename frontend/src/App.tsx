@@ -3,11 +3,14 @@ import type { FormEvent, InputHTMLAttributes } from 'react'
 import artwork from './auth-artwork.json'
 import './App.css'
 import LandingPage from './LandingPage'
+import CreateMaintenanceTicket from './CreateMaintenanceTicket'
+import MaintenanceTicketDetails from './MaintenanceTicketDetails'
+import MaintenanceTickets from './MaintenanceTickets'
 import ResidentDashboard from './ResidentDashboard'
 import VisitorLogbook from './VisitorLogbook'
 
 type Screen = 'login' | 'register' | 'reset'
-type Route = Screen | 'home' | 'resident-dashboard' | 'resident-logbook'
+type Route = Screen | 'home' | 'resident-dashboard' | 'resident-logbook' | 'resident-maintenance' | 'resident-maintenance-new' | 'resident-maintenance-detail'
 function currentScreen(): Route {
   const route = window.location.hash.replace('#', '')
   return route === '/register' ? 'register'
@@ -15,6 +18,9 @@ function currentScreen(): Route {
       : route === '/login' ? 'login'
         : route === '/resident/dashboard' ? 'resident-dashboard'
           : route === '/resident/logbook' ? 'resident-logbook'
+            : route === '/resident/maintenance' ? 'resident-maintenance'
+              : route === '/resident/maintenance/new' ? 'resident-maintenance-new'
+                : route.startsWith('/resident/maintenance/') ? 'resident-maintenance-detail'
           : 'home'
 }
 const copy = {
@@ -143,6 +149,9 @@ export default function App() {
   if (screen === 'home') return <LandingPage />
   if (screen === 'resident-dashboard') return <ResidentDashboard />
   if (screen === 'resident-logbook') return <VisitorLogbook />
+  if (screen === 'resident-maintenance') return <MaintenanceTickets />
+  if (screen === 'resident-maintenance-new') return <CreateMaintenanceTicket />
+  if (screen === 'resident-maintenance-detail') return <MaintenanceTicketDetails />
   return <main className="auth-shell">
     <WelcomePanel screen={screen} />
     <AuthForm key={screen} screen={screen} />

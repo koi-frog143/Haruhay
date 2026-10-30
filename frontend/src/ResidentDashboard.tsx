@@ -6,13 +6,13 @@ const asset = (name: string) => `./assets/dashboard/${name}`
 const metrics = [
   { value: '₱3,500', label: 'Upcoming rent', icon: 'icon-wallet-metric.svg' },
   { value: '02', label: 'Items for pickup', icon: 'icon-box-metric.svg' },
-  { value: '01', label: 'Active maintenance ticket', icon: 'icon-ticket-metric.svg' },
+  { value: '01', label: 'Active maintenance ticket', icon: 'icon-ticket-metric.svg', href: '#/resident/maintenance' },
   { value: '03', label: 'Recent guest entries', icon: 'icon-book-metric.svg', href: '#/resident/logbook' },
 ]
 
 const services = [
   { title: 'Logbook', description: 'Visitors & access history', icon: 'icon-book-service.svg', href: '#/resident/logbook' },
-  { title: 'Maintenance', description: 'Submit service requests', icon: 'icon-wrench-service.svg' },
+  { title: 'Maintenance', description: 'Submit service requests', icon: 'icon-wrench-service.svg', href: '#/resident/maintenance' },
   { title: 'Holding station', description: 'Packages at the desk', icon: 'icon-box-service.svg' },
   { title: 'Payments', description: 'Dues & receipts', icon: 'icon-wallet-service.svg' },
 ]
