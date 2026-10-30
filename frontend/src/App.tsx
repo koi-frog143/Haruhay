@@ -4,15 +4,17 @@ import artwork from './auth-artwork.json'
 import './App.css'
 import LandingPage from './LandingPage'
 import ResidentDashboard from './ResidentDashboard'
+import VisitorLogbook from './VisitorLogbook'
 
 type Screen = 'login' | 'register' | 'reset'
-type Route = Screen | 'home' | 'resident-dashboard'
+type Route = Screen | 'home' | 'resident-dashboard' | 'resident-logbook'
 function currentScreen(): Route {
   const route = window.location.hash.replace('#', '')
   return route === '/register' ? 'register'
     : route === '/forgot-password' ? 'reset'
       : route === '/login' ? 'login'
         : route === '/resident/dashboard' ? 'resident-dashboard'
+          : route === '/resident/logbook' ? 'resident-logbook'
           : 'home'
 }
 const copy = {
@@ -140,6 +142,7 @@ export default function App() {
   }, [screen])
   if (screen === 'home') return <LandingPage />
   if (screen === 'resident-dashboard') return <ResidentDashboard />
+  if (screen === 'resident-logbook') return <VisitorLogbook />
   return <main className="auth-shell">
     <WelcomePanel screen={screen} />
     <AuthForm key={screen} screen={screen} />

@@ -18,6 +18,7 @@ Open the localhost URL printed by Vite (normally http://localhost:5173).
 - Registration: http://localhost:5173/#/register
 - Password reset: http://localhost:5173/#/forgot-password
 - Resident dashboard: http://localhost:5173/#/resident/dashboard
+- Visitor logbook: http://localhost:5173/#/resident/logbook
 
 Use the links in the forms to switch screens. Browser Back and Forward also work.
 Stop the preview with Ctrl+C. Do not open index.html directly; Vite serves the TypeScript application.
@@ -40,4 +41,4 @@ The existing Vite /api proxy is retained for future integration; these screens n
 
 ## Assets
 
-Figma artwork is stored locally in public/assets/auth and public/assets/landing. DM Sans is bundled locally with its OFL license, so the UI does not depend on a font CDN.
+Figma artwork is stored locally in public/assets/auth, public/assets/landing, and public/assets/dashboard. DM Sans is bundled locally with its OFL license, so the UI does not depend on a font CDN.
