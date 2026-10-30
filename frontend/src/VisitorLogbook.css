@@ -1,0 +1,208 @@
+.logbook-page-heading { position: relative; }
+
+.logbook-add-visitor {
+  position: absolute;
+  top: 29px;
+  right: -19px;
+  width: 191px;
+  height: 44px;
+  border-radius: 13px;
+  background: var(--blue);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  transition: background .15s, transform .15s;
+}
+.logbook-add-visitor:hover { background: #2c6d9c; transform: translateY(-1px); }
+
+.logbook-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 18px;
+  margin-top: 37px;
+}
+
+.logbook-metric-card,
+.logbook-safety-card {
+  min-width: 0;
+  height: 133px;
+  border: 1px solid var(--line);
+  border-radius: 17px;
+  background: #fff;
+}
+
+.logbook-metric-card {
+  position: relative;
+}
+.logbook-metric-card .resident-card-icon { position: absolute; top: 17px; left: 16px; }
+.logbook-metric-card > strong {
+  position: absolute;
+  top: 74px;
+  left: 17px;
+  margin: 0;
+  color: var(--ink);
+  font-size: 29px;
+  line-height: 42px;
+  letter-spacing: -.4px;
+}
+.logbook-metric-card > span:last-child { position: absolute; top: 111px; left: 17px; color: var(--muted); font-size: 12px; line-height: 18px; }
+
+.logbook-safety-card { padding: 20px 19px; }
+.logbook-safety-card h2 { margin: 0; color: #203c53; font-size: 17px; line-height: 25px; }
+.logbook-safety-card > div { display: flex; align-items: center; gap: 15px; margin-top: 27px; }
+.logbook-safety-card img { flex: 0 0 26px; }
+.logbook-safety-card strong { color: var(--ink); font-size: 12px; line-height: 18px; }
+
+.logbook-activity { margin-top: 32px; }
+.logbook-section-heading { display: flex; align-items: center; justify-content: space-between; }
+.logbook-section-heading h2 { margin: 0; color: #203c53; font-size: 18px; line-height: 26px; }
+.logbook-section-heading button { padding: 4px 7px; background: transparent; color: var(--blue); font-size: 12px; font-weight: 600; }
+.logbook-section-heading button:hover { text-decoration: underline; }
+
+.logbook-filters { display: flex; gap: 9px; margin-top: 23px; }
+.logbook-filters button {
+  min-width: 92px;
+  height: 31px;
+  padding: 0 13px;
+  border-radius: 15px;
+  background: #fff;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+.logbook-filters button:first-child { min-width: 114px; }
+.logbook-filters button:hover { color: var(--blue); }
+.logbook-filters button.active { background: var(--powder); color: var(--blue); }
+
+.logbook-table-wrap {
+  min-height: 307px;
+  margin-top: 21px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 17px;
+  background: #fff;
+}
+.logbook-table { width: 100%; border-collapse: separate; border-spacing: 0; table-layout: fixed; }
+.logbook-table col:nth-child(1) { width: 24%; }
+.logbook-table col:nth-child(2) { width: 18%; }
+.logbook-table col:nth-child(3) { width: 23%; }
+.logbook-table col:nth-child(4) { width: 18%; }
+.logbook-table col:nth-child(5) { width: 17%; }
+.logbook-table thead { background: #f3f9fd; }
+.logbook-table thead th {
+  height: 51px;
+  padding: 0 12px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 15px;
+  text-align: left;
+  text-transform: uppercase;
+}
+.logbook-table thead th:first-child,
+.logbook-table tbody th:first-child { padding-left: 18px; }
+.logbook-table tbody tr { height: 60px; }
+.logbook-table tbody tr:last-child { height: 74px; }
+.logbook-table tbody th,
+.logbook-table tbody td {
+  padding: 0 12px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 18px;
+  text-align: left;
+}
+.logbook-table tbody th { color: #203c53; font-weight: 600; }
+.logbook-table tbody tr:not(:last-child) > * { border-bottom: 1px solid var(--line); }
+.logbook-status {
+  display: inline-flex;
+  width: 118px;
+  height: 31px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 15px;
+  background: #e5f3ef;
+  color: #347867;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 16px;
+}
+.logbook-status.checked-out { background: var(--powder); color: var(--blue); }
+.logbook-empty { height: 180px; text-align: center !important; }
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (max-width: 1180px) {
+  .logbook-add-visitor { right: 0; }
+  .logbook-summary { gap: 14px; }
+  .logbook-safety-card { padding-right: 14px; padding-left: 14px; }
+  .logbook-safety-card > div { gap: 10px; }
+}
+
+@media (max-width: 980px) {
+  .logbook-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 700px) {
+  .logbook-add-visitor { position: static; width: 100%; margin-top: 24px; }
+  .logbook-summary { margin-top: 28px; }
+  .logbook-section-heading { align-items: flex-end; }
+  .logbook-table-wrap { min-height: 0; overflow: visible; border: 0; background: transparent; }
+  .logbook-table,
+  .logbook-table tbody,
+  .logbook-table tr,
+  .logbook-table th,
+  .logbook-table td { display: block; width: 100%; }
+  .logbook-table colgroup,
+  .logbook-table thead { display: none; }
+  .logbook-table tbody { display: grid; gap: 12px; }
+  .logbook-table tbody tr,
+  .logbook-table tbody tr:last-child {
+    height: auto;
+    padding: 14px 16px;
+    border: 1px solid var(--line);
+    border-radius: 15px;
+    background: #fff;
+  }
+  .logbook-table tbody th,
+  .logbook-table tbody td,
+  .logbook-table tbody th:first-child {
+    display: flex;
+    min-height: 34px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--line) !important;
+    text-align: right;
+  }
+  .logbook-table tbody td:last-child { border-bottom: 0 !important; }
+  .logbook-table tbody th::before,
+  .logbook-table tbody td::before {
+    content: attr(data-label);
+    color: var(--muted);
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+  .logbook-status { width: 112px; }
+}
+
+@media (max-width: 480px) {
+  .logbook-summary { grid-template-columns: 1fr; }
+  .logbook-filters { width: 100%; gap: 6px; overflow-x: auto; padding-bottom: 3px; }
+  .logbook-filters button,
+  .logbook-filters button:first-child { min-width: max-content; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .logbook-add-visitor { transition: none; }
+}

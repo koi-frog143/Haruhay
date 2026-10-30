@@ -36,6 +36,7 @@
   font-weight: 600;
   line-height: 16px;
 }
+.resident-nav > a,
 .resident-nav > button {
   display: flex;
   width: 100%;
@@ -51,7 +52,9 @@
   font-weight: 500;
   text-align: left;
 }
-.resident-nav > button:hover { background: #f3f9fd; color: var(--ink); }
+.resident-nav > a:hover,
+.resident-nav > button:hover { background: #f3f9fd; color: var(--ink); text-decoration: none; }
+.resident-nav > a.active,
 .resident-nav > button.active { background: var(--powder); color: var(--ink); font-weight: 700; }
 .resident-nav img { flex: 0 0 21px; }
 
@@ -181,7 +184,9 @@
   text-align: left;
   transition: border-color .15s, transform .15s, box-shadow .15s;
 }
+.resident-metric-card, .resident-service-card { text-decoration: none; }
 .resident-metric-card:hover, .resident-service-card:hover, .resident-heads-up:hover { border-color: var(--blue); box-shadow: 0 9px 25px rgb(24 60 90 / 7%); transform: translateY(-2px); }
+.resident-metric-card:hover, .resident-service-card:hover { text-decoration: none; }
 .resident-metric-card { display: flex; min-width: 0; min-height: 133px; flex-direction: column; align-items: flex-start; padding: 17px; border-radius: 17px; }
 .resident-card-icon { display: grid; width: 46px; height: 46px; place-items: center; border-radius: 13px; background: var(--powder); }
 .resident-metric-card strong { margin-top: 4px; font-size: 29px; line-height: 36px; letter-spacing: -.4px; }
