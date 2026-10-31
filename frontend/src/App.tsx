@@ -2,15 +2,17 @@ import { useEffect, useRef, useState } from 'react'
 import type { FormEvent, InputHTMLAttributes } from 'react'
 import artwork from './auth-artwork.json'
 import './App.css'
+import BillingPayments from './BillingPayments'
 import LandingPage from './LandingPage'
 import CreateMaintenanceTicket from './CreateMaintenanceTicket'
 import MaintenanceTicketDetails from './MaintenanceTicketDetails'
 import MaintenanceTickets from './MaintenanceTickets'
+import PaymentHistory from './PaymentHistory'
 import ResidentDashboard from './ResidentDashboard'
 import VisitorLogbook from './VisitorLogbook'
 
 type Screen = 'login' | 'register' | 'reset'
-type Route = Screen | 'home' | 'resident-dashboard' | 'resident-logbook' | 'resident-maintenance' | 'resident-maintenance-new' | 'resident-maintenance-detail'
+type Route = Screen | 'home' | 'resident-dashboard' | 'resident-logbook' | 'resident-maintenance' | 'resident-maintenance-new' | 'resident-maintenance-detail' | 'resident-payments' | 'resident-payment-history'
 function currentScreen(): Route {
   const route = window.location.hash.replace('#', '')
   return route === '/register' ? 'register'
@@ -21,6 +23,8 @@ function currentScreen(): Route {
             : route === '/resident/maintenance' ? 'resident-maintenance'
               : route === '/resident/maintenance/new' ? 'resident-maintenance-new'
                 : route.startsWith('/resident/maintenance/') ? 'resident-maintenance-detail'
+                  : route === '/resident/payments/history' ? 'resident-payment-history'
+                    : route === '/resident/payments' ? 'resident-payments'
           : 'home'
 }
 const copy = {
@@ -152,6 +156,8 @@ export default function App() {
   if (screen === 'resident-maintenance') return <MaintenanceTickets />
   if (screen === 'resident-maintenance-new') return <CreateMaintenanceTicket />
   if (screen === 'resident-maintenance-detail') return <MaintenanceTicketDetails />
+  if (screen === 'resident-payments') return <BillingPayments />
+  if (screen === 'resident-payment-history') return <PaymentHistory />
   return <main className="auth-shell">
     <WelcomePanel screen={screen} />
     <AuthForm key={screen} screen={screen} />

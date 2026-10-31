@@ -22,6 +22,8 @@ Open the localhost URL printed by Vite (normally http://localhost:5173).
 - Maintenance tickets: http://localhost:5173/#/resident/maintenance
 - New maintenance request: http://localhost:5173/#/resident/maintenance/new
 - Maintenance ticket details: http://localhost:5173/#/resident/maintenance/TCK-1042
+- Billing and payments: http://localhost:5173/#/resident/payments
+- Payment history: http://localhost:5173/#/resident/payments/history
 
 Use the links in the forms to switch screens. Browser Back and Forward also work.
 Stop the preview with Ctrl+C. Do not open index.html directly; Vite serves the TypeScript application.
