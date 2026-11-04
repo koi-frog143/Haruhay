@@ -10,11 +10,13 @@ import MaintenanceTickets from './MaintenanceTickets'
 import PaymentHistory from './PaymentHistory'
 import ResidentDashboard from './ResidentDashboard'
 import VisitorLogbook from './VisitorLogbook'
+import ResidentProfile from './ResidentProfile'
 
 type Screen = 'login' | 'register' | 'reset'
-type Route = Screen | 'home' | 'resident-dashboard' | 'resident-logbook' | 'resident-maintenance' | 'resident-maintenance-new' | 'resident-maintenance-detail' | 'resident-payments' | 'resident-payment-history'
+type Route = Screen | 'home' | 'resident-dashboard' | 'resident-logbook' | 'resident-maintenance' | 'resident-maintenance-new' | 'resident-maintenance-detail' | 'resident-payments' | 'resident-payment-history' | 'resident-profile'
 function currentScreen(): Route {
   const route = window.location.hash.replace('#', '')
+  if (route === '/resident/profile') return 'resident-profile'
   return route === '/register' ? 'register'
     : route === '/forgot-password' ? 'reset'
       : route === '/login' ? 'login'
@@ -150,6 +152,7 @@ export default function App() {
   useEffect(() => {
     if (screen !== 'home' || !['#haruhay-way', '#features', '#community'].includes(window.location.hash)) window.scrollTo(0, 0)
   }, [screen])
+  if (screen === 'resident-profile') return <ResidentProfile />
   if (screen === 'home') return <LandingPage />
   if (screen === 'resident-dashboard') return <ResidentDashboard />
   if (screen === 'resident-logbook') return <VisitorLogbook />
