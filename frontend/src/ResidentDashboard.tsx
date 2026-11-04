@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
 import ResidentLayout from './ResidentLayout'
+import { CURRENT_RESIDENT, useHoldingState } from './holdingData'
 
 const asset = (name: string) => `./assets/dashboard/${name}`
 
 const metrics = [
   { value: '₱3,500', label: 'Upcoming rent', icon: 'icon-wallet-metric.svg', href: '#/resident/payments' },
-  { value: '02', label: 'Items for pickup', icon: 'icon-box-metric.svg' },
+  { value: '02', label: 'Items for pickup', icon: 'icon-box-metric.svg', href: '#/resident/holding-station' },
   { value: '01', label: 'Active maintenance ticket', icon: 'icon-ticket-metric.svg', href: '#/resident/maintenance' },
   { value: '03', label: 'Recent guest entries', icon: 'icon-book-metric.svg', href: '#/resident/logbook' },
 ]
@@ -13,11 +14,13 @@ const metrics = [
 const services = [
   { title: 'Logbook', description: 'Visitors & access history', icon: 'icon-book-service.svg', href: '#/resident/logbook' },
   { title: 'Maintenance', description: 'Submit service requests', icon: 'icon-wrench-service.svg', href: '#/resident/maintenance' },
-  { title: 'Holding station', description: 'Packages at the desk', icon: 'icon-box-service.svg' },
+  { title: 'Holding station', description: 'Packages at the desk', icon: 'icon-box-service.svg', href: '#/resident/holding-station' },
   { title: 'Payments', description: 'Dues & receipts', icon: 'icon-wallet-service.svg', href: '#/resident/payments' },
 ]
 
 export default function ResidentDashboard() {
+  const holdingState = useHoldingState()
+  const pickupCount = holdingState.items.filter(item => item.residentId === CURRENT_RESIDENT && item.status === 'Ready').length
   const [notice, setNotice] = useState('')
 
   useEffect(() => {
@@ -54,7 +57,7 @@ export default function ResidentDashboard() {
         {metrics.map(metric => {
           const content = <>
             <span className="resident-card-icon"><img src={asset(metric.icon)} width="24" height="24" alt="" /></span>
-            <strong>{metric.value}</strong>
+            <strong>{metric.label === 'Items for pickup' ? String(pickupCount).padStart(2, '0') : metric.value}</strong>
             <span>{metric.label}</span>
           </>
           return metric.href
