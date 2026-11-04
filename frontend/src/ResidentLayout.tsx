@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { FormEvent, ReactNode } from 'react'
 import './ResidentDashboard.css'
+import { getResidentProfile, profileInitials } from './profileData'
 
 const asset = (name: string) => `./assets/dashboard/${name}`
 
@@ -13,7 +14,7 @@ const navigation: Array<{ label: ResidentSection; icon: string; href?: string }>
   { label: 'Holding station', icon: 'icon-box-nav.svg' },
   { label: 'Payments', icon: 'icon-wallet-nav.svg', href: '#/resident/payments' },
   { label: 'Community', icon: 'icon-heart-nav.svg' },
-  { label: 'My profile', icon: 'icon-user-nav.svg' },
+  { label: 'My profile', icon: 'icon-user-nav.svg', href: '#/resident/profile' },
 ]
 
 type OpenPanel = 'notifications' | 'account' | null
@@ -28,6 +29,12 @@ type ResidentLayoutProps = {
 }
 
 export default function ResidentLayout({ activeSection, breadcrumb, notice, onNotice, onDismissNotice, children }: ResidentLayoutProps) {
+  const [profile, setProfile] = useState(getResidentProfile)
+  useEffect(() => {
+    const update = () => setProfile(getResidentProfile())
+    window.addEventListener('haruhay-profile-updated', update)
+    return () => window.removeEventListener('haruhay-profile-updated', update)
+  }, [])
   const [navigationOpen, setNavigationOpen] = useState(false)
   const [openPanel, setOpenPanel] = useState<OpenPanel>(null)
   const [search, setSearch] = useState('')
@@ -146,10 +153,10 @@ export default function ResidentLayout({ activeSection, breadcrumb, notice, onNo
               aria-expanded={openPanel === 'account'}
               onClick={() => setOpenPanel(openPanel === 'account' ? null : 'account')}
             >
-              <span>AS</span><strong>Andrea S.</strong>
+              <span>{profileInitials(profile.fullName)}</span><strong>{profile.fullName.trim().split(/\s+/u)[0]} {profile.fullName.trim().split(/\s+/u).length > 1 ? Array.from(profile.fullName.trim().split(/\s+/u).at(-1) ?? '')[0] + '.' : ''}</strong>
             </button>
             {openPanel === 'account' && <div className="resident-popover resident-account-menu">
-              <button type="button" onClick={() => preview('My profile')}>My profile</button>
+              <a href="#/resident/profile" onClick={() => setOpenPanel(null)}>My profile</a>
               <a href="#/login">Sign out</a>
             </div>}
           </div>
