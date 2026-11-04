@@ -23,6 +23,9 @@ Open the localhost URL printed by Vite (normally http://localhost:5173).
 - New maintenance request: http://localhost:5173/#/resident/maintenance/new
 - Maintenance ticket details: http://localhost:5173/#/resident/maintenance/TCK-1042
 - Billing and payments: http://localhost:5173/#/resident/payments
+- Resident Holding Station: http://localhost:5173/#/resident/holding-station
+- Front desk Holding Station: http://localhost:5173/#/front-desk/holding-station
+- Resident profile: http://localhost:5173/#/resident/profile
 - Payment history: http://localhost:5173/#/resident/payments/history
 
 Use the links in the forms to switch screens. Browser Back and Forward also work.
@@ -47,3 +50,22 @@ The existing Vite /api proxy is retained for future integration; these screens n
 ## Assets
 
 Figma artwork is stored locally in public/assets/auth, public/assets/landing, and public/assets/dashboard. DM Sans is bundled locally with its OFL license, so the UI does not depend on a font CDN.
+
+## Holding Station
+
+The former standalone holding-station page is integrated into the React application.
+Use the resident sidebar or dashboard package card, or open either Holding Station URL above.
+The Resident / Front desk links switch between the two frontend workspaces.
+
+- Residents can see their ready items, pickup codes, all available items, and collection history.
+- Front desk can search/filter records, register items, edit descriptions/shelves, view history, and confirm deletions.
+- Shelf occupancy prevents two ready items from using the same slot. Full shelves disable registration.
+- Release requires a presented ID, claimant name, and receipt confirmation. Owner IDs must match; representatives require an explicit authorization check.
+- Walk-in inquiries record visitor details and search by resident and/or tracking number. If both are supplied, both must match.
+- Dashboard pickup counts use the same records. Changes and inquiries survive navigation and refresh within the same browser session.
+- Light/dark controls affect Holding Station content without changing other screens.
+
+HoldingStation.tsx and HoldingStation.css contain the UI. holdingData.ts contains the sample records and shared session-storage helpers.
+Sample resident IDs are RES-0204 (current resident), RES-0101 (Marco), and RES-0312 (Lea).
+The front desk view is a preview, not an authenticated staff area. Backend persistence, real notifications, and staff authorization are not connected.
+No standalone folder or separate server is required.

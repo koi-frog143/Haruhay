@@ -11,11 +11,14 @@ import PaymentHistory from './PaymentHistory'
 import ResidentDashboard from './ResidentDashboard'
 import VisitorLogbook from './VisitorLogbook'
 import ResidentProfile from './ResidentProfile'
+import HoldingStation from './HoldingStation'
 
 type Screen = 'login' | 'register' | 'reset'
-type Route = Screen | 'home' | 'resident-dashboard' | 'resident-logbook' | 'resident-maintenance' | 'resident-maintenance-new' | 'resident-maintenance-detail' | 'resident-payments' | 'resident-payment-history' | 'resident-profile'
+type Route = Screen | 'home' | 'resident-dashboard' | 'resident-logbook' | 'resident-maintenance' | 'resident-maintenance-new' | 'resident-maintenance-detail' | 'resident-payments' | 'resident-payment-history' | 'resident-profile' | 'resident-holding' | 'desk-holding'
 function currentScreen(): Route {
   const route = window.location.hash.replace('#', '')
+  if (route === '/resident/holding-station') return 'resident-holding'
+  if (route === '/front-desk/holding-station') return 'desk-holding'
   if (route === '/resident/profile') return 'resident-profile'
   return route === '/register' ? 'register'
     : route === '/forgot-password' ? 'reset'
@@ -152,6 +155,8 @@ export default function App() {
   useEffect(() => {
     if (screen !== 'home' || !['#haruhay-way', '#features', '#community'].includes(window.location.hash)) window.scrollTo(0, 0)
   }, [screen])
+  if (screen === 'resident-holding') return <HoldingStation key='resident' />
+  if (screen === 'desk-holding') return <HoldingStation key='desk' desk />
   if (screen === 'resident-profile') return <ResidentProfile />
   if (screen === 'home') return <LandingPage />
   if (screen === 'resident-dashboard') return <ResidentDashboard />

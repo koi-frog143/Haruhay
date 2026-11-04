@@ -11,7 +11,7 @@ const navigation: Array<{ label: ResidentSection; icon: string; href?: string }>
   { label: 'Dashboard', icon: 'icon-home.svg', href: '#/resident/dashboard' },
   { label: 'Logbook', icon: 'icon-book-nav.svg', href: '#/resident/logbook' },
   { label: 'Maintenance', icon: 'icon-ticket-nav.svg', href: '#/resident/maintenance' },
-  { label: 'Holding station', icon: 'icon-box-nav.svg' },
+  { label: 'Holding station', icon: 'icon-box-nav.svg', href: '#/resident/holding-station' },
   { label: 'Payments', icon: 'icon-wallet-nav.svg', href: '#/resident/payments' },
   { label: 'Community', icon: 'icon-heart-nav.svg' },
   { label: 'My profile', icon: 'icon-user-nav.svg', href: '#/resident/profile' },
