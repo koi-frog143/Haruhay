@@ -13,7 +13,7 @@ const navigation: Array<{ label: ResidentSection; icon: string; href?: string }>
   { label: 'Maintenance', icon: 'icon-ticket-nav.svg', href: '#/resident/maintenance' },
   { label: 'Holding station', icon: 'icon-box-nav.svg', href: '#/resident/holding-station' },
   { label: 'Payments', icon: 'icon-wallet-nav.svg', href: '#/resident/payments' },
-  { label: 'Community', icon: 'icon-heart-nav.svg' },
+  { label: 'Community', icon: 'icon-heart-nav.svg', href: '#/resident/community' },
   { label: 'My profile', icon: 'icon-user-nav.svg', href: '#/resident/profile' },
 ]
 
