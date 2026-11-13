@@ -1,6 +1,9 @@
 .logbook-page-heading { position: relative; }
 
 .logbook-add-visitor {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   position: absolute;
   top: 29px;
   right: -19px;
@@ -13,7 +16,7 @@
   font-weight: 700;
   transition: background .15s, transform .15s;
 }
-.logbook-add-visitor:hover { background: #2c6d9c; transform: translateY(-1px); }
+.logbook-add-visitor:hover { background: #2c6d9c; text-decoration: none; transform: translateY(-1px); }
 
 .logbook-summary {
   display: grid;

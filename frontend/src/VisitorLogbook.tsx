@@ -69,7 +69,7 @@ export default function VisitorLogbook() {
         <span>VISITORS AND ACCESS</span>
         <h1>Your logbook</h1>
         <p>Know when your guests arrive and when you enter your home.</p>
-        <button className="logbook-add-visitor" type="button" onClick={() => setNotice('Visitor registration is designed and ready for the next implementation phase.')}>Add visitor</button>
+        <a className="logbook-add-visitor" href="#/resident/logbook/register">Add visitor</a>
       </header>
 
       <section className="logbook-summary" aria-label="Logbook summary">

@@ -1,0 +1,175 @@
+.visitor-register-content { padding-top: 32px; }
+
+.visitor-register-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 725px) minmax(250px, 324px);
+  gap: 21px;
+  align-items: start;
+  margin-top: 38px;
+}
+
+.visitor-register-panel,
+.visitor-welcome-card {
+  border: 1px solid var(--line);
+  border-radius: 17px;
+  background: #fff;
+}
+
+.visitor-register-panel { min-height: 588px; padding: 20px 24px 22px; }
+.visitor-register-panel header { margin-left: -3px; }
+.visitor-register-panel h2,
+.visitor-welcome-card h2 {
+  margin: 0;
+  color: #203c53;
+  font-size: 17px;
+  line-height: 25px;
+}
+.visitor-register-panel header p {
+  margin: 3px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.visitor-register-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 22px 28px;
+  margin-top: 29px;
+}
+.visitor-register-fields label { display: grid; gap: 7px; min-width: 0; }
+.visitor-register-fields label > span:first-child {
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 18px;
+}
+.visitor-input-wrap {
+  display: flex;
+  height: 50px;
+  min-width: 0;
+  align-items: center;
+  gap: 12px;
+  padding: 0 13px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: #fff;
+  transition: border-color .15s, box-shadow .15s;
+}
+.visitor-input-wrap:focus-within {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px rgb(54 120 167 / 12%);
+}
+.visitor-input-wrap img { flex: 0 0 19px; }
+.visitor-input-wrap input,
+.visitor-input-wrap select {
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+}
+.visitor-input-wrap input::placeholder { color: var(--muted); opacity: 1; }
+.visitor-input-wrap select { cursor: pointer; }
+.visitor-input-readonly { background: #fbfdff; }
+.visitor-input-readonly input { color: var(--muted); }
+
+.visitor-consent-note {
+  display: flex;
+  min-height: 66px;
+  align-items: center;
+  gap: 14px;
+  margin-top: 24px;
+  padding: 13px 16px;
+  border-radius: 13px;
+  background: var(--powder);
+}
+.visitor-consent-note img { flex: 0 0 24px; }
+.visitor-consent-note p {
+  margin: 0;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 19px;
+}
+.visitor-form-error {
+  margin: 10px 0 -10px;
+  color: #a33b3b;
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.visitor-register-actions { display: flex; gap: 15px; margin-top: 18px; }
+.visitor-register-actions button,
+.visitor-register-actions a {
+  display: inline-flex;
+  height: 46px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 13px;
+  font-size: 13px;
+  font-weight: 700;
+}
+.visitor-register-actions button {
+  width: 230px;
+  background: var(--blue);
+  color: #fff;
+  transition: background .15s, transform .15s;
+}
+.visitor-register-actions button:hover { background: #2c6d9c; transform: translateY(-1px); }
+.visitor-register-actions a {
+  width: 131px;
+  border: 1px solid var(--line);
+  color: var(--ink);
+}
+.visitor-register-actions a:hover { border-color: var(--blue); text-decoration: none; }
+
+.visitor-welcome-card {
+  position: relative;
+  min-height: 337px;
+  padding: 20px 21px;
+  overflow: hidden;
+}
+.visitor-welcome-heart { display: block; margin-top: 35px; }
+.visitor-welcome-card h3 {
+  margin: 20px 0 0;
+  color: var(--ink);
+  font-size: 19px;
+  line-height: 27px;
+}
+.visitor-welcome-card > p {
+  max-width: 280px;
+  margin: 14px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 20px;
+}
+.visitor-welcome-stars { position: absolute; left: 159px; bottom: 25px; }
+
+@media (max-width: 1180px) {
+  .visitor-register-layout { grid-template-columns: minmax(0, 1fr) 270px; }
+  .visitor-register-fields { column-gap: 20px; }
+}
+
+@media (max-width: 900px) {
+  .visitor-register-layout { grid-template-columns: 1fr; }
+  .visitor-welcome-card { min-height: 230px; }
+  .visitor-welcome-stars { right: 30px; left: auto; bottom: 22px; }
+}
+
+@media (max-width: 620px) {
+  .visitor-register-fields { grid-template-columns: 1fr; gap: 18px; }
+  .visitor-register-panel { padding: 20px; }
+  .visitor-register-actions { flex-direction: column; }
+  .visitor-register-actions button,
+  .visitor-register-actions a { width: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .visitor-input-wrap,
+  .visitor-register-actions button { transition: none; }
+}
