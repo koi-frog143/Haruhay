@@ -59,8 +59,11 @@
 .logbook-activity { margin-top: 32px; }
 .logbook-section-heading { display: flex; align-items: center; justify-content: space-between; }
 .logbook-section-heading h2 { margin: 0; color: #203c53; font-size: 18px; line-height: 26px; }
-.logbook-section-heading button { padding: 4px 7px; background: transparent; color: var(--blue); font-size: 12px; font-weight: 600; }
-.logbook-section-heading button:hover { text-decoration: underline; }
+.logbook-section-actions { display: flex; align-items: center; gap: 14px; }
+.logbook-section-actions a,
+.logbook-section-actions button { padding: 4px 7px; background: transparent; color: var(--blue); font-size: 12px; font-weight: 600; }
+.logbook-section-actions a:hover,
+.logbook-section-actions button:hover { text-decoration: underline; }
 
 .logbook-filters { display: flex; gap: 9px; margin-top: 23px; }
 .logbook-filters button {

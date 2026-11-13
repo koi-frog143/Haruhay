@@ -13,15 +13,17 @@ import VisitorLogbook from './VisitorLogbook'
 import ResidentProfile from './ResidentProfile'
 import HoldingStation from './HoldingStation'
 import RegisterVisitor from './RegisterVisitor'
+import AccessHistory from './AccessHistory'
 
 type Screen = 'login' | 'register' | 'reset'
-type Route = Screen | 'home' | 'resident-dashboard' | 'resident-logbook' | 'resident-register-visitor' | 'resident-maintenance' | 'resident-maintenance-new' | 'resident-maintenance-detail' | 'resident-payments' | 'resident-payment-history' | 'resident-profile' | 'resident-holding' | 'desk-holding'
+type Route = Screen | 'home' | 'resident-dashboard' | 'resident-logbook' | 'resident-register-visitor' | 'resident-access-history' | 'resident-maintenance' | 'resident-maintenance-new' | 'resident-maintenance-detail' | 'resident-payments' | 'resident-payment-history' | 'resident-profile' | 'resident-holding' | 'desk-holding'
 function currentScreen(): Route {
   const route = window.location.hash.replace('#', '')
   if (route === '/resident/holding-station') return 'resident-holding'
   if (route === '/front-desk/holding-station') return 'desk-holding'
   if (route === '/resident/profile') return 'resident-profile'
   if (route === '/resident/logbook/register') return 'resident-register-visitor'
+  if (route === '/resident/logbook/access-history') return 'resident-access-history'
   return route === '/register' ? 'register'
     : route === '/forgot-password' ? 'reset'
       : route === '/login' ? 'login'
@@ -164,6 +166,7 @@ export default function App() {
   if (screen === 'resident-dashboard') return <ResidentDashboard />
   if (screen === 'resident-logbook') return <VisitorLogbook />
   if (screen === 'resident-register-visitor') return <RegisterVisitor />
+  if (screen === 'resident-access-history') return <AccessHistory />
   if (screen === 'resident-maintenance') return <MaintenanceTickets />
   if (screen === 'resident-maintenance-new') return <CreateMaintenanceTicket />
   if (screen === 'resident-maintenance-detail') return <MaintenanceTicketDetails />
