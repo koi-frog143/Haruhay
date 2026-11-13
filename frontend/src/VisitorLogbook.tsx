@@ -90,7 +90,10 @@ export default function VisitorLogbook() {
       <section className="logbook-activity" aria-labelledby="logbook-recent-title">
         <div className="logbook-section-heading">
           <h2 id="logbook-recent-title">Recent entries</h2>
-          <button type="button" onClick={exportEntries}>Export <span aria-hidden="true">→</span></button>
+          <div className="logbook-section-actions">
+            <a href="#/resident/logbook/access-history">Access history</a>
+            <button type="button" onClick={exportEntries}>Export <span aria-hidden="true">→</span></button>
+          </div>
         </div>
 
         <div className="logbook-filters" aria-label="Filter recent entries">
