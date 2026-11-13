@@ -35,6 +35,12 @@ export default function ResidentProfile() {
     dialog.current?.showModal()
   }
 
+  function closeDialog() {
+    setError('')
+    form.current?.reset()
+    dialog.current?.close()
+  }
+
   function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const data = new FormData(event.currentTarget)
@@ -117,10 +123,10 @@ export default function ResidentProfile() {
       </div>
     </div>
 
-    <dialog className="profile-dialog" ref={dialog} aria-labelledby="profile-dialog-title" aria-describedby="profile-dialog-description" onClick={event => { if (event.target === event.currentTarget) dialog.current?.close() }}>
+    <dialog className="profile-dialog" ref={dialog} aria-labelledby="profile-dialog-title" aria-describedby="profile-dialog-description" onClick={event => { if (event.target === event.currentTarget) closeDialog() }}>
       <div className="profile-dialog-heading">
         <h2 id="profile-dialog-title">{mode === 'edit' ? 'Edit my profile' : 'Notification preferences'}</h2>
-        <button type="button" aria-label="Close dialog" onClick={() => dialog.current?.close()}>×</button>
+        <button type="button" aria-label="Close dialog" onClick={closeDialog}>×</button>
       </div>
       <p className="profile-dialog-eyebrow">RESIDENT ACCOUNT</p>
       <p className="profile-dialog-description" id="profile-dialog-description">{mode === 'edit' ? 'Update your contact information and personal details.' : 'Choose which updates and reminders you would like to receive.'}</p>
@@ -136,10 +142,12 @@ export default function ResidentProfile() {
           </label>)}
         </div>}
         {error && <p className="profile-form-error" role="alert">{error}</p>}
-        <p className="profile-session-note">Saved in this browser session. {mode === 'preferences' ? 'Notification delivery is not connected yet.' : 'No account changes are sent to a server.'}</p>
+        <p className="profile-session-note">{mode === 'edit'
+          ? 'Interaction preview • changes are saved only in this browser session'
+          : 'Saved in this browser session • notification delivery is not connected yet'}</p>
         <div className="profile-dialog-actions">
-          <button type="button" onClick={() => dialog.current?.close()}>Cancel</button>
-          <button type="submit">{mode === 'edit' ? 'Save profile' : 'Save preferences'}</button>
+          {mode === 'preferences' && <button type="button" onClick={closeDialog}>Cancel</button>}
+          <button type="submit">{mode === 'edit' ? 'Save profile (preview)' : 'Save preferences'}</button>
         </div>
       </form>
     </dialog>
