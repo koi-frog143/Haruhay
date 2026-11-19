@@ -3,6 +3,7 @@ import ResidentLayout from './ResidentLayout'
 import { getMaintenanceTickets } from './maintenanceData'
 import type { MaintenanceStatus } from './maintenanceData'
 import './Maintenance.css'
+import { usePreviewData } from './previewStore'
 
 const asset = (name: string) => `./assets/dashboard/${name}`
 type TicketFilter = 'All' | 'In progress' | 'Resolved'
@@ -14,14 +15,14 @@ function statusClass(status: MaintenanceStatus) {
 export default function MaintenanceTickets() {
   const [filter, setFilter] = useState<TicketFilter>('All')
   const [notice, setNotice] = useState('')
-  const [tickets] = useState(getMaintenanceTickets)
+  const tickets = usePreviewData(getMaintenanceTickets)
 
   useEffect(() => {
     document.title = 'Maintenance tickets | Haruhay'
   }, [])
 
   const activeCount = tickets.filter(ticket => ticket.status !== 'Resolved').length
-  const totalCount = tickets.length + 4
+  const totalCount = tickets.length
   const visibleTickets = useMemo(() => tickets.filter(ticket => {
     if (filter === 'Resolved') return ticket.status === 'Resolved'
     if (filter === 'In progress') return ticket.status !== 'Resolved'
@@ -31,7 +32,7 @@ export default function MaintenanceTickets() {
   const metrics = [
     { value: String(totalCount).padStart(2, '0'), label: 'Total requests', icon: 'icon-ticket-metric.svg' },
     { value: String(activeCount).padStart(2, '0'), label: 'In progress', icon: 'maintenance-clock-metric.svg' },
-    { value: '06', label: 'Resolved', icon: 'maintenance-check-metric.svg', mint: true },
+    { value: String(tickets.filter(ticket => ticket.status === 'Resolved').length).padStart(2, '0'), label: 'Resolved', icon: 'maintenance-check-metric.svg', mint: true },
   ]
 
   return <ResidentLayout
@@ -59,8 +60,8 @@ export default function MaintenanceTickets() {
 
       <section className="maintenance-requests" aria-labelledby="maintenance-requests-title">
         <div className="maintenance-section-heading">
-          <h2 id="maintenance-requests-title">My requests</h2>
-          <button type="button" onClick={() => setNotice('Your complete maintenance history is represented in this frontend preview.')}>See history <span aria-hidden="true">→</span></button>
+          <h2 id="maintenance-requests-title" tabIndex={-1}>{filter === 'Resolved' ? 'Resolved request history' : 'My requests'}</h2>
+          <button type="button" onClick={() => { setFilter('Resolved'); document.getElementById('maintenance-requests-title')?.focus() }}>See history <span aria-hidden="true">→</span></button>
         </div>
 
         <div className="maintenance-filters" aria-label="Filter maintenance tickets">

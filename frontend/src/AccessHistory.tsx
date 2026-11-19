@@ -1,23 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import ResidentLayout from './ResidentLayout'
 import './AccessHistory.css'
+import ResidentDialog from './ResidentDialog'
+import { accessRecords as records } from './residentData'
+import { downloadCsv } from './previewStore'
 
 type AccessFilter = 'All records' | 'Check-ins' | 'Check-outs'
-type AccessRecord = {
-  date: string
-  time: string
-  activity: 'Resident check-in' | 'Resident check-out'
-  entryPoint: string
-  verification: 'Verified'
-}
-
-const records: AccessRecord[] = [
-  { date: 'Oct 12, 2026', time: '8:11 AM', activity: 'Resident check-in', entryPoint: 'Main entrance', verification: 'Verified' },
-  { date: 'Oct 12, 2026', time: '7:19 AM', activity: 'Resident check-out', entryPoint: 'Main entrance', verification: 'Verified' },
-  { date: 'Oct 11, 2026', time: '9:25 PM', activity: 'Resident check-in', entryPoint: 'Main entrance', verification: 'Verified' },
-  { date: 'Oct 11, 2026', time: '8:03 AM', activity: 'Resident check-out', entryPoint: 'Main entrance', verification: 'Verified' },
-  { date: 'Oct 10, 2026', time: '7:14 PM', activity: 'Resident check-in', entryPoint: 'Main entrance', verification: 'Verified' },
-]
 
 const filters: AccessFilter[] = ['All records', 'Check-ins', 'Check-outs']
 const asset = (name: string) => `./assets/dashboard/${name}`
@@ -25,6 +13,9 @@ const asset = (name: string) => `./assets/dashboard/${name}`
 export default function AccessHistory() {
   const [filter, setFilter] = useState<AccessFilter>('All records')
   const [notice, setNotice] = useState('')
+  const [exportOpen, setExportOpen] = useState(false)
+  const [start, setStart] = useState('2026-10-10')
+  const [end, setEnd] = useState('2026-10-12')
 
   useEffect(() => {
     document.title = 'Resident access history | Haruhay'
@@ -36,21 +27,18 @@ export default function AccessHistory() {
     return true
   }), [filter])
 
+  const invalidRange = !start || !end || start > end
+  const exportRecords = invalidRange ? [] : visibleRecords.filter(record => record.isoDate >= start && record.isoDate <= end)
+
   function downloadLog() {
+    if (!exportRecords.length) return
     const rows = [
       ['Date', 'Time', 'Activity', 'Entry point', 'Verification'],
-      ...visibleRecords.map(record => [record.date, record.time, record.activity, record.entryPoint, record.verification]),
+      ...exportRecords.map(record => [record.date, record.time, record.activity, record.entryPoint, record.verification]),
     ]
-    const csv = rows.map(row => row.map(value => `"${value.replaceAll('"', '""')}"`).join(',')).join('\n')
-    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `haruhay-access-history-${filter.toLowerCase().replaceAll(' ', '-')}.csv`
-    document.body.appendChild(link)
-    link.click()
-    link.remove()
-    URL.revokeObjectURL(url)
-    setNotice(`${filter} downloaded as a CSV file.`)
+    downloadCsv(`haruhay-access-history-${start}-to-${end}.csv`, rows)
+    setExportOpen(false)
+    setNotice(`Downloaded ${exportRecords.length} access records as CSV.`)
   }
 
   return <ResidentLayout
@@ -77,7 +65,7 @@ export default function AccessHistory() {
             onClick={() => setFilter(option)}
           >{option}</button>)}
         </div>
-        <button className="access-download" type="button" onClick={downloadLog}>Download log</button>
+        <button className="access-download" type="button" onClick={() => setExportOpen(true)}>Download log</button>
       </div>
 
       <div className="access-table-wrap">
@@ -102,8 +90,20 @@ export default function AccessHistory() {
 
       <aside className="access-privacy-note">
         <img src={asset('access-lock.svg')} width="27" height="27" alt="" />
-        <p>Your access history is only visible to authorized property administrators.</p>
+        <p>This preview shows sample records locally. Real access history requires authorized account access.</p>
       </aside>
+      <p className="resident-preview-label">Sample access records · October 2026</p>
     </div>
+    {exportOpen && <ResidentDialog title="Export access log" eyebrow="ACCESS HISTORY" onClose={() => setExportOpen(false)}>
+      <form onSubmit={event => { event.preventDefault(); downloadLog() }}>
+        <div className="dialog-body">
+          <p>Choose a date range, then download a CSV copy of your records. Current filter: {filter}.</p>
+          <label>From<input type="date" value={start} onChange={event => setStart(event.target.value)} required /></label>
+          <label>Through<input type="date" value={end} min={start} onChange={event => setEnd(event.target.value)} required /></label>
+          {invalidRange ? <p className="dialog-error" role="alert">Choose a valid start and end date.</p> : <p role="status">{exportRecords.length} matching records{exportRecords.length ? '' : '. Try October 10–12, 2026 or another activity filter'}.</p>}
+        </div>
+        <button className="dialog-primary" disabled={!exportRecords.length}>Download CSV</button>
+      </form>
+    </ResidentDialog>}
   </ResidentLayout>
 }

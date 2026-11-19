@@ -1,37 +1,24 @@
 import { useEffect, useMemo, useState } from 'react'
 import ResidentLayout from './ResidentLayout'
 import './Billing.css'
+import ResidentDialog from './ResidentDialog'
+import { payments } from './residentData'
+import { downloadCsv } from './previewStore'
 
 const asset = (name: string) => `./assets/dashboard/${name}`
 
 type PaymentStatus = 'Paid' | 'Pending'
 type PaymentFilter = 'All transactions' | PaymentStatus
 
-type Payment = {
-  period: string
-  date: string
-  method: string
-  amount: string
-  status: PaymentStatus
-}
-
-const payments: Payment[] = [
-  { period: 'September 2026', date: 'Sep 14, 2026', method: 'GCash', amount: '₱3,500', status: 'Paid' },
-  { period: 'August 2026', date: 'Aug 13, 2026', method: 'GCash', amount: '₱3,500', status: 'Paid' },
-  { period: 'July 2026', date: 'Jul 15, 2026', method: 'Bank transfer', amount: '₱3,500', status: 'Paid' },
-  { period: 'June 2026', date: 'Jun 12, 2026', method: 'GCash', amount: '₱3,500', status: 'Paid' },
-  { period: 'May 2026', date: 'May 15, 2026', method: 'Bank transfer', amount: '₱3,500', status: 'Paid' },
-]
 
 const filters: PaymentFilter[] = ['All transactions', 'Paid', 'Pending']
 
-function csvCell(value: string) {
-  return `"${value.replaceAll('"', '""')}"`
-}
 
 export default function PaymentHistory() {
   const [filter, setFilter] = useState<PaymentFilter>('All transactions')
   const [notice, setNotice] = useState('')
+  const [exportOpen, setExportOpen] = useState(false)
+  const [selected, setSelected] = useState<string[]>([])
 
   useEffect(() => {
     document.title = 'Payment history | Haruhay'
@@ -42,20 +29,15 @@ export default function PaymentHistory() {
   )), [filter])
 
   function exportReceipts() {
+    const chosen = visiblePayments.filter(payment => selected.includes(payment.period))
+    if (!chosen.length) return
     const rows = [
       ['Billing period', 'Date paid', 'Method', 'Amount', 'Payment status'],
-      ...visiblePayments.map(payment => [payment.period, payment.date, payment.method, payment.amount, payment.status]),
+      ...chosen.map(payment => [payment.period, payment.date, payment.method, payment.amount, payment.status]),
     ]
-    const csv = rows.map(row => row.map(csvCell).join(',')).join('\r\n')
-    const url = URL.createObjectURL(new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8' }))
-    const link = document.createElement('a')
-    link.href = url
-    link.download = 'haruhay-payment-history.csv'
-    document.body.appendChild(link)
-    link.click()
-    link.remove()
-    URL.revokeObjectURL(url)
-    setNotice(`Exported ${visiblePayments.length} payment record${visiblePayments.length === 1 ? '' : 's'} as CSV.`)
+    downloadCsv('haruhay-payment-history.csv', rows)
+    setExportOpen(false)
+    setNotice(`Exported ${chosen.length} payment records as CSV.`)
   }
 
   return <ResidentLayout
@@ -84,7 +66,7 @@ export default function PaymentHistory() {
               onClick={() => setFilter(option)}
             >{option}</button>)}
           </div>
-          <button className="payment-export" type="button" onClick={exportReceipts} disabled={visiblePayments.length === 0}>Export receipts</button>
+          <button className="payment-export" type="button" onClick={() => { setSelected(visiblePayments.map(payment => payment.period)); setExportOpen(true) }} disabled={visiblePayments.length === 0}>Export receipts</button>
         </div>
 
         <div className="payment-table-wrap">
@@ -107,9 +89,19 @@ export default function PaymentHistory() {
 
         <aside className="payment-security-note">
           <img src={asset('icon-shield.svg')} width="24" height="24" alt="" />
-          <p>Payment records are stored securely and accessible only to authorized users.</p>
+          <p>Sample records for this local preview. Real payment records require authorized account access.</p>
         </aside>
       </section>
+      <p className="resident-preview-label">Sample payment history · exports contain CSV records, not official receipt documents.</p>
     </div>
+    {exportOpen && <ResidentDialog title="Export receipts" eyebrow="PAYMENT HISTORY" onClose={() => setExportOpen(false)}>
+      <div className="dialog-body">
+        <p>Select the payment records you want to export. Format: CSV spreadsheet.</p>
+        <label className="dialog-choice"><input type="checkbox" checked={selected.length === visiblePayments.length} onChange={event => setSelected(event.target.checked ? visiblePayments.map(payment => payment.period) : [])} />Select all records</label>
+        <fieldset><legend>Payment records</legend>{visiblePayments.map(payment => <label className="dialog-choice" key={payment.period}><input type="checkbox" checked={selected.includes(payment.period)} onChange={event => setSelected(previous => event.target.checked ? [...previous, payment.period] : previous.filter(period => period !== payment.period))} />{payment.period} · {payment.amount}</label>)}</fieldset>
+        <p role="status">{selected.length} selected. This download is not an official receipt.</p>
+      </div>
+      <button className="dialog-primary" type="button" onClick={exportReceipts} disabled={!selected.length}>Download selected CSV</button>
+    </ResidentDialog>}
   </ResidentLayout>
 }

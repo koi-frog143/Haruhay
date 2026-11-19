@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react'
 import ResidentLayout from './ResidentLayout'
 import './Billing.css'
+import ResidentDialog from './ResidentDialog'
+import { billDueLabel, billTiming, getPaymentChannel, money, paymentChannels, savePaymentChannel, upcomingBill, upcomingTotal } from './residentData'
+import type { PaymentChannel } from './residentData'
+import { usePreviewData } from './previewStore'
 
 const asset = (name: string) => `./assets/dashboard/${name}`
 
@@ -27,15 +31,19 @@ const billingCenter = [
 
 export default function BillingPayments() {
   const [notice, setNotice] = useState('')
+  const channel = usePreviewData(getPaymentChannel)
+  const [selectedChannel, setSelectedChannel] = useState<PaymentChannel>(channel)
+  const [panel, setPanel] = useState<'upcoming' | 'methods' | null>(null)
+  const [error, setError] = useState('')
 
   useEffect(() => {
     document.title = 'Payments & billing | Haruhay'
   }, [])
 
   function preview(action: 'upcoming' | 'methods') {
-    setNotice(action === 'upcoming'
-      ? 'Your next preview payment is ₱3,500.00, due October 15.'
-      : 'Payment method management is a frontend preview; no financial details are stored.')
+    setSelectedChannel(channel)
+    setError('')
+    setPanel(action)
   }
 
   return <ResidentLayout
@@ -56,17 +64,17 @@ export default function BillingPayments() {
         <article className="billing-balance">
           <img className="billing-balance-circle" src={asset('billing-balance-circle.svg')} width="233" height="233" alt="" />
           <span>TOTAL UPCOMING</span>
-          <strong>₱3,500.00</strong>
-          <p>October rent and utilities</p>
-          <time dateTime="2026-10-15">DUE OCTOBER 15</time>
+          <strong>{money(upcomingTotal)}</strong>
+          <p>{upcomingBill.period} rent and utilities</p>
+          <time dateTime={upcomingBill.due}>DUE {billDueLabel.toUpperCase()}</time>
         </article>
 
         <article className="billing-breakdown">
           <h2>Payment breakdown</h2>
           <dl>
-            <div><dt>Monthly rent</dt><dd>₱3,000.00</dd></div>
-            <div><dt>Utilities</dt><dd>₱500.00</dd></div>
-            <div><dt>Outstanding balance</dt><dd>₱0.00</dd></div>
+            <div><dt>Monthly rent</dt><dd>{money(upcomingBill.rent)}</dd></div>
+            <div><dt>Utilities</dt><dd>{money(upcomingBill.utilities)}</dd></div>
+            <div><dt>Outstanding balance</dt><dd>{money(upcomingBill.outstanding)}</dd></div>
           </dl>
         </article>
       </section>
@@ -91,6 +99,13 @@ export default function BillingPayments() {
           })}
         </div>
       </section>
+      <p className="resident-preview-label">Sample billing period: {upcomingBill.period} · Preferred channel: {channel}. No payments are processed.</p>
     </div>
+    {panel && <ResidentDialog title={panel === 'upcoming' ? 'Upcoming payments' : 'Payment methods'} eyebrow="MONTHLY DUES" onClose={() => setPanel(null)}>
+      {panel === 'upcoming' ? <><div className="dialog-body"><p><strong>{upcomingBill.period} · {money(upcomingTotal)}</strong></p><p>Sample due date: {billDueLabel}, 2026. {billTiming()}.</p><p>Rent {money(upcomingBill.rent)} + utilities {money(upcomingBill.utilities)}. Preferred channel: {channel}.</p><p>For actual balances and payment instructions, check with the front desk. This preview cannot accept or submit payments.</p><a href="#/resident/payments/history" onClick={() => setPanel(null)}>View payment history</a></div><button className="dialog-primary" onClick={() => setPanel(null)}>Done</button></> : <form onSubmit={event => { event.preventDefault(); try { savePaymentChannel(selectedChannel); setPanel(null); setNotice('Preferred payment channel saved locally.') } catch (error) { setError(error instanceof Error ? error.message : 'Could not save your preference.') } }}>
+        <div className="dialog-body"><p>Choose your preferred channel. Only the channel name is stored; no account or financial details are collected.</p><fieldset><legend>Preferred payment channel</legend>{paymentChannels.map(value => <label className="dialog-choice" key={value}><input type="radio" name="channel" value={value} checked={selectedChannel === value} onChange={() => setSelectedChannel(value)} />{value}</label>)}</fieldset><p>Confirm actual payment instructions with the front desk.</p></div>
+        {error && <p className="dialog-error" role="alert">{error}</p>}<button className="dialog-primary">Save preference (preview)</button>
+      </form>}
+    </ResidentDialog>}
   </ResidentLayout>
 }

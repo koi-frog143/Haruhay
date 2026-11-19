@@ -152,9 +152,10 @@ function AuthForm({ screen }: { screen: Screen }) {
 }
 
 export default function App() {
-  const [screen, setScreen] = useState<Route>(currentScreen)
+  const [routeHash, setRouteHash] = useState(() => window.location.hash)
+  const screen = currentScreen()
   useEffect(() => {
-    const onHashChange = () => setScreen(currentScreen())
+    const onHashChange = () => setRouteHash(window.location.hash)
     window.addEventListener('hashchange', onHashChange)
     return () => window.removeEventListener('hashchange', onHashChange)
   }, [])
@@ -172,7 +173,7 @@ export default function App() {
   if (screen === 'resident-community') return <CommunityBoard />
   if (screen === 'resident-maintenance') return <MaintenanceTickets />
   if (screen === 'resident-maintenance-new') return <CreateMaintenanceTicket />
-  if (screen === 'resident-maintenance-detail') return <MaintenanceTicketDetails />
+  if (screen === 'resident-maintenance-detail') return <MaintenanceTicketDetails key={routeHash} />
   if (screen === 'resident-payments') return <BillingPayments />
   if (screen === 'resident-payment-history') return <PaymentHistory />
   return <main className="auth-shell">
