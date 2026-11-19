@@ -19,6 +19,8 @@ Open the localhost URL printed by Vite (normally http://localhost:5173).
 - Password reset: http://localhost:5173/#/forgot-password
 - Resident dashboard: http://localhost:5173/#/resident/dashboard
 - Visitor logbook: http://localhost:5173/#/resident/logbook
+- Register a visitor: http://localhost:5173/#/resident/logbook/register
+- Resident access history: http://localhost:5173/#/resident/logbook/access-history
 - Maintenance tickets: http://localhost:5173/#/resident/maintenance
 - New maintenance request: http://localhost:5173/#/resident/maintenance/new
 - Maintenance ticket details: http://localhost:5173/#/resident/maintenance/TCK-1042
@@ -27,6 +29,7 @@ Open the localhost URL printed by Vite (normally http://localhost:5173).
 - Front desk Holding Station: http://localhost:5173/#/front-desk/holding-station
 - Resident profile: http://localhost:5173/#/resident/profile
 - Payment history: http://localhost:5173/#/resident/payments/history
+- Community board: http://localhost:5173/#/resident/community
 
 Use the links in the forms to switch screens. Browser Back and Forward also work.
 Stop the preview with Ctrl+C. Do not open index.html directly; Vite serves the TypeScript application.
@@ -46,6 +49,23 @@ npm run preview
 
 The production preview URL is normally http://localhost:4173. It also runs without the backend.
 The existing Vite /api proxy is retained for future integration; these screens never call it.
+
+## Resident interactions
+
+The resident portal uses shared sample records and browser session storage. Changes survive navigation and refresh in the same tab; this is a frontend preview with no server authentication, notifications, staff review or payment processing.
+
+- Access-log export opens a date-range dialog and exports matching records from the current activity filter as CSV.
+- Payment history lets residents select individual records for CSV export. These files are spreadsheets, not official receipt documents.
+- Maintenance comments use a dialog and persist by ticket. Ticket creation, list totals, resolved history and dashboard counts use the same records. Unknown ticket URLs display a missing-record state.
+- Visitor requests appear separately in the logbook as pending review, with local cancellation. Requests never count as actual arrivals or guests on site. Expected arrival times use Philippine time.
+- Upcoming payments show the sample bill breakdown and due date. Payment methods save only a preferred channel name, with no account details or payment submission.
+- Search covers resident pages, tickets, packages, visitor requests, announcements and payment history. A search button is available on phone layouts.
+- Notifications derive from local records, honor resident reminder preferences and persist read status. Support creates local drafts; no message is sent. Speak with the front desk for actual assistance.
+- All services opens a destination list. Community View all opens a searchable announcement list, and individual cards open notice details.
+
+Figma supplies lightweight preview dialogs for exports and comments. Functional fields were added using the same dialog colors, type and spacing. Search, support drafts, notifications, payment preferences and service/announcement lists use matching minimal dialogs because detailed designs for those interactions were not supplied. Billing and activity fixtures retain the October 2026 design period and are explicitly labeled as sample data; counts reflect the available records rather than Figma's illustrative totals.
+
+For browser integration verification, start Vite and an isolated Chrome instance with remote debugging on port 9227, then run `node scripts/check-resident-ui.mjs` from this folder. The script creates its own browser tab, clears only that tab's session storage, checks all 12 resident routes at 1440px and 390px, and verifies exports, persistence, errors, focus, navigation and the existing Holding Station routes. Screenshots, asset geometry, downloaded CSVs and results are written to the ignored `.ui-verification` folder. `UI_ORIGIN` and `UI_DEBUG` can override the local URLs.
 
 ## Assets
 

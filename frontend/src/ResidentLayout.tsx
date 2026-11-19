@@ -1,7 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { FormEvent, ReactNode } from 'react'
 import './ResidentDashboard.css'
 import { getResidentProfile, profileInitials } from './profileData'
+import ResidentTools from './ResidentTools'
+import { getNotifications } from './residentToolsData'
+import { getReadNotifications } from './residentData'
+import { usePreviewData } from './previewStore'
 
 const asset = (name: string) => `./assets/dashboard/${name}`
 
@@ -17,7 +21,7 @@ const navigation: Array<{ label: ResidentSection; icon: string; href?: string }>
   { label: 'My profile', icon: 'icon-user-nav.svg', href: '#/resident/profile' },
 ]
 
-type OpenPanel = 'notifications' | 'account' | null
+type OpenPanel = 'account' | null
 
 type ResidentLayoutProps = {
   activeSection: ResidentSection
@@ -28,7 +32,7 @@ type ResidentLayoutProps = {
   children: ReactNode
 }
 
-export default function ResidentLayout({ activeSection, breadcrumb, notice, onNotice, onDismissNotice, children }: ResidentLayoutProps) {
+export default function ResidentLayout({ activeSection, breadcrumb, notice, onDismissNotice, children }: ResidentLayoutProps) {
   const [profile, setProfile] = useState(getResidentProfile)
   useEffect(() => {
     const update = () => setProfile(getResidentProfile())
@@ -36,8 +40,39 @@ export default function ResidentLayout({ activeSection, breadcrumb, notice, onNo
     return () => window.removeEventListener('haruhay-profile-updated', update)
   }, [])
   const [navigationOpen, setNavigationOpen] = useState(false)
+  const [narrow, setNarrow] = useState(() => window.matchMedia('(max-width: 980px)').matches)
+  const sidebar = useRef<HTMLElement>(null)
+  const menuButton = useRef<HTMLButtonElement>(null)
   const [openPanel, setOpenPanel] = useState<OpenPanel>(null)
   const [search, setSearch] = useState('')
+  const [tool, setTool] = useState<'search' | 'support' | 'services' | 'notifications' | null>(null)
+  const notifications = usePreviewData(getNotifications)
+  const readNotifications = usePreviewData(getReadNotifications)
+  const unread = notifications.filter(item => !readNotifications.includes(item.id)).length
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 980px)')
+    const update = () => setNarrow(media.matches)
+    media.addEventListener('change', update)
+    return () => media.removeEventListener('change', update)
+  }, [])
+  useEffect(() => {
+    if (!navigationOpen || !narrow) return
+    const previousOverflow = document.body.style.overflow
+    const returnFocus = menuButton.current
+    document.body.style.overflow = 'hidden'
+    const links = () => Array.from(sidebar.current?.querySelectorAll<HTMLElement>('a[href], button:not([disabled])') ?? [])
+    links()[0]?.focus()
+    const trap = (event: KeyboardEvent) => {
+      if (event.key !== 'Tab') return
+      const focusable = links()
+      const first = focusable[0]
+      const last = focusable.at(-1)
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus() }
+      if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus() }
+    }
+    window.addEventListener('keydown', trap)
+    return () => { document.body.style.overflow = previousOverflow; window.removeEventListener('keydown', trap); returnFocus?.focus() }
+  }, [navigationOpen, narrow])
 
   useEffect(() => {
     const closeOnEscape = (event: KeyboardEvent) => {
@@ -50,16 +85,15 @@ export default function ResidentLayout({ activeSection, breadcrumb, notice, onNo
     return () => window.removeEventListener('keydown', closeOnEscape)
   }, [])
 
-  function preview(label: string) {
-    onNotice(`${label} is designed and ready for the next implementation phase.`)
+  function preview() {
+    setTool('services')
     setNavigationOpen(false)
     setOpenPanel(null)
   }
 
   function submitSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    const query = search.trim()
-    onNotice(query ? `Search preview: “${query}”` : 'Enter something to search for in Haruhay.')
+    setTool('search')
     setOpenPanel(null)
   }
 
@@ -68,10 +102,12 @@ export default function ResidentLayout({ activeSection, breadcrumb, notice, onNo
       className={'resident-sidebar-backdrop ' + (navigationOpen ? 'is-open' : '')}
       type="button"
       aria-label="Close navigation"
+      tabIndex={-1}
+      aria-hidden={!navigationOpen}
       onClick={() => setNavigationOpen(false)}
     />
 
-    <aside id="resident-navigation" className={'resident-sidebar ' + (navigationOpen ? 'is-open' : '')} aria-label="Resident portal navigation">
+    <aside ref={sidebar} inert={narrow && !navigationOpen} id="resident-navigation" className={'resident-sidebar ' + (navigationOpen ? 'is-open' : '')} aria-label="Resident portal navigation">
       <a className="resident-brand" href="#/" aria-label="Haruhay home">
         <img src={asset('haruhay-mark.png')} width="56" height="56" alt="" />
         <img src={asset('haruhay-wordmark.png')} width="172" height="46" alt="Haruhay" />
@@ -94,13 +130,13 @@ export default function ResidentLayout({ activeSection, breadcrumb, notice, onNo
                 aria-current={item.label === activeSection ? 'page' : undefined}
                 onClick={() => setNavigationOpen(false)}
               >{content}</a>
-            : <button className={className} type="button" key={item.label} onClick={() => preview(item.label)}>{content}</button>
+            : <button className={className} type="button" key={item.label} onClick={preview}>{content}</button>
         })}
       </nav>
 
       <div className="resident-sidebar-footer">
         <a className="resident-signout" href="#/login">Sign out</a>
-        <button className="resident-support" type="button" onClick={() => preview('Resident support')}>
+        <button className="resident-support" type="button" onClick={() => { setTool('support'); setNavigationOpen(false) }}>
           <span className="resident-support-title">
             <img src={asset('icon-shield.svg')} width="24" height="24" alt="" />
             <strong>Here for you, always.</strong>
@@ -110,9 +146,10 @@ export default function ResidentLayout({ activeSection, breadcrumb, notice, onNo
       </div>
     </aside>
 
-    <section className="resident-workspace">
+    <section className="resident-workspace" inert={narrow && navigationOpen}>
       <header className="resident-topbar">
         <button
+          ref={menuButton}
           className="resident-menu-button"
           type="button"
           aria-label="Open resident navigation"
@@ -127,22 +164,19 @@ export default function ResidentLayout({ activeSection, breadcrumb, notice, onNo
             <img src={asset('icon-search.svg')} width="19" height="19" alt="" />
             <input value={search} onChange={event => setSearch(event.target.value)} aria-label="Search Haruhay" placeholder="Search Haruhay..." />
           </form>
+          <button type="button" className="resident-icon-button resident-search-launch" aria-label="Search Haruhay" onClick={() => setTool('search')}><img src={asset('icon-search.svg')} width="19" height="19" alt="" /></button>
 
           <div className="resident-popover-anchor">
             <button
               className="resident-icon-button"
               type="button"
-              aria-label="Notifications"
-              aria-expanded={openPanel === 'notifications'}
-              onClick={() => setOpenPanel(openPanel === 'notifications' ? null : 'notifications')}
+              aria-label={`Notifications${unread ? ` (${unread} unread)` : ''}`}
+              aria-haspopup="dialog"
+              onClick={() => { setOpenPanel(null); setTool('notifications') }}
             >
               <img src={asset('icon-bell.svg')} width="21" height="21" alt="" />
-              <img className="resident-notification-dot" src={asset('notification-dot.svg')} width="8" height="8" alt="" />
+              {unread > 0 && <img className="resident-notification-dot" src={asset('notification-dot.svg')} width="8" height="8" alt="" />}
             </button>
-            {openPanel === 'notifications' && <div className="resident-popover resident-notifications" role="status">
-              <strong>You’re all caught up.</strong>
-              <span>New community updates will appear here.</span>
-            </div>}
           </div>
 
           <div className="resident-popover-anchor">
@@ -164,6 +198,7 @@ export default function ResidentLayout({ activeSection, breadcrumb, notice, onNo
       </header>
 
       {children}
+      {tool && <ResidentTools mode={tool} initialQuery={search} onClose={() => setTool(null)} />}
 
       <div className={'resident-status ' + (notice ? 'is-visible' : '')} role="status" aria-live="polite">
         {notice}

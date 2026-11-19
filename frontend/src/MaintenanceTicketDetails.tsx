@@ -1,14 +1,16 @@
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import ResidentLayout from './ResidentLayout'
-import { getMaintenanceTicket } from './maintenanceData'
+import { getMaintenanceTicket, getTicketComments, saveTicketComment } from './maintenanceData'
+import ResidentDialog from './ResidentDialog'
 import type { MaintenanceStatus } from './maintenanceData'
 import './Maintenance.css'
 
 const asset = (name: string) => `./assets/dashboard/${name}`
 
 function ticketIdFromHash() {
-  return decodeURIComponent(window.location.hash.replace('#/resident/maintenance/', ''))
+  try { return decodeURIComponent(window.location.hash.replace('#/resident/maintenance/', '')) }
+  catch { return '' }
 }
 
 function statusClass(status: MaintenanceStatus) {
@@ -23,10 +25,16 @@ const stageByStatus: Record<MaintenanceStatus, number> = {
 }
 
 export default function MaintenanceTicketDetails() {
+  const ticket = getMaintenanceTicket(ticketIdFromHash())
+  if (!ticket) return <ResidentLayout activeSection="Maintenance" breadcrumb="Maintenance / Not found" notice="" onNotice={() => {}} onDismissNotice={() => {}}><div className="resident-content"><h1>Maintenance request not found</h1><p>This request does not exist in this preview session.</p><a href="#/resident/maintenance">Back to maintenance tickets</a></div></ResidentLayout>
+  return <TicketDetails key={ticket.id} ticket={ticket} />
+}
+
+function TicketDetails({ ticket }: { ticket: NonNullable<ReturnType<typeof getMaintenanceTicket>> }) {
   const [notice, setNotice] = useState('')
-  const [ticket] = useState(() => getMaintenanceTicket(ticketIdFromHash()))
-  const [comments, setComments] = useState([ticket.comment])
+  const [comments, setComments] = useState(() => [ticket.comment, ...getTicketComments(ticket.id)])
   const [commentOpen, setCommentOpen] = useState(false)
+  const [error, setError] = useState('')
 
   useEffect(() => {
     document.title = `${ticket.title} | Haruhay maintenance`
@@ -44,11 +52,12 @@ export default function MaintenanceTicketDetails() {
     event.preventDefault()
     const data = new FormData(event.currentTarget)
     const message = String(data.get('comment') ?? '').trim()
-    if (!message) return
-    setComments(previous => [...previous, message])
-    event.currentTarget.reset()
-    setCommentOpen(false)
-    setNotice('Your comment was added to this frontend preview.')
+    try {
+      saveTicketComment(ticket.id, message)
+      setComments([ticket.comment, ...getTicketComments(ticket.id)])
+      setCommentOpen(false)
+      setNotice('Comment saved in this browser session.')
+    } catch (error) { setError(error instanceof Error ? error.message : 'Could not save your comment.') }
   }
 
   return <ResidentLayout
@@ -86,10 +95,7 @@ export default function MaintenanceTicketDetails() {
                 <div><strong>{index === 0 ? 'Front desk' : 'You'}</strong><p>{comment}</p></div>
               </article>)}
             </div>
-            {commentOpen ? <form className="maintenance-comment-form" onSubmit={addComment}>
-              <label htmlFor="maintenance-comment">Add a comment</label>
-              <div><input id="maintenance-comment" name="comment" maxLength={300} autoFocus required placeholder="Write an update or question..." /><button type="submit">Post</button></div>
-            </form> : <button className="maintenance-comment-button" type="button" onClick={() => setCommentOpen(true)}>Add a comment</button>}
+            <button className="maintenance-comment-button" type="button" onClick={() => { setError(''); setCommentOpen(true) }}>Add a comment</button>
           </section>
         </div>
 
@@ -107,5 +113,12 @@ export default function MaintenanceTicketDetails() {
         </aside>
       </div>
     </div>
+    {commentOpen && <ResidentDialog title="Add a comment" eyebrow="MAINTENANCE TICKET" onClose={() => setCommentOpen(false)}>
+      <form onSubmit={addComment}>
+        <div className="dialog-body"><p>Write an update for the support team.</p><label>Comment<textarea name="comment" maxLength={300} required placeholder="Write an update or question…" onChange={() => setError('')} /></label></div>
+        {error && <p className="dialog-error" role="alert">{error}</p>}
+        <button className="dialog-primary">Post comment (preview)</button>
+      </form>
+    </ResidentDialog>}
   </ResidentLayout>
 }

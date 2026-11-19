@@ -1,6 +1,11 @@
 import { useEffect, useState } from 'react'
 import ResidentLayout from './ResidentLayout'
 import { CURRENT_RESIDENT, useHoldingState } from './holdingData'
+import { getMaintenanceTickets } from './maintenanceData'
+import { getResidentProfile } from './profileData'
+import { billDueLabel, billTiming, money, upcomingTotal, visitorEntries } from './residentData'
+import { usePreviewData } from './previewStore'
+import ResidentTools from './ResidentTools'
 
 const asset = (name: string) => `./assets/dashboard/${name}`
 
@@ -22,13 +27,22 @@ export default function ResidentDashboard() {
   const holdingState = useHoldingState()
   const pickupCount = holdingState.items.filter(item => item.residentId === CURRENT_RESIDENT && item.status === 'Ready').length
   const [notice, setNotice] = useState('')
+  const [servicesOpen, setServicesOpen] = useState(false)
+  const profile = usePreviewData(getResidentProfile)
+  const tickets = usePreviewData(getMaintenanceTickets)
+  const values: Record<string, string> = {
+    'Upcoming rent': money(upcomingTotal),
+    'Items for pickup': String(pickupCount).padStart(2, '0'),
+    'Active maintenance ticket': String(tickets.filter(ticket => ticket.status !== 'Resolved').length).padStart(2, '0'),
+    'Recent guest entries': String(visitorEntries.length).padStart(2, '0'),
+  }
 
   useEffect(() => {
     document.title = 'Resident dashboard | Haruhay'
   }, [])
 
-  function preview(label: string) {
-    setNotice(`${label} is designed and ready for the next implementation phase.`)
+  function preview() {
+    setServicesOpen(true)
   }
 
   return <ResidentLayout
@@ -41,7 +55,7 @@ export default function ResidentDashboard() {
     <div className="resident-content">
       <header className="resident-page-heading">
         <span>YOUR SPACE&nbsp; / &nbsp;ROOM 204</span>
-        <h1>Good morning, Andrea!</h1>
+        <h1>Welcome home, {profile.fullName.trim().split(/\s+/u)[0]}!</h1>
         <p>Another day in a space that cares for you.</p>
       </header>
 
@@ -57,19 +71,19 @@ export default function ResidentDashboard() {
         {metrics.map(metric => {
           const content = <>
             <span className="resident-card-icon"><img src={asset(metric.icon)} width="24" height="24" alt="" /></span>
-            <strong>{metric.label === 'Items for pickup' ? String(pickupCount).padStart(2, '0') : metric.value}</strong>
+            <strong>{values[metric.label]}</strong>
             <span>{metric.label}</span>
           </>
           return metric.href
             ? <a className="resident-metric-card" href={metric.href} key={metric.label}>{content}</a>
-            : <button className="resident-metric-card" type="button" key={metric.label} onClick={() => preview(metric.label)}>{content}</button>
+            : <button className="resident-metric-card" type="button" key={metric.label} onClick={preview}>{content}</button>
         })}
       </section>
 
       <section className="resident-explore" aria-labelledby="resident-explore-title">
         <div className="resident-section-heading">
           <h2 id="resident-explore-title">Explore Haruhay</h2>
-          <button type="button" onClick={() => preview('All services')}>All services <span aria-hidden="true">→</span></button>
+          <button type="button" onClick={preview}>All services <span aria-hidden="true">→</span></button>
         </div>
         <div className="resident-services-layout">
           <div className="resident-service-grid">
@@ -81,17 +95,19 @@ export default function ResidentDashboard() {
               </>
               return service.href
                 ? <a className="resident-service-card" href={service.href} key={service.title}>{content}</a>
-                : <button className="resident-service-card" type="button" key={service.title} onClick={() => preview(service.title)}>{content}</button>
+                : <button className="resident-service-card" type="button" key={service.title} onClick={preview}>{content}</button>
             })}
           </div>
           <a className="resident-heads-up" href="#/resident/payments">
             <strong>Heads up</strong>
-            <span className="resident-due-date">OCT 15</span>
+            <span className="resident-due-date">{billDueLabel.toUpperCase()}</span>
             <b>Rent due</b>
-            <span>7 days remaining</span>
+            <span>{billTiming()}</span>
           </a>
         </div>
       </section>
+      <p className="resident-preview-label">Frontend preview · sample records with changes saved in this browser session.</p>
     </div>
+    {servicesOpen && <ResidentTools mode="services" onClose={() => setServicesOpen(false)} />}
   </ResidentLayout>
 }

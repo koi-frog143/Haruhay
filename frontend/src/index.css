@@ -18,10 +18,11 @@
   --cream: #fffcf8;
   --muted: #688096;
   --line: #e3ebf2;
+  --mist: #f3f9fd;
 }
 * { box-sizing: border-box; }
 body { margin: 0; min-width: 320px; }
-button, input, select { font: inherit; }
+button, input, select, textarea { font: inherit; }
 button { border: 0; cursor: pointer; }
 a { color: var(--blue); text-decoration: none; }
 a:hover { text-decoration: underline; }

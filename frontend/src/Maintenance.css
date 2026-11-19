@@ -115,13 +115,13 @@
   border-radius: 17px;
   background: #fff;
 }
-.maintenance-form-panel { position: relative; height: 588px; }
-.maintenance-form-panel > h2 { position: absolute; top: 20px; left: 21px; margin: 0; color: #203c53; font-size: 17px; line-height: 25px; }
-.maintenance-form-panel > p { position: absolute; top: 48px; left: 21px; margin: 0; color: var(--muted); font-size: 12px; line-height: 18px; }
-.maintenance-first-fields { position: absolute; top: 109px; right: 35px; left: 24px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 21px; }
+.maintenance-form-panel { position: relative; min-height: 588px; padding: 20px 24px; }
+.maintenance-form-panel > h2 { margin: 0; color: #203c53; font-size: 17px; line-height: 25px; }
+.maintenance-form-panel > p { margin: 3px 0 0; color: var(--muted); font-size: 12px; line-height: 18px; }
+.maintenance-first-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 21px; margin-top: 43px; }
 .maintenance-form-group { display: flex; min-width: 0; flex-direction: column; gap: 9px; color: var(--ink); font-size: 11px; font-weight: 600; line-height: 16px; }
-.maintenance-title-field { position: absolute; top: 218px; right: 36px; left: 24px; }
-.maintenance-description-field { position: absolute; top: 326px; right: 36px; left: 24px; }
+.maintenance-title-field { margin-top: 34px; }
+.maintenance-description-field { margin-top: 33px; }
 .maintenance-field { display: flex; height: 50px; align-items: center; gap: 12px; padding: 0 14px; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
 .maintenance-field img { flex: 0 0 auto; }
 .maintenance-field input,
@@ -132,7 +132,8 @@
 .maintenance-description-field textarea::placeholder { color: var(--muted); opacity: 1; }
 .maintenance-field:focus-within,
 .maintenance-description-field textarea:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgb(54 120 167 / 12%); }
-.maintenance-form-actions { position: absolute; top: 503px; left: 24px; display: flex; gap: 13px; }
+.maintenance-form-actions { display: flex; gap: 13px; margin-top: 42px; }
+.maintenance-form-feedback > p:last-child { margin-bottom: 0; }
 .maintenance-form-actions button { height: 45px; border-radius: 13px; font-size: 13px; font-weight: 700; }
 .maintenance-submit { width: 205px; background: var(--blue); color: #fff; }
 .maintenance-submit:hover { background: #2c6d9c; }

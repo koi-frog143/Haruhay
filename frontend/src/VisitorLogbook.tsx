@@ -1,34 +1,28 @@
 import { useEffect, useMemo, useState } from 'react'
 import ResidentLayout from './ResidentLayout'
 import './VisitorLogbook.css'
+import { accessRecords, visitorEntries, getVisitorRequests, cancelVisitorRequest } from './residentData'
+import { getResidentProfile } from './profileData'
+import { downloadCsv, usePreviewData } from './previewStore'
+import ResidentDialog from './ResidentDialog'
 
 const asset = (name: string) => `./assets/dashboard/${name}`
 
 type ActivityFilter = 'All activity' | 'Visitors' | 'Residents'
-type Entry = {
-  person: string
-  type: 'Guest' | 'Resident'
-  dateTime: string
-  location: string
-  status: 'Checked in' | 'Checked out' | 'Verified'
-}
-
-const entries: Entry[] = [
-  { person: 'Maria Santos', type: 'Guest', dateTime: 'Oct 8 • 10:32 AM', location: 'Room 204', status: 'Checked in' },
-  { person: 'Andrea Santos', type: 'Resident', dateTime: 'Oct 8 • 8:14 AM', location: 'Main entrance', status: 'Verified' },
-  { person: 'John Mercado', type: 'Guest', dateTime: 'Oct 7 • 4:45 PM', location: 'Room 204', status: 'Checked out' },
-  { person: 'Andrea Santos', type: 'Resident', dateTime: 'Oct 7 • 7:03 AM', location: 'Main entrance', status: 'Verified' },
-]
-
-const metrics = [
-  { value: '03', label: 'Visits this week', icon: 'icon-users-metric.svg' },
-  { value: '01', label: 'Guest on premises', icon: 'icon-user-metric.svg' },
-  { value: '24', label: 'Entries this month', icon: 'icon-book-metric.svg' },
-]
 
 export default function VisitorLogbook() {
   const [filter, setFilter] = useState<ActivityFilter>('All activity')
   const [notice, setNotice] = useState('')
+  const profile = usePreviewData(getResidentProfile)
+  const requests = usePreviewData(getVisitorRequests)
+  const [cancelId, setCancelId] = useState<string | null>(null)
+  const [error, setError] = useState('')
+  const entries = useMemo(() => [...visitorEntries, ...accessRecords.map(record => ({ person: profile.fullName, type: 'Resident', dateTime: `${record.date} · ${record.time}`, location: record.entryPoint, status: record.activity === 'Resident check-out' ? 'Checked out' : 'Verified', isoDate: record.isoDate }))].sort((a, b) => b.isoDate.localeCompare(a.isoDate)), [profile.fullName])
+  const metrics = [
+    { value: String(visitorEntries.length).padStart(2, '0'), label: 'Recorded guest visits', icon: 'icon-users-metric.svg' },
+    { value: String(visitorEntries.filter(entry => entry.status === 'Checked in').length).padStart(2, '0'), label: 'Guest on premises', icon: 'icon-user-metric.svg' },
+    { value: String(entries.length).padStart(2, '0'), label: 'Recorded entries', icon: 'icon-book-metric.svg' },
+  ]
 
   useEffect(() => {
     document.title = 'Visitor logbook | Haruhay'
@@ -38,22 +32,14 @@ export default function VisitorLogbook() {
     if (filter === 'Visitors') return entry.type === 'Guest'
     if (filter === 'Residents') return entry.type === 'Resident'
     return true
-  }), [filter])
+  }), [filter, entries])
 
   function exportEntries() {
     const rows = [
       ['Person', 'Visit type', 'Date and time', 'Room / area', 'Status'],
       ...visibleEntries.map(entry => [entry.person, entry.type, entry.dateTime, entry.location, entry.status]),
     ]
-    const csv = rows.map(row => row.map(value => `"${value.replaceAll('"', '""')}"`).join(',')).join('\n')
-    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `haruhay-logbook-${filter.toLowerCase().replace(' ', '-')}.csv`
-    document.body.appendChild(link)
-    link.click()
-    link.remove()
-    URL.revokeObjectURL(url)
+    downloadCsv(`haruhay-logbook-${filter.toLowerCase().replace(' ', '-')}.csv`, rows)
     setNotice(`${filter} entries exported as a CSV file.`)
   }
 
@@ -126,6 +112,18 @@ export default function VisitorLogbook() {
           </table>
         </div>
       </section>
+      <section className="resident-pending-requests" aria-labelledby="visitor-requests-title">
+        <h2 id="visitor-requests-title">Visitor requests</h2>
+        <p>Local preview · pending requests are not check-ins and do not increase guest counts. Arrival times use Philippine time.</p>
+        {error && <p className="dialog-error" role="alert">{error}</p>}
+        {!requests.length ? <p>No visitor requests yet. <a href="#/resident/logbook/register">Register a visitor</a></p> : <ul className="dialog-list">{requests.map(request => <li key={request.id}><div><strong>{request.fullName}</strong><small>{request.expectedArrival.replace('T', ' ')} · {request.purpose}</small><span>{request.status}</span></div>{request.status === 'Pending review' && <button className="dialog-secondary" onClick={() => { setError(''); setCancelId(request.id) }}>Cancel request for {request.fullName}</button>}</li>)}</ul>}
+      </section>
+      <p className="resident-preview-label">Sample recorded activity · October 2026</p>
     </div>
+    {cancelId && <ResidentDialog title="Cancel visitor request?" eyebrow="VISITOR REQUEST" onClose={() => setCancelId(null)}>
+      <div className="dialog-body"><p>This cancels the locally saved request. Recorded check-ins remain unchanged.</p></div>
+      {error && <p className="dialog-error" role="alert">{error}</p>}
+      <button className="dialog-primary" onClick={() => { try { cancelVisitorRequest(cancelId); setCancelId(null); setNotice('Visitor request cancelled locally.') } catch (error) { setError(error instanceof Error ? error.message : 'Could not cancel the request.') } }}>Confirm cancellation</button>
+    </ResidentDialog>}
   </ResidentLayout>
 }

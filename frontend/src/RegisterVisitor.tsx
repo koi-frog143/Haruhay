@@ -2,6 +2,9 @@ import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import ResidentLayout from './ResidentLayout'
 import './RegisterVisitor.css'
+import { createVisitorRequest } from './residentData'
+import { getResidentProfile } from './profileData'
+import { manilaInputDate, usePreviewData } from './previewStore'
 
 const asset = (name: string) => `./assets/dashboard/${name}`
 
@@ -12,7 +15,6 @@ type VisitorRequest = {
   expectedArrival: string
 }
 
-const REQUESTS_KEY = 'haruhay-visitor-requests'
 
 function value(data: FormData, key: string) {
   return String(data.get(key) ?? '').trim()
@@ -21,6 +23,8 @@ function value(data: FormData, key: string) {
 export default function RegisterVisitor() {
   const [notice, setNotice] = useState('')
   const [error, setError] = useState('')
+  const profile = usePreviewData(getResidentProfile)
+  const [arrivalDefaults] = useState(() => ({ min: manilaInputDate(), next: manilaInputDate(new Date(Date.now() + 3600000)) }))
 
   useEffect(() => {
     document.title = 'Register a visitor | Haruhay'
@@ -29,6 +33,7 @@ export default function RegisterVisitor() {
   function submitRequest(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setError('')
+    setNotice('')
 
     const form = event.currentTarget
     const data = new FormData(form)
@@ -46,11 +51,11 @@ export default function RegisterVisitor() {
       return
     }
 
-    const stored = sessionStorage.getItem(REQUESTS_KEY)
-    const requests: VisitorRequest[] = stored ? JSON.parse(stored) : []
-    sessionStorage.setItem(REQUESTS_KEY, JSON.stringify([request, ...requests].slice(0, 20)))
-    setNotice(`Visitor request for ${request.fullName} was submitted for front desk review.`)
-    form.reset()
+    try {
+      createVisitorRequest(request)
+      setNotice(`Request for ${request.fullName} saved locally as pending review. No staff were notified.`)
+      form.reset()
+    } catch (error) { setError(error instanceof Error ? error.message : 'Could not save the visitor request.') }
   }
 
   return <ResidentLayout
@@ -109,7 +114,7 @@ export default function RegisterVisitor() {
               <span>Expected arrival</span>
               <span className="visitor-input-wrap">
                 <img src={asset('visitor-calendar.svg')} width="19" height="19" alt="" />
-                <input name="expectedArrival" type="datetime-local" defaultValue="2026-10-12T15:00" required />
+                <input name="expectedArrival" type="datetime-local" aria-label="Expected arrival (Philippine time)" min={arrivalDefaults.min} defaultValue={arrivalDefaults.next} required />
               </span>
             </label>
 
@@ -117,7 +122,7 @@ export default function RegisterVisitor() {
               <span>Resident / host</span>
               <span className="visitor-input-wrap visitor-input-readonly">
                 <img src={asset('visitor-users.svg')} width="19" height="19" alt="" />
-                <input value="Andrea Santos" aria-label="Resident or host" readOnly />
+                <input value={profile.fullName} aria-label="Resident or host" readOnly />
               </span>
             </label>
 
@@ -135,6 +140,7 @@ export default function RegisterVisitor() {
             <p>Guests are verified by the front desk. Please remind them to bring a valid ID.</p>
           </div>
 
+          <p className="resident-preview-label">Arrival times use Philippine time. Requests stay pending in this browser session until a staff workflow is connected. <a href="#/resident/logbook">View requests</a></p>
           {error && <p className="visitor-form-error" role="alert">{error}</p>}
 
           <div className="visitor-register-actions">

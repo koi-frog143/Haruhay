@@ -15,7 +15,7 @@
   position: relative;
   min-width: 0;
   height: 240px;
-  overflow: hidden;
+  overflow: visible;
   padding: 25px 27px;
   border-radius: 19px;
   background: var(--ink);
@@ -43,7 +43,7 @@
   text-align: center;
 }
 
-.billing-breakdown { height: 240px; padding: 20px 21px; border: 1px solid var(--line); background: #fff; }
+.billing-breakdown { position: relative; height: 240px; padding: 20px 21px; border: 1px solid var(--line); background: #fff; }
 .billing-breakdown h2 { margin: 0; color: #203c53; font-size: 17px; line-height: 25px; }
 .billing-breakdown dl { display: grid; gap: 19px; margin: 31px 6px 0 0; }
 .billing-breakdown dl > div { display: flex; align-items: center; justify-content: space-between; gap: 24px; }
@@ -173,6 +173,7 @@
 }
 
 @media (max-width: 900px) {
+  .billing-balance { overflow: hidden; }
   .billing-overview { grid-template-columns: 1fr; }
   .billing-breakdown { height: auto; min-height: 220px; }
   .billing-center-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }

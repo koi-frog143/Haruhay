@@ -1,3 +1,5 @@
+import { readPreview, savePreview } from './previewStore'
+
 export type MaintenanceStatus = 'Submitted' | 'Assigned' | 'In progress' | 'Resolved'
 
 export type MaintenanceTicket = {
@@ -75,12 +77,7 @@ export const seedMaintenanceTickets: MaintenanceTicket[] = [
 ]
 
 function readStoredTickets(): MaintenanceTicket[] {
-  try {
-    const value = sessionStorage.getItem(TICKETS_KEY)
-    return value ? JSON.parse(value) as MaintenanceTicket[] : []
-  } catch {
-    return []
-  }
+  return readPreview<MaintenanceTicket[]>(TICKETS_KEY, [], (value): value is MaintenanceTicket[] => Array.isArray(value) && value.every(ticket => ticket && ['id', 'title', 'submitted', 'category', 'categoryLabel', 'location', 'description', 'assignedTo', 'comment'].every(key => typeof ticket[key] === 'string') && ['Submitted', 'Assigned', 'In progress', 'Resolved'].includes(ticket.status)))
 }
 
 export function getMaintenanceTickets() {
@@ -88,13 +85,14 @@ export function getMaintenanceTickets() {
 }
 
 export function getMaintenanceTicket(id: string) {
-  return getMaintenanceTickets().find(ticket => ticket.id === id) ?? seedMaintenanceTickets[0]
+  return getMaintenanceTickets().find(ticket => ticket.id === id)
 }
 
 export function createMaintenanceTicket(draft: MaintenanceDraft) {
+  if (![draft.title, draft.description, draft.location, draft.category].every(value => value.trim())) throw new Error('Complete all required fields using non-empty text.')
   const stored = readStoredTickets()
-  const id = `TCK-${1043 + stored.length}`
-  const submitted = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date())
+  const id = `TCK-${Math.max(1042, ...getMaintenanceTickets().map(ticket => Number(ticket.id.replace('TCK-', '')) || 0)) + 1}`
+  const submitted = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Manila', month: 'short', day: 'numeric', year: 'numeric' }).format(new Date())
   const category = draft.category || 'General repair'
   const ticket: MaintenanceTicket = {
     id,
@@ -108,20 +106,24 @@ export function createMaintenanceTicket(draft: MaintenanceDraft) {
     assignedTo: 'Awaiting assignment',
     comment: 'Your request has been received. We will keep you updated here.',
   }
-  sessionStorage.setItem(TICKETS_KEY, JSON.stringify([ticket, ...stored]))
-  sessionStorage.removeItem(DRAFT_KEY)
+  savePreview(TICKETS_KEY, [ticket, ...stored])
+  try { sessionStorage.removeItem(DRAFT_KEY) } catch { /* Ticket is already saved. */ }
   return ticket
 }
 
 export function saveMaintenanceDraft(draft: MaintenanceDraft) {
-  sessionStorage.setItem(DRAFT_KEY, JSON.stringify(draft))
+  savePreview(DRAFT_KEY, draft)
 }
 
 export function getMaintenanceDraft(): MaintenanceDraft | null {
-  try {
-    const value = sessionStorage.getItem(DRAFT_KEY)
-    return value ? JSON.parse(value) as MaintenanceDraft : null
-  } catch {
-    return null
-  }
+  return readPreview<MaintenanceDraft | null>(DRAFT_KEY, null, (value): value is MaintenanceDraft => !!value && typeof value === 'object' && ['category', 'location', 'title', 'description'].every(key => typeof (value as Record<string, unknown>)[key] === 'string'))
+}
+
+export function getTicketComments(id: string): string[] {
+  return readPreview<string[]>(`haruhay-comments-${id}`, [], (value): value is string[] => Array.isArray(value) && value.every(comment => typeof comment === 'string'))
+}
+export function saveTicketComment(id: string, message: string) {
+  if (!getMaintenanceTicket(id)) throw new Error('This maintenance request could not be found.')
+  if (!message.trim() || message.trim().length > 300) throw new Error('Enter a comment of 1–300 characters.')
+  savePreview(`haruhay-comments-${id}`, [...getTicketComments(id), message.trim()])
 }

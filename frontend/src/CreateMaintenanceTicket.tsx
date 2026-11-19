@@ -19,6 +19,7 @@ function formDraft(form: HTMLFormElement): MaintenanceDraft {
 
 export default function CreateMaintenanceTicket() {
   const [notice, setNotice] = useState('')
+  const [error, setError] = useState('')
   const [draft] = useState(getMaintenanceDraft)
 
   useEffect(() => {
@@ -27,14 +28,19 @@ export default function CreateMaintenanceTicket() {
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    const ticket = createMaintenanceTicket(formDraft(event.currentTarget))
-    window.location.hash = `/resident/maintenance/${ticket.id}`
+    try {
+      const ticket = createMaintenanceTicket(formDraft(event.currentTarget))
+      window.location.hash = `/resident/maintenance/${ticket.id}`
+    } catch (error) { setError(error instanceof Error ? error.message : 'Could not save the request. Please try again.') }
   }
 
   function saveDraft(form: HTMLFormElement | null) {
     if (!form) return
-    saveMaintenanceDraft(formDraft(form))
-    setNotice('Your maintenance request draft was saved in this browser session.')
+    try {
+      saveMaintenanceDraft(formDraft(form))
+      setError('')
+      setNotice('Your maintenance request draft was saved in this browser session.')
+    } catch (error) { setError(error instanceof Error ? error.message : 'Could not save your draft.') }
   }
 
   return <ResidentLayout
@@ -97,6 +103,10 @@ export default function CreateMaintenanceTicket() {
           <div className="maintenance-form-actions">
             <button className="maintenance-submit" type="submit">Submit request</button>
             <button className="maintenance-save-draft" type="button" onClick={event => saveDraft(event.currentTarget.form)}>Save as draft</button>
+          </div>
+          <div className="maintenance-form-feedback">
+            {error && <p role="alert" className="resident-inline-error">{error}</p>}
+            <p className="resident-preview-label">Local preview · requests are saved in this browser session.</p>
           </div>
         </form>
 
