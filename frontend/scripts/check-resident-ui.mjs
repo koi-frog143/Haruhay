@@ -336,7 +336,7 @@ try {
     await escape()
   })
   await check('Corrupt local data falls back to usable fixtures', async () => {
-    await evaluate(`sessionStorage.setItem('haruhay-maintenance-tickets', '{broken'); sessionStorage.setItem('haruhay-visitor-requests', '[{},null,4]'); sessionStorage.setItem('haruhay-payment-channel', '"invalid"'); sessionStorage.setItem('haruhay-comments-TCK-1042', '{}'); window.dispatchEvent(new Event('haruhay-preview-updated'))`)
+    await evaluate(`sessionStorage.setItem('haruhay-maintenance-tickets', '{broken'); sessionStorage.setItem('haruhay-visitor-requests', '[{},null,4]'); sessionStorage.setItem('haruhay-visitors-v1', '{broken'); sessionStorage.setItem('haruhay-payment-channel', '"invalid"'); sessionStorage.setItem('haruhay-comments-TCK-1042', '{}'); window.dispatchEvent(new Event('haruhay-preview-updated'))`)
     await navigate('/resident/maintenance')
     assert.equal(await evaluate('document.querySelectorAll(".maintenance-table tbody tr").length'), 4)
     await route('/resident/logbook')

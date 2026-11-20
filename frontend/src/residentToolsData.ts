@@ -1,7 +1,8 @@
+import { getSettings } from './settingsData'
 import { getResidentProfile } from './profileData'
 import { getHoldingState, CURRENT_RESIDENT } from './holdingData'
 import { getMaintenanceTickets, getTicketComments } from './maintenanceData'
-import { announcements, billDueLabel, getVisitorRequests, money, payments, upcomingTotal } from './residentData'
+import { getAnnouncements, getBillingSummary, getResidentPayments, getVisitorRequests, money } from './residentData'
 
 export const residentServices = [
   { title: 'Dashboard', description: 'Home and overview', href: '#/resident/dashboard' },
@@ -17,6 +18,8 @@ export const residentServices = [
   { title: 'My profile', description: 'Account details and notification preferences', href: '#/resident/profile' },
 ]
 export function getSearchEntries() {
+  const announcements = getAnnouncements()
+  const payments = getResidentPayments()
   return [...residentServices,
     ...getMaintenanceTickets().map(ticket => ({ title: `${ticket.id} · ${ticket.title}`, description: `${ticket.category} · ${ticket.status} · ${ticket.description}`, href: `#/resident/maintenance/${ticket.id}` })),
     ...announcements.map(item => ({ title: item.title, description: item.description, href: '#/resident/community' })),
@@ -27,11 +30,14 @@ export function getSearchEntries() {
 }
 export function getNotifications() {
   const preferences = getResidentProfile()
+  const announcements = getAnnouncements()
+  const bill = getBillingSummary()
+  const policy = getSettings().notifications
   return [
-    ...(preferences.paymentReminders ? [{ id: 'bill-2026-10', title: `Sample rent due ${billDueLabel}`, description: `${money(upcomingTotal)} · October 2026 sample bill`, href: '#/resident/payments' }] : []),
+    ...(preferences.paymentReminders && policy.payments && bill.balance > 0 ? [{ id: `bill-${bill.periodKey}-${bill.balance}`, title: `Sample rent due ${bill.dueLabel}`, description: `${money(bill.balance)} · ${bill.period} sample bill`, href: '#/resident/payments' }] : []),
     ...getHoldingState().items.filter(item => item.residentId === CURRENT_RESIDENT && item.status === 'Ready').map(item => ({ id: `holding-${item.id}`, title: `${item.description} ready for pickup`, description: `${item.code} · Shelf ${item.slot}`, href: '#/resident/holding-station' })),
-    ...(preferences.maintenanceUpdates ? getMaintenanceTickets().filter(ticket => ticket.status !== 'Resolved').map(ticket => ({ id: `ticket-${ticket.id}-${ticket.status}-${getTicketComments(ticket.id).length}`, title: ticket.title, description: `${ticket.id} · ${ticket.status}`, href: `#/resident/maintenance/${ticket.id}` })) : []),
-    ...(preferences.communityAnnouncements ? announcements.map(item => ({ id: `announcement-${item.id}`, title: item.title, description: `${item.date} · Community notice`, href: '#/resident/community' })) : []),
+    ...(preferences.maintenanceUpdates && policy.maintenance ? getMaintenanceTickets().filter(ticket => ticket.status !== 'Resolved').map(ticket => ({ id: `ticket-${ticket.id}-${ticket.status}-${getTicketComments(ticket.id).length}`, title: ticket.title, description: `${ticket.id} · ${ticket.status}`, href: `#/resident/maintenance/${ticket.id}` })) : []),
+    ...(preferences.communityAnnouncements && policy.announcements ? announcements.map(item => ({ id: `announcement-${item.id}`, title: item.title, description: `${item.date} · Community notice`, href: '#/resident/community' })) : []),
     ...getVisitorRequests().filter(item => item.status === 'Pending review').map(item => ({ id: `request-${item.id}`, title: `${item.fullName}: pending review`, description: 'Saved locally; this is not a check-in.', href: '#/resident/logbook' })),
   ]
 }

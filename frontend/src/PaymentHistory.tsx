@@ -2,20 +2,21 @@ import { useEffect, useMemo, useState } from 'react'
 import ResidentLayout from './ResidentLayout'
 import './Billing.css'
 import ResidentDialog from './ResidentDialog'
-import { payments } from './residentData'
-import { downloadCsv } from './previewStore'
+import { getResidentPayments } from './residentData'
+import { downloadCsv, usePreviewData } from './previewStore'
 
 const asset = (name: string) => `./assets/dashboard/${name}`
 
-type PaymentStatus = 'Paid' | 'Pending'
+type PaymentStatus = 'Paid' | 'Pending' | 'Rejected'
 type PaymentFilter = 'All transactions' | PaymentStatus
 
 
-const filters: PaymentFilter[] = ['All transactions', 'Paid', 'Pending']
+const filters: PaymentFilter[] = ['All transactions', 'Paid', 'Pending', 'Rejected']
 
 
 export default function PaymentHistory() {
   const [filter, setFilter] = useState<PaymentFilter>('All transactions')
+  const payments = usePreviewData(getResidentPayments)
   const [notice, setNotice] = useState('')
   const [exportOpen, setExportOpen] = useState(false)
   const [selected, setSelected] = useState<string[]>([])
@@ -26,10 +27,10 @@ export default function PaymentHistory() {
 
   const visiblePayments = useMemo(() => payments.filter(payment => (
     filter === 'All transactions' || payment.status === filter
-  )), [filter])
+  )), [filter, payments])
 
   function exportReceipts() {
-    const chosen = visiblePayments.filter(payment => selected.includes(payment.period))
+    const chosen = visiblePayments.filter(payment => selected.includes(payment.id))
     if (!chosen.length) return
     const rows = [
       ['Billing period', 'Date paid', 'Method', 'Amount', 'Payment status'],
@@ -66,7 +67,7 @@ export default function PaymentHistory() {
               onClick={() => setFilter(option)}
             >{option}</button>)}
           </div>
-          <button className="payment-export" type="button" onClick={() => { setSelected(visiblePayments.map(payment => payment.period)); setExportOpen(true) }} disabled={visiblePayments.length === 0}>Export receipts</button>
+          <button className="payment-export" type="button" onClick={() => { setSelected(visiblePayments.map(payment => payment.id)); setExportOpen(true) }} disabled={visiblePayments.length === 0}>Export receipts</button>
         </div>
 
         <div className="payment-table-wrap">
@@ -75,14 +76,14 @@ export default function PaymentHistory() {
             <colgroup><col /><col /><col /><col /><col /></colgroup>
             <thead><tr><th>Billing period</th><th>Date paid</th><th>Method</th><th>Amount</th><th>Payment status</th></tr></thead>
             <tbody>
-              {visiblePayments.map(payment => <tr key={payment.period}>
+              {visiblePayments.map(payment => <tr key={payment.id}>
                 <th scope="row" data-label="Billing period">{payment.period}</th>
                 <td data-label="Date paid">{payment.date}</td>
                 <td data-label="Method">{payment.method}</td>
                 <td data-label="Amount">{payment.amount}</td>
                 <td data-label="Payment status"><span className={`payment-status ${payment.status.toLowerCase()}`}>{payment.status}</span></td>
               </tr>)}
-              {visiblePayments.length === 0 && <tr><td className="payment-empty" colSpan={5}>No pending payments are shown in this preview.</td></tr>}
+              {visiblePayments.length === 0 && <tr><td className="payment-empty" colSpan={5}>No payments match this filter.</td></tr>}
             </tbody>
           </table>
         </div>
@@ -97,8 +98,8 @@ export default function PaymentHistory() {
     {exportOpen && <ResidentDialog title="Export receipts" eyebrow="PAYMENT HISTORY" onClose={() => setExportOpen(false)}>
       <div className="dialog-body">
         <p>Select the payment records you want to export. Format: CSV spreadsheet.</p>
-        <label className="dialog-choice"><input type="checkbox" checked={selected.length === visiblePayments.length} onChange={event => setSelected(event.target.checked ? visiblePayments.map(payment => payment.period) : [])} />Select all records</label>
-        <fieldset><legend>Payment records</legend>{visiblePayments.map(payment => <label className="dialog-choice" key={payment.period}><input type="checkbox" checked={selected.includes(payment.period)} onChange={event => setSelected(previous => event.target.checked ? [...previous, payment.period] : previous.filter(period => period !== payment.period))} />{payment.period} · {payment.amount}</label>)}</fieldset>
+        <label className="dialog-choice"><input type="checkbox" checked={selected.length === visiblePayments.length} onChange={event => setSelected(event.target.checked ? visiblePayments.map(payment => payment.id) : [])} />Select all records</label>
+        <fieldset><legend>Payment records</legend>{visiblePayments.map(payment => <label className="dialog-choice" key={payment.id}><input type="checkbox" checked={selected.includes(payment.id)} onChange={event => setSelected(previous => event.target.checked ? [...previous, payment.id] : previous.filter(period => period !== payment.id))} />{payment.period} · {payment.amount}</label>)}</fieldset>
         <p role="status">{selected.length} selected. This download is not an official receipt.</p>
       </div>
       <button className="dialog-primary" type="button" onClick={exportReceipts} disabled={!selected.length}>Download selected CSV</button>

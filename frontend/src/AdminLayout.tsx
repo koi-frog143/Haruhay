@@ -1,0 +1,77 @@
+import { useEffect, useRef, useState } from 'react'
+import type { ReactNode } from 'react'
+import { AdminIcon } from './AdminUI'
+import ResidentDialog from './ResidentDialog'
+import { getResidents } from './residentsData'
+import { getAllMaintenanceTickets } from './maintenanceData'
+import { getAllAnnouncements } from './announcementData'
+import { getPropertyBilling } from './billingData'
+import { getVisitorRequests } from './visitorData'
+import { usePreviewData } from './previewStore'
+import { getSettings } from './settingsData'
+
+export type AdminSection = 'Dashboard' | 'Residents' | 'Visitor logbook' | 'Maintenance' | 'Holding station' | 'Billing & payments' | 'Announcements' | 'Settings'
+const navigation: Array<{ label: AdminSection; href: string; icon: string }> = [
+  { label: 'Dashboard', href: '#/admin/dashboard', icon: 'imgIconHome' }, { label: 'Residents', href: '#/admin/residents', icon: 'imgIconUsers' }, { label: 'Visitor logbook', href: '#/admin/logbook', icon: 'imgIconBook' }, { label: 'Maintenance', href: '#/admin/maintenance', icon: 'imgIconWrench' }, { label: 'Holding station', href: '#/admin/holding-station', icon: 'imgIconBox' }, { label: 'Billing & payments', href: '#/admin/billing', icon: 'imgIconWallet' }, { label: 'Announcements', href: '#/admin/announcements', icon: 'imgIconMegaphone' }, { label: 'Settings', href: '#/admin/settings', icon: 'imgIconSettings' },
+]
+type Props = { active: AdminSection; node: string; children: ReactNode; notice?: string; onDismissNotice?: () => void }
+export default function AdminLayout({ active, node, children, notice = '', onDismissNotice }: Props) {
+  const [navOpen, setNavOpen] = useState(false)
+  const [narrow, setNarrow] = useState(() => matchMedia('(max-width: 980px)').matches)
+  const [accountOpen, setAccountOpen] = useState(false)
+  const [panel, setPanel] = useState<'search' | 'notifications' | 'support' | null>(null)
+  const [query, setQuery] = useState('')
+  const menu = useRef<HTMLButtonElement>(null)
+  const sidebar = useRef<HTMLElement>(null)
+  const account = useRef<HTMLButtonElement>(null)
+  const residents = usePreviewData(getResidents)
+  const tickets = usePreviewData(getAllMaintenanceTickets)
+  const announcements = usePreviewData(getAllAnnouncements)
+  const billing = usePreviewData(getPropertyBilling)
+  const requests = usePreviewData(getVisitorRequests)
+  const settings = usePreviewData(getSettings)
+  useEffect(() => { document.title = `${active} | Haruhay administration` }, [active])
+  const attention = [
+    ...tickets.filter(ticket => ticket.priority === 'High' && ticket.status !== 'Resolved').map(ticket => ({ title: ticket.title, detail: 'High priority · ' + ticket.location, href: `#/admin/maintenance/${ticket.id}` })),
+    { title: `${billing.pending.length} payments to review`, detail: 'Verify sample payment evidence', href: '#/admin/payments/approvals' },
+    { title: `${requests.filter(request => request.status === 'Pending review').length} pending visitor requests`, detail: 'Review before registering a visit', href: '#/admin/logbook' },
+  ]
+  const entries = [
+    ...navigation.map(item => ({ title: item.label, detail: 'Admin workspace', href: item.href })),
+    ...residents.map(resident => ({ title: resident.fullName, detail: `${resident.id} · Room ${resident.room}`, href: `#/admin/residents/${resident.id}` })),
+    ...tickets.map(ticket => ({ title: ticket.title, detail: `${ticket.id} · ${ticket.status}`, href: `#/admin/maintenance/${ticket.id}` })),
+    ...announcements.map(item => ({ title: item.title, detail: 'Announcement · ' + (item.published ? 'Published' : 'Draft'), href: '#/admin/announcements' })),
+  ]
+  const results = query.trim() ? entries.filter(item => query.toLowerCase().trim().split(/\s+/u).every(term => `${item.title} ${item.detail}`.toLowerCase().includes(term))) : []
+  useEffect(() => { const media = matchMedia('(max-width: 980px)'); const update = () => setNarrow(media.matches); media.addEventListener('change', update); return () => media.removeEventListener('change', update) }, [])
+  useEffect(() => {
+    const close = (event: KeyboardEvent) => { if (event.key === 'Escape') { setNavOpen(false); setAccountOpen(false); if (document.activeElement?.closest('.admin-account-menu')) account.current?.focus() } }
+    window.addEventListener('keydown', close)
+    return () => window.removeEventListener('keydown', close)
+  }, [])
+  useEffect(() => {
+    if (!navOpen || !narrow) return
+    const previous = document.body.style.overflow
+    const trigger = menu.current
+    document.body.style.overflow = 'hidden'
+    const links = () => Array.from(sidebar.current?.querySelectorAll<HTMLElement>('a[href], button') ?? [])
+    links()[0]?.focus()
+    const trap = (event: KeyboardEvent) => { if (event.key !== 'Tab') return; const controls = links(); if (event.shiftKey && document.activeElement === controls[0]) { event.preventDefault(); controls.at(-1)?.focus() } else if (!event.shiftKey && document.activeElement === controls.at(-1)) { event.preventDefault(); controls[0]?.focus() } }
+    window.addEventListener('keydown', trap)
+    return () => { document.body.style.overflow = previous; window.removeEventListener('keydown', trap); trigger?.focus() }
+  }, [navOpen, narrow])
+  return <main className="admin-shell">
+    <button className={'admin-backdrop ' + (navOpen ? 'is-open' : '')} tabIndex={-1} aria-hidden={!navOpen} aria-label="Close admin navigation" onClick={() => setNavOpen(false)} />
+    <aside ref={sidebar} id="admin-navigation" className={'admin-sidebar ' + (navOpen ? 'is-open' : '')} inert={narrow && !navOpen} aria-label="Administrator navigation">
+      <a className="admin-brand" href="#/admin/dashboard" aria-label="Haruhay administrator home"><AdminIcon node={node} name="imgHaruhayFinalWebFallbackMark" /><AdminIcon node={node} name="imgHaruhayFinalWebFallbackWordmark" /></a>
+      <nav><p>ADMIN WORKSPACE</p>{navigation.map(item => <a key={item.label} className={item.label === active ? 'active' : ''} aria-current={item.label === active ? 'page' : undefined} href={item.href} onClick={() => setNavOpen(false)}><AdminIcon node={node} name={item.icon} />{item.label}</a>)}</nav>
+      <div className="admin-sidebar-footer"><a href="#/login">Sign out of preview</a><button className="admin-support" onClick={() => { setPanel('support'); setNavOpen(false) }}><span><AdminIcon node={node} name="imgIconShield" /><strong>Here for you, always.</strong></span><small>Need support? Talk to our team.</small></button></div>
+    </aside>
+    <section className="admin-workspace" inert={narrow && navOpen}>
+      <header className="admin-topbar"><button className="admin-menu-button" ref={menu} aria-label="Open admin navigation" aria-expanded={navOpen} aria-controls="admin-navigation" onClick={() => setNavOpen(true)}><span /><span /><span /></button><p>Administration / {active}</p><div className="admin-topbar-actions"><form className="admin-search" role="search" onSubmit={event => { event.preventDefault(); setPanel('search') }}><AdminIcon node={node} name="imgIconSearch" /><input value={query} onChange={event => setQuery(event.target.value)} placeholder="Search Haruhay..." aria-label="Search administrator records" /></form><button className="admin-mobile-search" aria-label="Search administrator records" onClick={() => setPanel('search')}><AdminIcon node={node} name="imgIconSearch" /></button><button className="admin-bell" aria-label="Admin notifications" onClick={() => setPanel('notifications')}><AdminIcon node={node} name="imgIconBell" /><AdminIcon node={node} name="imgDecorativeCircle" className="admin-notification-dot" /></button><div className="admin-account-anchor"><button className="admin-account" ref={account} aria-expanded={accountOpen} aria-label="Open administrator account menu" onClick={() => setAccountOpen(!accountOpen)}><span>JD</span><strong>Joy D.</strong></button>{accountOpen && <nav className="admin-account-menu"><a href="#/admin/settings" onClick={() => setAccountOpen(false)}>Settings & permissions</a><a href="#/resident/dashboard">Resident preview</a><a href="#/login">Sign out of preview</a></nav>}</div></div></header>
+      <div className="admin-content">{children}<p className="admin-preview-note">Admin preview · changes stay in this browser session. Sign-in and server permissions are not connected.</p></div>
+      {notice && <div className="admin-toast" role="status">{notice}<button aria-label="Dismiss message" onClick={onDismissNotice}>×</button></div>}
+      {panel && <ResidentDialog title={panel === 'search' ? 'Search Haruhay' : panel === 'notifications' ? 'Admin notifications' : 'Property support'} eyebrow="ADMIN WORKSPACE" onClose={() => setPanel(null)}><div className="dialog-body">{panel === 'search' ? <><label>Search pages, residents and tickets<input type="search" value={query} onChange={event => setQuery(event.target.value)} /></label><p role="status">{query.trim() ? `${results.length} results` : 'Enter a search term.'}</p><ul className="dialog-list">{results.map((item, index) => <li key={index}><a href={item.href} onClick={() => setPanel(null)}>{item.title}</a><small>{item.detail}</small></li>)}</ul></> : panel === 'notifications' ? <ul className="dialog-list">{attention.map(item => <li key={item.href}><a href={item.href} onClick={() => setPanel(null)}>{item.title}</a><small>{item.detail}</small></li>)}</ul> : <><p>{settings.property.name}</p><p>{settings.property.contact}</p><p>This preview does not send support messages. Check with the property team directly.</p><a href="#/admin/settings" onClick={() => setPanel(null)}>Manage property contact details</a></>}</div></ResidentDialog>}
+    </section>
+  </main>
+}

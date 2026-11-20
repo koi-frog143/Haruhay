@@ -1,6 +1,6 @@
 # Haruhay frontend
 
-React + TypeScript + Vite implementation of the Haruhay web landing page (18:20) and authentication screens from Figma: login (18:106), registration (18:158), and password reset (18:217).
+React + TypeScript + Vite implementation of the Haruhay website, authentication previews, resident portal and administrator workspace from Figma.
 
 ## Preview without a backend or database
 
@@ -35,7 +35,7 @@ Use the links in the forms to switch screens. Browser Back and Forward also work
 Stop the preview with Ctrl+C. Do not open index.html directly; Vite serves the TypeScript application.
 
 No Spring Boot server, database, API keys, or environment files are needed.
-These forms validate locally without sending or saving credentials. A valid login opens the resident dashboard UI preview; registration and password reset display preview confirmations without creating an account or sending email. The property dropdown contains one clearly labeled demo property. The administrator link explains that its workspace is outside this preview.
+These forms validate locally without sending or saving credentials. A valid login opens the resident dashboard UI preview; registration and password reset display preview confirmations without creating an account or sending email. The property dropdown contains one clearly labeled demo property. The login screen's administrator preview button opens the admin dashboard directly, without authentication.
 
 Try a valid email and any non-empty password for login; registration requires a name, valid email, password of at least eight characters, and demo property. Password visibility can be toggled. Check the layout at desktop and mobile widths.
 
@@ -52,7 +52,7 @@ The existing Vite /api proxy is retained for future integration; these screens n
 
 ## Resident interactions
 
-The resident portal uses shared sample records and browser session storage. Changes survive navigation and refresh in the same tab; this is a frontend preview with no server authentication, notifications, staff review or payment processing.
+The resident and admin portals share sample records and browser session storage. Changes survive navigation and refresh in the same tab; this is a frontend preview with no server authentication, real notification delivery or payment processing. Staff review actions update local preview records only.
 
 - Access-log export opens a date-range dialog and exports matching records from the current activity filter as CSV.
 - Payment history lets residents select individual records for CSV export. These files are spreadsheets, not official receipt documents.
@@ -69,7 +69,43 @@ For browser integration verification, start Vite and an isolated Chrome instance
 
 ## Assets
 
-Figma artwork is stored locally in public/assets/auth, public/assets/landing, and public/assets/dashboard. DM Sans is bundled locally with its OFL license, so the UI does not depend on a font CDN.
+Figma artwork is stored locally in public/assets/auth, public/assets/landing, public/assets/dashboard and public/assets/admin. Admin artwork reuses existing files when their content matches exactly; admin-artwork.json maps each design screen to its local assets and original SVG dimensions. DM Sans is bundled locally with its OFL license, so the UI does not depend on a font CDN.
+
+## Administrator workspace
+
+Use **Preview administrator workspace** on the login screen or open these hash routes:
+
+- Dashboard: `#/admin/dashboard`
+- Resident directory: `#/admin/residents`
+- Resident details: `#/admin/residents/RES-0204`
+- Visitor logbook: `#/admin/logbook`
+- Maintenance operations: `#/admin/maintenance`
+- Maintenance details: `#/admin/maintenance/TCK-1043`
+- Holding Station manager: `#/admin/holding-station`
+- Billing overview: `#/admin/billing`
+- Payment approvals: `#/admin/payments/approvals`
+- Announcements: `#/admin/announcements`
+- Property and staff settings: `#/admin/settings`
+
+The dashboard derives metrics and collection charts from the same records used by the modules. Directory search, filters, add/edit forms and missing-record states work locally. Resident detail links can restrict visitor/payment lists to that resident. Contact actions save drafts and never send messages.
+
+Visitor requests remain pending until registered as **Expected** visits. Staff must separately record check-in and check-out; requests and expected visits do not count as guests on site. Arrival and activity times use Philippine time.
+
+Maintenance priority is separate from workflow status. Technician assignment, priority, status, comments and activity updates persist and appear in the resident's own maintenance screens. Property-wide tickets belonging to other residents stay out of the current resident's list.
+
+Payment review shows sample transaction evidence, requires a verification checkbox, and requires a reason for rejection. Approvals update local collected totals, remaining balances and resident payment history. No payment is processed, no external evidence is fetched and no real transaction is verified. Monthly rules determine the selected preview period's charges; historical payment amounts are retained.
+
+Announcements can be created, edited, published or kept as drafts. Only published notices appear on the resident board. Property, staff roles/permission flags, billing rules, notification preferences and security/retention policies have editable dialogs. Reports export selected date ranges as CSV for residents, visits, payments, maintenance and held items.
+
+Design assumptions and boundaries:
+
+- The Figma dialogs contain short preview descriptions rather than complete forms. Functional fields expand those dialogs using the existing colors, typography and spacing.
+- Sample totals are derived from six initial resident records and the available transactions, rather than reproducing illustrative Figma counts such as 48 residents. Existing resident/package identifiers are preserved, including the current resident `RES-0204`.
+- This preview treats each room as one active resident assignment. Inactive records can retain a room. Room capacity/bed management is not modeled.
+- Local storage is session storage in the same browser tab. There is no cross-device synchronization, server authorization, automatic retention deletion, email delivery or PDF receipt generation. Staff permissions and security options are saved policy preferences, not enforced backend controls.
+- The existing front desk URL, release validation, shelf occupancy, inquiries, editing/deletion and history use the same HoldingStation component inside the admin layout. Package release identity checks remain mandatory regardless of the saved security-policy preference.
+
+Run `node scripts/check-admin-ui.mjs` with Vite and the same isolated Chrome debugging setup described above. It checks all 11 admin screens at desktop and narrow widths, cross-portal state changes, forms, settings, exports, keyboard focus, navigation and the Holding Station workflows. Its screenshots, local asset geometry, CSV downloads and results are saved under `.ui-verification/admin`. Re-run the resident browser checks after modifying shared data helpers.
 
 ## Holding Station
 

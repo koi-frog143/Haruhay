@@ -1,9 +1,10 @@
+import { getCurrentResident } from './residentsData'
 import { useEffect, useState } from 'react'
 import ResidentLayout from './ResidentLayout'
 import { CURRENT_RESIDENT, useHoldingState } from './holdingData'
 import { getMaintenanceTickets } from './maintenanceData'
 import { getResidentProfile } from './profileData'
-import { billDueLabel, billTiming, money, upcomingTotal, visitorEntries } from './residentData'
+import { getBillingSummary, getVisitorEntries, money } from './residentData'
 import { usePreviewData } from './previewStore'
 import ResidentTools from './ResidentTools'
 
@@ -30,8 +31,11 @@ export default function ResidentDashboard() {
   const [servicesOpen, setServicesOpen] = useState(false)
   const profile = usePreviewData(getResidentProfile)
   const tickets = usePreviewData(getMaintenanceTickets)
+  const bill = usePreviewData(getBillingSummary)
+  const visitorEntries = usePreviewData(getVisitorEntries)
+  const resident = usePreviewData(getCurrentResident)
   const values: Record<string, string> = {
-    'Upcoming rent': money(upcomingTotal),
+    'Upcoming rent': money(bill.balance),
     'Items for pickup': String(pickupCount).padStart(2, '0'),
     'Active maintenance ticket': String(tickets.filter(ticket => ticket.status !== 'Resolved').length).padStart(2, '0'),
     'Recent guest entries': String(visitorEntries.length).padStart(2, '0'),
@@ -54,7 +58,7 @@ export default function ResidentDashboard() {
   >
     <div className="resident-content">
       <header className="resident-page-heading">
-        <span>YOUR SPACE&nbsp; / &nbsp;ROOM 204</span>
+        <span>YOUR SPACE&nbsp; / &nbsp;ROOM {resident.room}</span>
         <h1>Welcome home, {profile.fullName.trim().split(/\s+/u)[0]}!</h1>
         <p>Another day in a space that cares for you.</p>
       </header>
@@ -64,7 +68,7 @@ export default function ResidentDashboard() {
         <img className="resident-welcome-heart" src={asset('icon-heart-welcome.svg')} width="45" height="45" alt="" />
         <h2 id="resident-welcome-title">Your little corner of belonging.</h2>
         <p>Everything about your stay, calmly in one place. Check in, stay informed, and let us handle the rest.</p>
-        <span className="resident-room-badge">HOME&nbsp; • &nbsp;ROOM 204</span>
+        <span className="resident-room-badge">HOME&nbsp; • &nbsp;ROOM {resident.room}</span>
       </section>
 
       <section className="resident-metrics" aria-label="Your stay at a glance">
@@ -100,9 +104,9 @@ export default function ResidentDashboard() {
           </div>
           <a className="resident-heads-up" href="#/resident/payments">
             <strong>Heads up</strong>
-            <span className="resident-due-date">{billDueLabel.toUpperCase()}</span>
+            <span className="resident-due-date">{bill.dueLabel.toUpperCase()}</span>
             <b>Rent due</b>
-            <span>{billTiming()}</span>
+            <span>{bill.timing}</span>
           </a>
         </div>
       </section>
