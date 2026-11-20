@@ -1,12 +1,10 @@
 ﻿import { useEffect, useState } from 'react'
 
-export const HOLDING_RESIDENTS = {
-  'RES-0204': { name: 'Andrea S.', room: '204' },
-  'RES-0101': { name: 'Marco R.', room: '101' },
-  'RES-0312': { name: 'Lea T.', room: '312' },
-}
-export type ResidentId = keyof typeof HOLDING_RESIDENTS
-export const CURRENT_RESIDENT: ResidentId = 'RES-0204'
+import { CURRENT_RESIDENT_ID, getResidents } from './residentsData'
+
+export type ResidentId = string
+export const CURRENT_RESIDENT: ResidentId = CURRENT_RESIDENT_ID
+export function getHoldingResidents(): Record<string, { name: string; room: string }> { return Object.fromEntries(getResidents().map(resident => [resident.id, { name: resident.fullName, room: resident.room }])) }
 export const HOLDING_SLOTS = ['A-1', 'A-2', 'A-3', 'A-4', 'B-1', 'B-2']
 export const HOLDING_CATEGORIES = ['Parcel', 'Letter / document', 'Food delivery', 'Other']
 export type HoldingItem = {
@@ -62,7 +60,7 @@ function isItem(value: unknown): value is HoldingItem {
   const item = value as Record<string, unknown>
   return Number.isSafeInteger(item.id) && Number(item.id) > 0 &&
     ['code', 'category', 'description', 'sender', 'depositor', 'tracking', 'slot', 'received', 'pin'].every(key => typeof item[key] === 'string') &&
-    typeof item.residentId === 'string' && Object.hasOwn(HOLDING_RESIDENTS, item.residentId) &&
+    typeof item.residentId === 'string' && Object.hasOwn(getHoldingResidents(), item.residentId) &&
     (item.status === 'Ready' || item.status === 'Claimed') && Array.isArray(item.history) && item.history.every(line => typeof line === 'string') &&
     (item.claimed === undefined || typeof item.claimed === 'string')
 }

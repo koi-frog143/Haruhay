@@ -5,6 +5,7 @@ import './RegisterVisitor.css'
 import { createVisitorRequest } from './residentData'
 import { getResidentProfile } from './profileData'
 import { manilaInputDate, usePreviewData } from './previewStore'
+import { getCurrentResident } from './residentsData'
 
 const asset = (name: string) => `./assets/dashboard/${name}`
 
@@ -24,6 +25,7 @@ export default function RegisterVisitor() {
   const [notice, setNotice] = useState('')
   const [error, setError] = useState('')
   const profile = usePreviewData(getResidentProfile)
+  const resident = usePreviewData(getCurrentResident)
   const [arrivalDefaults] = useState(() => ({ min: manilaInputDate(), next: manilaInputDate(new Date(Date.now() + 3600000)) }))
 
   useEffect(() => {
@@ -130,7 +132,7 @@ export default function RegisterVisitor() {
               <span>Room to visit</span>
               <span className="visitor-input-wrap visitor-input-readonly">
                 <img src={asset('visitor-building.svg')} width="19" height="19" alt="" />
-                <input value="204 / second floor" aria-label="Room to visit" readOnly />
+                <input value={`Room ${resident.room}`} aria-label="Room to visit" readOnly />
               </span>
             </label>
           </div>
@@ -140,7 +142,7 @@ export default function RegisterVisitor() {
             <p>Guests are verified by the front desk. Please remind them to bring a valid ID.</p>
           </div>
 
-          <p className="resident-preview-label">Arrival times use Philippine time. Requests stay pending in this browser session until a staff workflow is connected. <a href="#/resident/logbook">View requests</a></p>
+          <p className="resident-preview-label">Arrival times use Philippine time. Requests stay pending until registered in the administrator preview. No real notifications are sent. <a href="#/resident/logbook">View requests</a></p>
           {error && <p className="visitor-form-error" role="alert">{error}</p>}
 
           <div className="visitor-register-actions">

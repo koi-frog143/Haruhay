@@ -15,11 +15,13 @@ import HoldingStation from './HoldingStation'
 import RegisterVisitor from './RegisterVisitor'
 import AccessHistory from './AccessHistory'
 import CommunityBoard from './CommunityBoard'
+import AdminApp from './AdminApp'
 
 type Screen = 'login' | 'register' | 'reset'
-type Route = Screen | 'home' | 'resident-dashboard' | 'resident-logbook' | 'resident-register-visitor' | 'resident-access-history' | 'resident-community' | 'resident-maintenance' | 'resident-maintenance-new' | 'resident-maintenance-detail' | 'resident-payments' | 'resident-payment-history' | 'resident-profile' | 'resident-holding' | 'desk-holding'
+type Route = Screen | 'admin' | 'home' | 'resident-dashboard' | 'resident-logbook' | 'resident-register-visitor' | 'resident-access-history' | 'resident-community' | 'resident-maintenance' | 'resident-maintenance-new' | 'resident-maintenance-detail' | 'resident-payments' | 'resident-payment-history' | 'resident-profile' | 'resident-holding' | 'desk-holding'
 function currentScreen(): Route {
   const route = window.location.hash.replace('#', '')
+  if (route === '/admin' || route.startsWith('/admin/')) return 'admin'
   if (route === '/resident/holding-station') return 'resident-holding'
   if (route === '/front-desk/holding-station') return 'desk-holding'
   if (route === '/resident/profile') return 'resident-profile'
@@ -144,7 +146,7 @@ function AuthForm({ screen }: { screen: Screen }) {
             : <a href="#/login">Back to log in <span aria-hidden="true"> →</span></a>}
       </nav>
       {screen === 'login' && <footer className="auth-footer">
-        <button type="button" className="admin-preview" onClick={() => setNotice('Administrator workspace is not included in this login and registration preview.')}>Preview administrator workspace</button>
+        <button type="button" className="admin-preview" onClick={() => { window.location.hash = '/admin/dashboard' }}>Preview administrator workspace</button>
         <p><img src={artwork.login.IconShield1} alt="" />Safe, private and made for your community.</p>
       </footer>}
     </div>
@@ -162,6 +164,7 @@ export default function App() {
   useEffect(() => {
     if (screen !== 'home' || !['#haruhay-way', '#features', '#community'].includes(window.location.hash)) window.scrollTo(0, 0)
   }, [screen])
+  if (screen === 'admin') return <AdminApp key={routeHash} />
   if (screen === 'resident-holding') return <HoldingStation key='resident' />
   if (screen === 'desk-holding') return <HoldingStation key='desk' desk />
   if (screen === 'resident-profile') return <ResidentProfile />

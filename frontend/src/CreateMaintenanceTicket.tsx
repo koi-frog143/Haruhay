@@ -4,6 +4,7 @@ import ResidentLayout from './ResidentLayout'
 import { createMaintenanceTicket, getMaintenanceDraft, saveMaintenanceDraft } from './maintenanceData'
 import type { MaintenanceDraft } from './maintenanceData'
 import './Maintenance.css'
+import { getCurrentResident } from './residentsData'
 
 const asset = (name: string) => `./assets/dashboard/${name}`
 
@@ -82,7 +83,7 @@ export default function CreateMaintenanceTicket() {
               <span>Room or location</span>
               <span className="maintenance-field">
                 <img src={asset('maintenance-location-field.svg')} width="19" height="19" alt="" />
-                <input name="location" defaultValue={draft?.location ?? 'Room 204, second floor'} placeholder="Room 204, second floor" maxLength={100} required />
+                <input name="location" defaultValue={draft?.location ?? `Room ${getCurrentResident().room}`} placeholder="Room or shared area" maxLength={100} required />
               </span>
             </label>
           </div>

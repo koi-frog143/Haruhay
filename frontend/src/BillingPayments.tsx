@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import ResidentLayout from './ResidentLayout'
 import './Billing.css'
 import ResidentDialog from './ResidentDialog'
-import { billDueLabel, billTiming, getPaymentChannel, money, paymentChannels, savePaymentChannel, upcomingBill, upcomingTotal } from './residentData'
+import { getBillingSummary, getPaymentChannel, money, paymentChannels, savePaymentChannel } from './residentData'
 import type { PaymentChannel } from './residentData'
 import { usePreviewData } from './previewStore'
 
@@ -31,6 +31,10 @@ const billingCenter = [
 
 export default function BillingPayments() {
   const [notice, setNotice] = useState('')
+  const upcomingBill = usePreviewData(getBillingSummary)
+  const upcomingTotal = upcomingBill.balance
+  const billDueLabel = upcomingBill.dueLabel
+  const billTiming = () => upcomingBill.timing
   const channel = usePreviewData(getPaymentChannel)
   const [selectedChannel, setSelectedChannel] = useState<PaymentChannel>(channel)
   const [panel, setPanel] = useState<'upcoming' | 'methods' | null>(null)
@@ -60,7 +64,7 @@ export default function BillingPayments() {
         <p>Your rent, utilities, and receipts — in one organized place.</p>
       </header>
 
-      <section className="billing-overview" aria-label="October billing overview">
+      <section className="billing-overview" aria-label={`${upcomingBill.period} billing overview`}>
         <article className="billing-balance">
           <img className="billing-balance-circle" src={asset('billing-balance-circle.svg')} width="233" height="233" alt="" />
           <span>TOTAL UPCOMING</span>
@@ -75,6 +79,7 @@ export default function BillingPayments() {
             <div><dt>Monthly rent</dt><dd>{money(upcomingBill.rent)}</dd></div>
             <div><dt>Utilities</dt><dd>{money(upcomingBill.utilities)}</dd></div>
             <div><dt>Outstanding balance</dt><dd>{money(upcomingBill.outstanding)}</dd></div>
+            {upcomingBill.paid > 0 && <div><dt>Approved payments</dt><dd>{money(upcomingBill.paid)}</dd></div>}
           </dl>
         </article>
       </section>
@@ -99,10 +104,10 @@ export default function BillingPayments() {
           })}
         </div>
       </section>
-      <p className="resident-preview-label">Sample billing period: {upcomingBill.period} · Preferred channel: {channel}. No payments are processed.</p>
+      <p className="resident-preview-label">Sample billing period: {upcomingBill.period} · Preferred channel: {channel}. {upcomingBill.paid > 0 ? `Approved locally: ${money(upcomingBill.paid)}. Remaining: ${money(upcomingBill.balance)}.` : ''} No payments are processed.</p>
     </div>
     {panel && <ResidentDialog title={panel === 'upcoming' ? 'Upcoming payments' : 'Payment methods'} eyebrow="MONTHLY DUES" onClose={() => setPanel(null)}>
-      {panel === 'upcoming' ? <><div className="dialog-body"><p><strong>{upcomingBill.period} · {money(upcomingTotal)}</strong></p><p>Sample due date: {billDueLabel}, 2026. {billTiming()}.</p><p>Rent {money(upcomingBill.rent)} + utilities {money(upcomingBill.utilities)}. Preferred channel: {channel}.</p><p>For actual balances and payment instructions, check with the front desk. This preview cannot accept or submit payments.</p><a href="#/resident/payments/history" onClick={() => setPanel(null)}>View payment history</a></div><button className="dialog-primary" onClick={() => setPanel(null)}>Done</button></> : <form onSubmit={event => { event.preventDefault(); try { savePaymentChannel(selectedChannel); setPanel(null); setNotice('Preferred payment channel saved locally.') } catch (error) { setError(error instanceof Error ? error.message : 'Could not save your preference.') } }}>
+      {panel === 'upcoming' ? <><div className="dialog-body"><p><strong>{upcomingBill.period} · {money(upcomingTotal)}</strong></p><p>Sample due date: {billDueLabel}, {upcomingBill.periodKey.slice(0, 4)}. {billTiming()}.</p><p>Rent {money(upcomingBill.rent)} + utilities {money(upcomingBill.utilities)}. Preferred channel: {channel}.</p><p>For actual balances and payment instructions, check with the front desk. This preview cannot accept or submit payments.</p><a href="#/resident/payments/history" onClick={() => setPanel(null)}>View payment history</a></div><button className="dialog-primary" onClick={() => setPanel(null)}>Done</button></> : <form onSubmit={event => { event.preventDefault(); try { savePaymentChannel(selectedChannel); setPanel(null); setNotice('Preferred payment channel saved locally.') } catch (error) { setError(error instanceof Error ? error.message : 'Could not save your preference.') } }}>
         <div className="dialog-body"><p>Choose your preferred channel. Only the channel name is stored; no account or financial details are collected.</p><fieldset><legend>Preferred payment channel</legend>{paymentChannels.map(value => <label className="dialog-choice" key={value}><input type="radio" name="channel" value={value} checked={selectedChannel === value} onChange={() => setSelectedChannel(value)} />{value}</label>)}</fieldset><p>Confirm actual payment instructions with the front desk.</p></div>
         {error && <p className="dialog-error" role="alert">{error}</p>}<button className="dialog-primary">Save preference (preview)</button>
       </form>}

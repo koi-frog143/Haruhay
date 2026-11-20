@@ -1,3 +1,5 @@
+import { getCurrentResident, saveCurrentProfile } from './residentsData'
+
 export type ResidentProfileData = {
   fullName: string
   email: string
@@ -7,37 +9,13 @@ export type ResidentProfileData = {
   communityAnnouncements: boolean
 }
 
-const STORAGE_KEY = 'haruhay-resident-profile'
-const defaults: ResidentProfileData = {
-  fullName: 'Andrea Santos',
-  email: 'andrea.santos@email.com',
-  mobile: '0917 123 4567',
-  paymentReminders: true,
-  maintenanceUpdates: true,
-  communityAnnouncements: true,
-}
-
 export function getResidentProfile(): ResidentProfileData {
-  try {
-    const stored: unknown = JSON.parse(sessionStorage.getItem(STORAGE_KEY) ?? 'null')
-    if (!stored || typeof stored !== 'object') return { ...defaults }
-    const values = stored as Record<string, unknown>
-    const result = { ...defaults }
-    for (const key of ['fullName', 'email', 'mobile'] as const) {
-      if (key in stored && typeof values[key] === 'string' && values[key].trim()) result[key] = values[key]
-    }
-    for (const key of ['paymentReminders', 'maintenanceUpdates', 'communityAnnouncements'] as const) {
-      if (key in stored && typeof values[key] === 'boolean') result[key] = values[key]
-    }
-    return result
-  } catch {
-    return { ...defaults }
-  }
+  const { fullName, email, mobile, paymentReminders, maintenanceUpdates, communityAnnouncements } = getCurrentResident()
+  return { fullName, email, mobile, paymentReminders, maintenanceUpdates, communityAnnouncements }
 }
 
 export function saveResidentProfile(profile: ResidentProfileData) {
-  sessionStorage.setItem(STORAGE_KEY, JSON.stringify(profile))
-  window.dispatchEvent(new Event('haruhay-profile-updated'))
+  saveCurrentProfile(profile)
 }
 
 export function profileInitials(name: string) {

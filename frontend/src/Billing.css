@@ -115,6 +115,7 @@
 .payment-table col:nth-child(4) { width: 15%; }
 .payment-table col:nth-child(5) { width: 21.3%; }
 .payment-table thead { background: var(--mist); }
+.payment-status.rejected { background: #fcecef; color: #a33245; }
 .payment-table thead tr { height: 51px; }
 .payment-table thead th {
   padding: 0 19px;

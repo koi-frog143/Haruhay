@@ -17,7 +17,7 @@ export default function ResidentDialog({ title, eyebrow, onClose, children }: Pr
       element?.close()
       queueMicrotask(() => {
         if (previous instanceof HTMLElement && previous.isConnected && !previous.closest('[inert]')) previous.focus()
-        else document.querySelector<HTMLElement>('.resident-menu-button')?.focus()
+        else document.querySelector<HTMLElement>('.resident-menu-button, .admin-menu-button')?.focus()
       })
     }
   }, [])

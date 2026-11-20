@@ -1,4 +1,5 @@
-import { readPreview, savePreview } from './previewStore'
+import { readPreview, savePreview, manilaInputDate } from './previewStore'
+import { CURRENT_RESIDENT_ID, getCurrentResident, getResident } from './residentsData'
 
 export type MaintenanceStatus = 'Submitted' | 'Assigned' | 'In progress' | 'Resolved'
 
@@ -13,6 +14,9 @@ export type MaintenanceTicket = {
   description: string
   assignedTo: string
   comment: string
+  residentId?: string
+  priority?: 'Normal' | 'High'
+  activity?: Array<{ text: string; created: string }>
 }
 
 export type MaintenanceDraft = {
@@ -77,11 +81,28 @@ export const seedMaintenanceTickets: MaintenanceTicket[] = [
 ]
 
 function readStoredTickets(): MaintenanceTicket[] {
-  return readPreview<MaintenanceTicket[]>(TICKETS_KEY, [], (value): value is MaintenanceTicket[] => Array.isArray(value) && value.every(ticket => ticket && ['id', 'title', 'submitted', 'category', 'categoryLabel', 'location', 'description', 'assignedTo', 'comment'].every(key => typeof ticket[key] === 'string') && ['Submitted', 'Assigned', 'In progress', 'Resolved'].includes(ticket.status)))
+  return readPreview<MaintenanceTicket[]>(TICKETS_KEY, [], (value): value is MaintenanceTicket[] => Array.isArray(value) && value.every(ticket => ticket && ['id', 'title', 'submitted', 'category', 'categoryLabel', 'location', 'description', 'assignedTo', 'comment'].every(key => typeof ticket[key] === 'string') && ['Submitted', 'Assigned', 'In progress', 'Resolved'].includes(ticket.status) && (ticket.priority === undefined || ['Normal', 'High'].includes(ticket.priority)) && (ticket.residentId === undefined || typeof ticket.residentId === 'string') && (ticket.activity === undefined || (Array.isArray(ticket.activity) && ticket.activity.every((item: { text: string; created: string }) => item && typeof item.text === 'string' && typeof item.created === 'string')))))
 }
 
+export function getAllMaintenanceTickets(): MaintenanceTicket[] {
+  const extra: MaintenanceTicket[] = [
+    { id: 'TCK-1043', residentId: 'RES-0045', priority: 'High', title: 'Broken hallway light', category: 'Electrical', categoryLabel: 'Electrical concern', location: 'Second floor, near Room 206', status: 'In progress', description: 'The shared hallway light flickers repeatedly and occasionally shuts off at night.', submitted: 'Oct 12, 2026', assignedTo: 'Marco Reyes', comment: 'Assigned to maintenance.', activity: [{ text: 'Assigned to maintenance', created: '2026-10-12T09:05' }] },
+    { id: 'TCK-1040', residentId: 'RES-0045', priority: 'Normal', title: 'AC unit inspection', category: 'Air conditioning', categoryLabel: 'Air conditioning', location: 'Room 302', status: 'Assigned', description: 'Please inspect the air-conditioning unit.', submitted: 'Oct 10, 2026', assignedTo: 'Marco Reyes', comment: 'Inspection scheduled.' },
+  ]
+  const rows = new Map([...seedMaintenanceTickets, ...extra].map(ticket => [ticket.id, { ...ticket, residentId: ticket.residentId ?? CURRENT_RESIDENT_ID, priority: ticket.priority ?? 'Normal' as const }]))
+  for (const ticket of readStoredTickets()) rows.set(ticket.id, { ...ticket, residentId: ticket.residentId ?? CURRENT_RESIDENT_ID, priority: ticket.priority ?? 'Normal' })
+  return [...rows.values()]
+}
 export function getMaintenanceTickets() {
-  return [...readStoredTickets(), ...seedMaintenanceTickets]
+  return getAllMaintenanceTickets().filter(ticket => ticket.residentId === CURRENT_RESIDENT_ID)
+}
+export function getAdminMaintenanceTicket(id: string) { return getAllMaintenanceTickets().find(ticket => ticket.id === id) }
+export function updateMaintenanceTicket(id: string, values: Pick<MaintenanceTicket, 'assignedTo' | 'status' | 'priority'>) {
+  const ticket = getAdminMaintenanceTicket(id)
+  if (!ticket) throw new Error('This maintenance request no longer exists.')
+  if (!values.assignedTo.trim() || !['Submitted', 'Assigned', 'In progress', 'Resolved'].includes(values.status) || !['Normal', 'High'].includes(values.priority ?? '')) throw new Error('Choose a technician, priority and valid status.')
+  const updated = { ...ticket, ...values, activity: [...(ticket.activity ?? []), { text: `${values.status} · Assigned to ${values.assignedTo} · ${values.priority} priority`, created: manilaInputDate() }] }
+  savePreview(TICKETS_KEY, [updated, ...readStoredTickets().filter(row => row.id !== id)])
 }
 
 export function getMaintenanceTicket(id: string) {
@@ -91,7 +112,7 @@ export function getMaintenanceTicket(id: string) {
 export function createMaintenanceTicket(draft: MaintenanceDraft) {
   if (![draft.title, draft.description, draft.location, draft.category].every(value => value.trim())) throw new Error('Complete all required fields using non-empty text.')
   const stored = readStoredTickets()
-  const id = `TCK-${Math.max(1042, ...getMaintenanceTickets().map(ticket => Number(ticket.id.replace('TCK-', '')) || 0)) + 1}`
+  const id = `TCK-${Math.max(1043, ...getAllMaintenanceTickets().map(ticket => Number(ticket.id.replace('TCK-', '')) || 0)) + 1}`
   const submitted = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Manila', month: 'short', day: 'numeric', year: 'numeric' }).format(new Date())
   const category = draft.category || 'General repair'
   const ticket: MaintenanceTicket = {
@@ -105,6 +126,9 @@ export function createMaintenanceTicket(draft: MaintenanceDraft) {
     description: draft.description,
     assignedTo: 'Awaiting assignment',
     comment: 'Your request has been received. We will keep you updated here.',
+    residentId: CURRENT_RESIDENT_ID,
+    priority: 'Normal',
+    activity: [{ text: `Request submitted by ${getCurrentResident().fullName}`, created: manilaInputDate() }],
   }
   savePreview(TICKETS_KEY, [ticket, ...stored])
   try { sessionStorage.removeItem(DRAFT_KEY) } catch { /* Ticket is already saved. */ }
@@ -119,11 +143,15 @@ export function getMaintenanceDraft(): MaintenanceDraft | null {
   return readPreview<MaintenanceDraft | null>(DRAFT_KEY, null, (value): value is MaintenanceDraft => !!value && typeof value === 'object' && ['category', 'location', 'title', 'description'].every(key => typeof (value as Record<string, unknown>)[key] === 'string'))
 }
 
-export function getTicketComments(id: string): string[] {
-  return readPreview<string[]>(`haruhay-comments-${id}`, [], (value): value is string[] => Array.isArray(value) && value.every(comment => typeof comment === 'string'))
+export type MaintenanceComment = { text: string; author: string; created: string }
+export function getMaintenanceComments(id: string): MaintenanceComment[] {
+  const comments = readPreview<Array<string | MaintenanceComment>>(`haruhay-comments-${id}`, [], (value): value is Array<string | MaintenanceComment> => Array.isArray(value) && value.every(comment => typeof comment === 'string' || (comment && typeof comment.text === 'string' && typeof comment.author === 'string' && typeof comment.created === 'string')))
+  return comments.map(comment => typeof comment === 'string' ? { text: comment, author: 'Resident', created: '' } : comment)
 }
-export function saveTicketComment(id: string, message: string) {
-  if (!getMaintenanceTicket(id)) throw new Error('This maintenance request could not be found.')
+export function getTicketComments(id: string) { return getMaintenanceComments(id).map(comment => comment.text) }
+export function saveTicketComment(id: string, message: string, author = 'Resident') {
+  const ticket = getAdminMaintenanceTicket(id)
+  if (!ticket || !getResident(ticket.residentId ?? CURRENT_RESIDENT_ID)) throw new Error('This maintenance request could not be found.')
   if (!message.trim() || message.trim().length > 300) throw new Error('Enter a comment of 1–300 characters.')
-  savePreview(`haruhay-comments-${id}`, [...getTicketComments(id), message.trim()])
+  savePreview(`haruhay-comments-${id}`, [...getMaintenanceComments(id), { text: message.trim(), author, created: manilaInputDate() }])
 }

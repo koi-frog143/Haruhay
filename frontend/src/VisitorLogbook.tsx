@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import ResidentLayout from './ResidentLayout'
 import './VisitorLogbook.css'
-import { accessRecords, visitorEntries, getVisitorRequests, cancelVisitorRequest } from './residentData'
+import { accessRecords, getVisitorEntries, getVisitorRequests, cancelVisitorRequest } from './residentData'
 import { getResidentProfile } from './profileData'
 import { downloadCsv, usePreviewData } from './previewStore'
 import ResidentDialog from './ResidentDialog'
@@ -15,9 +15,10 @@ export default function VisitorLogbook() {
   const [notice, setNotice] = useState('')
   const profile = usePreviewData(getResidentProfile)
   const requests = usePreviewData(getVisitorRequests)
+  const visitorEntries = usePreviewData(getVisitorEntries)
   const [cancelId, setCancelId] = useState<string | null>(null)
   const [error, setError] = useState('')
-  const entries = useMemo(() => [...visitorEntries, ...accessRecords.map(record => ({ person: profile.fullName, type: 'Resident', dateTime: `${record.date} · ${record.time}`, location: record.entryPoint, status: record.activity === 'Resident check-out' ? 'Checked out' : 'Verified', isoDate: record.isoDate }))].sort((a, b) => b.isoDate.localeCompare(a.isoDate)), [profile.fullName])
+  const entries = useMemo(() => [...visitorEntries, ...accessRecords.map(record => ({ person: profile.fullName, type: 'Resident', dateTime: `${record.date} · ${record.time}`, location: record.entryPoint, status: record.activity === 'Resident check-out' ? 'Checked out' : 'Verified', isoDate: record.isoDate }))].sort((a, b) => b.isoDate.localeCompare(a.isoDate)), [profile.fullName, visitorEntries])
   const metrics = [
     { value: String(visitorEntries.length).padStart(2, '0'), label: 'Recorded guest visits', icon: 'icon-users-metric.svg' },
     { value: String(visitorEntries.filter(entry => entry.status === 'Checked in').length).padStart(2, '0'), label: 'Guest on premises', icon: 'icon-user-metric.svg' },

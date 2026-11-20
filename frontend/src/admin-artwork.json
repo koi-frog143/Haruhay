@@ -1,0 +1,984 @@
+{
+  "18:1676": {
+    "imgIconHome": {
+      "src": "/assets/admin/IconHome-b61c3f75fc.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgHaruhayFinalWebFallbackWordmark": {
+      "src": "/assets/landing/HaruhayFinalWebFallbackWordmark.png",
+      "width": 929,
+      "height": 247
+    },
+    "imgIconBook": {
+      "src": "/assets/admin/IconBook-55882fdba0.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgIconUsers": {
+      "src": "/assets/admin/IconUsers-ef3032d46a.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgHaruhayFinalWebFallbackMark": {
+      "src": "/assets/landing/HaruhayFinalWebFallbackMark.png",
+      "width": 683,
+      "height": 705
+    },
+    "imgIconWrench": {
+      "src": "/assets/admin/IconWrench-109c1d5131.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgIconBox": {
+      "src": "/assets/admin/IconBox-b82daf0b40.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgIconMegaphone": {
+      "src": "/assets/admin/IconMegaphone-b20c312ee4.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgIconWallet": {
+      "src": "/assets/admin/IconWallet-2149c46935.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgIconSettings": {
+      "src": "/assets/admin/IconSettings-5f821ab187.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgIconSearch": {
+      "src": "/assets/admin/IconSearch-78e4aea8d7.svg",
+      "width": 19,
+      "height": 19
+    },
+    "imgIconShield": {
+      "src": "/assets/admin/IconShield-9f94e4c0ed.svg",
+      "width": 24,
+      "height": 24
+    },
+    "imgIconBell": {
+      "src": "/assets/admin/IconBell-5e71941c64.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgIconUsers1": {
+      "src": "/assets/admin/IconUsers1-6387f72e08.svg",
+      "width": 24,
+      "height": 24
+    },
+    "imgDecorativeCircle": {
+      "src": "/assets/admin/DecorativeCircle-4ee4e9803a.svg",
+      "width": 8,
+      "height": 8
+    },
+    "imgIconWrench1": {
+      "src": "/assets/admin/IconWrench1-cce76f05b1.svg",
+      "width": 24,
+      "height": 24
+    },
+    "imgIconBook1": {
+      "src": "/assets/admin/IconBook1-a75e47863c.svg",
+      "width": 24,
+      "height": 24
+    },
+    "imgIconWallet1": {
+      "src": "/assets/admin/IconWallet1-f1600683cf.svg",
+      "width": 24,
+      "height": 24
+    },
+    "imgIconZap": {
+      "src": "/assets/admin/IconZap-e9fbb22b31.svg",
+      "width": 22,
+      "height": 22
+    },
+    "imgIconWallet2": {
+      "src": "/assets/admin/IconWallet2-bb7777527e.svg",
+      "width": 22,
+      "height": 22
+    },
+    "imgIconBox1": {
+      "src": "/assets/admin/IconBox1-6ac06f8861.svg",
+      "width": 22,
+      "height": 22
+    }
+  },
+  "18:1809": {
+    "imgHaruhayFinalWebFallbackMark": {
+      "src": "/assets/landing/HaruhayFinalWebFallbackMark.png",
+      "width": 683,
+      "height": 705
+    },
+    "imgHaruhayFinalWebFallbackWordmark": {
+      "src": "/assets/landing/HaruhayFinalWebFallbackWordmark.png",
+      "width": 929,
+      "height": 247
+    },
+    "imgIconHome": {
+      "src": "/assets/admin/IconHome-f42a606c40.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgIconBook": {
+      "src": "/assets/admin/IconBook-55882fdba0.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgIconUsers": {
+      "src": "/assets/admin/IconUsers-e9edd762f1.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgIconWrench": {
+      "src": "/assets/admin/IconWrench-109c1d5131.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgIconWallet": {
+      "src": "/assets/admin/IconWallet-2149c46935.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgIconBox": {
+      "src": "/assets/admin/IconBox-b82daf0b40.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgIconMegaphone": {
+      "src": "/assets/admin/IconMegaphone-b20c312ee4.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgIconSearch": {
+      "src": "/assets/admin/IconSearch-78e4aea8d7.svg",
+      "width": 19,
+      "height": 19
+    },
+    "imgIconShield": {
+      "src": "/assets/admin/IconShield-9f94e4c0ed.svg",
+      "width": 24,
+      "height": 24
+    },
+    "imgIconSettings": {
+      "src": "/assets/admin/IconSettings-9a0ec49d7b.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgIconBell": {
+      "src": "/assets/admin/IconBell-5e71941c64.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgDecorativeCircle": {
+      "src": "/assets/admin/DecorativeCircle-4ee4e9803a.svg",
+      "width": 8,
+      "height": 8
+    },
+    "imgIconUsers1": {
+      "src": "/assets/admin/IconUsers1-6387f72e08.svg",
+      "width": 24,
+      "height": 24
+    },
+    "imgIconCheck": {
+      "src": "/assets/admin/IconCheck-b6afe6ec5d.svg",
+      "width": 24,
+      "height": 24
+    },
+    "imgIconClock": {
+      "src": "/assets/admin/IconClock-f40c639414.svg",
+      "width": 24,
+      "height": 24
+    },
+    "imgIconBuilding": {
+      "src": "/assets/admin/IconBuilding-316fec8fac.svg",
+      "width": 24,
+      "height": 24
+    },
+    "imgIconSearch1": {
+      "src": "/assets/admin/IconSearch1-cc50d15ca0.svg",
+      "width": 22,
+      "height": 22
+    }
+  },
+  "18:1947": {
+    "imgIconHome": {
+      "src": "/assets/admin/IconHome-f42a606c40.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgIconUsers": {
+      "src": "/assets/admin/IconUsers-e9edd762f1.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgHaruhayFinalWebFallbackWordmark": {
+      "src": "/assets/landing/HaruhayFinalWebFallbackWordmark.png",
+      "width": 929,
+      "height": 247
+    },
+    "imgHaruhayFinalWebFallbackMark": {
+      "src": "/assets/landing/HaruhayFinalWebFallbackMark.png",
+      "width": 683,
+      "height": 705
+    },
+    "imgIconBook": {
+      "src": "/assets/admin/IconBook-55882fdba0.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgIconWrench": {
+      "src": "/assets/admin/IconWrench-a324b4aa7c.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgIconBox": {
+      "src": "/assets/admin/IconBox-b82daf0b40.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgIconWallet": {
+      "src": "/assets/admin/IconWallet-2149c46935.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgIconSettings": {
+      "src": "/assets/admin/IconSettings-9a0ec49d7b.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgIconMegaphone": {
+      "src": "/assets/admin/IconMegaphone-b20c312ee4.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgIconShield": {
+      "src": "/assets/admin/IconShield-9f94e4c0ed.svg",
+      "width": 24,
+      "height": 24
+    },
+    "imgIconSearch": {
+      "src": "/assets/admin/IconSearch-78e4aea8d7.svg",
+      "width": 19,
+      "height": 19
+    },
+    "imgDecorativeCircle": {
+      "src": "/assets/admin/DecorativeCircle-4ee4e9803a.svg",
+      "width": 8,
+      "height": 8
+    },
+    "imgIconBell": {
+      "src": "/assets/admin/IconBell-5e71941c64.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgDecorativeCircle1": {
+      "src": "/assets/admin/DecorativeCircle1-baeebb7715.svg",
+      "width": 126,
+      "height": 126
+    }
+  },
+  "18:2055": {
+    "imgHaruhayFinalWebFallbackMark": {
+      "src": "/assets/landing/HaruhayFinalWebFallbackMark.png",
+      "width": 683,
+      "height": 705
+    },
+    "imgIconHome": {
+      "src": "/assets/admin/IconHome-f42a606c40.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgIconUsers": {
+      "src": "/assets/admin/IconUsers-ef3032d46a.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgHaruhayFinalWebFallbackWordmark": {
+      "src": "/assets/landing/HaruhayFinalWebFallbackWordmark.png",
+      "width": 929,
+      "height": 247
+    },
+    "imgIconWrench": {
+      "src": "/assets/admin/IconWrench-a324b4aa7c.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgIconBook": {
+      "src": "/assets/admin/IconBook-7627e8137d.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgIconBox": {
+      "src": "/assets/admin/IconBox-b82daf0b40.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgIconWallet": {
+      "src": "/assets/admin/IconWallet-2149c46935.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgIconMegaphone": {
+      "src": "/assets/admin/IconMegaphone-b20c312ee4.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgIconShield": {
+      "src": "/assets/admin/IconShield-9f94e4c0ed.svg",
+      "width": 24,
+      "height": 24
+    },
+    "imgIconSettings": {
+      "src": "/assets/admin/IconSettings-9a0ec49d7b.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgIconSearch": {
+      "src": "/assets/admin/IconSearch-78e4aea8d7.svg",
+      "width": 19,
+      "height": 19
+    },
+    "imgIconBell": {
+      "src": "/assets/admin/IconBell-5e71941c64.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgDecorativeCircle": {
+      "src": "/assets/admin/DecorativeCircle-4ee4e9803a.svg",
+      "width": 8,
+      "height": 8
+    },
+    "imgIconUsers1": {
+      "src": "/assets/admin/IconUsers1-6387f72e08.svg",
+      "width": 24,
+      "height": 24
+    },
+    "imgIconBook1": {
+      "src": "/assets/admin/IconBook1-a75e47863c.svg",
+      "width": 24,
+      "height": 24
+    }
+  },
+  "18:2184": {
+    "imgHaruhayFinalWebFallbackMark": {
+      "src": "/assets/landing/HaruhayFinalWebFallbackMark.png",
+      "width": 683,
+      "height": 705
+    },
+    "imgHaruhayFinalWebFallbackWordmark": {
+      "src": "/assets/landing/HaruhayFinalWebFallbackWordmark.png",
+      "width": 929,
+      "height": 247
+    },
+    "imgIconHome": {
+      "src": "/assets/admin/IconHome-f42a606c40.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgIconUsers": {
+      "src": "/assets/admin/IconUsers-ef3032d46a.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgIconBook": {
+      "src": "/assets/admin/IconBook-55882fdba0.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgIconBox": {
+      "src": "/assets/admin/IconBox-b82daf0b40.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgIconWallet": {
+      "src": "/assets/admin/IconWallet-2149c46935.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgIconWrench": {
+      "src": "/assets/admin/IconWrench-20d2d67830.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgIconMegaphone": {
+      "src": "/assets/admin/IconMegaphone-b20c312ee4.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgIconShield": {
+      "src": "/assets/admin/IconShield-9f94e4c0ed.svg",
+      "width": 24,
+      "height": 24
+    },
+    "imgIconSettings": {
+      "src": "/assets/admin/IconSettings-d7aea78b23.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgIconSearch": {
+      "src": "/assets/admin/IconSearch-78e4aea8d7.svg",
+      "width": 19,
+      "height": 19
+    },
+    "imgIconBell": {
+      "src": "/assets/admin/IconBell-5e71941c64.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgDecorativeCircle": {
+      "src": "/assets/admin/DecorativeCircle-4ee4e9803a.svg",
+      "width": 8,
+      "height": 8
+    },
+    "imgIconTicket": {
+      "src": "/assets/admin/IconTicket-42210a04e6.svg",
+      "width": 24,
+      "height": 24
+    },
+    "imgIconZap": {
+      "src": "/assets/admin/IconZap-524f70bf64.svg",
+      "width": 24,
+      "height": 24
+    },
+    "imgIconCheck": {
+      "src": "/assets/admin/IconCheck-b6afe6ec5d.svg",
+      "width": 24,
+      "height": 24
+    }
+  },
+  "18:2308": {
+    "imgHaruhayFinalWebFallbackWordmark": {
+      "src": "/assets/landing/HaruhayFinalWebFallbackWordmark.png",
+      "width": 929,
+      "height": 247
+    },
+    "imgIconHome": {
+      "src": "/assets/admin/IconHome-f42a606c40.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgIconUsers": {
+      "src": "/assets/admin/IconUsers-ef3032d46a.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgHaruhayFinalWebFallbackMark": {
+      "src": "/assets/landing/HaruhayFinalWebFallbackMark.png",
+      "width": 683,
+      "height": 705
+    },
+    "imgIconBook": {
+      "src": "/assets/admin/IconBook-55882fdba0.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgIconWrench": {
+      "src": "/assets/admin/IconWrench-20d2d67830.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgIconBox": {
+      "src": "/assets/admin/IconBox-b82daf0b40.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgIconWallet": {
+      "src": "/assets/admin/IconWallet-2149c46935.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgIconSettings": {
+      "src": "/assets/admin/IconSettings-9a0ec49d7b.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgIconMegaphone": {
+      "src": "/assets/admin/IconMegaphone-b20c312ee4.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgIconShield": {
+      "src": "/assets/admin/IconShield-9f94e4c0ed.svg",
+      "width": 24,
+      "height": 24
+    },
+    "imgIconSearch": {
+      "src": "/assets/admin/IconSearch-78e4aea8d7.svg",
+      "width": 19,
+      "height": 19
+    },
+    "imgIconBell": {
+      "src": "/assets/admin/IconBell-5e71941c64.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgDecorativeCircle": {
+      "src": "/assets/admin/DecorativeCircle-4ee4e9803a.svg",
+      "width": 8,
+      "height": 8
+    },
+    "imgIconZap": {
+      "src": "/assets/admin/IconZap-4cce8861b5.svg",
+      "width": 35,
+      "height": 35
+    },
+    "imgIconUsers1": {
+      "src": "/assets/admin/IconUsers1-6df2050256.svg",
+      "width": 19,
+      "height": 19
+    },
+    "imgIconClock": {
+      "src": "/assets/admin/IconClock-082b9dbdfd.svg",
+      "width": 19,
+      "height": 19
+    },
+    "imgIconCheck": {
+      "src": "/assets/admin/IconCheck-838e14cdb7.svg",
+      "width": 19,
+      "height": 19
+    }
+  },
+  "18:2419": {
+    "imgIconHome": {
+      "src": "/assets/admin/IconHome-f42a606c40.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgHaruhayFinalWebFallbackWordmark": {
+      "src": "/assets/landing/HaruhayFinalWebFallbackWordmark.png",
+      "width": 929,
+      "height": 247
+    },
+    "imgHaruhayFinalWebFallbackMark": {
+      "src": "/assets/landing/HaruhayFinalWebFallbackMark.png",
+      "width": 683,
+      "height": 705
+    },
+    "imgIconUsers": {
+      "src": "/assets/admin/IconUsers-ef3032d46a.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgIconBook": {
+      "src": "/assets/admin/IconBook-55882fdba0.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgIconBox": {
+      "src": "/assets/admin/IconBox-c2f0c76333.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgIconWallet": {
+      "src": "/assets/admin/IconWallet-2149c46935.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgIconWrench": {
+      "src": "/assets/admin/IconWrench-a324b4aa7c.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgIconMegaphone": {
+      "src": "/assets/admin/IconMegaphone-b20c312ee4.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgIconSettings": {
+      "src": "/assets/admin/IconSettings-f01ce04456.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgIconShield": {
+      "src": "/assets/admin/IconShield-9f94e4c0ed.svg",
+      "width": 24,
+      "height": 24
+    },
+    "imgIconBell": {
+      "src": "/assets/admin/IconBell-5e71941c64.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgIconSearch": {
+      "src": "/assets/admin/IconSearch-78e4aea8d7.svg",
+      "width": 19,
+      "height": 19
+    },
+    "imgDecorativeCircle": {
+      "src": "/assets/admin/DecorativeCircle-4ee4e9803a.svg",
+      "width": 8,
+      "height": 8
+    },
+    "imgIconBox1": {
+      "src": "/assets/admin/IconBox1-cd054bff75.svg",
+      "width": 24,
+      "height": 24
+    },
+    "imgIconCheck": {
+      "src": "/assets/admin/IconCheck-b6afe6ec5d.svg",
+      "width": 24,
+      "height": 24
+    },
+    "imgIconUpload": {
+      "src": "/assets/admin/IconUpload-fee4a405da.svg",
+      "width": 24,
+      "height": 24
+    }
+  },
+  "18:2541": {
+    "imgIconHome": {
+      "src": "/assets/admin/IconHome-f42a606c40.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgIconUsers": {
+      "src": "/assets/admin/IconUsers-ef3032d46a.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgIconBook": {
+      "src": "/assets/admin/IconBook-55882fdba0.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgHaruhayFinalWebFallbackMark": {
+      "src": "/assets/landing/HaruhayFinalWebFallbackMark.png",
+      "width": 683,
+      "height": 705
+    },
+    "imgIconWrench": {
+      "src": "/assets/admin/IconWrench-a324b4aa7c.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgHaruhayFinalWebFallbackWordmark": {
+      "src": "/assets/landing/HaruhayFinalWebFallbackWordmark.png",
+      "width": 929,
+      "height": 247
+    },
+    "imgIconWallet": {
+      "src": "/assets/admin/IconWallet-cbc83a6bec.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgIconMegaphone": {
+      "src": "/assets/admin/IconMegaphone-b20c312ee4.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgIconBox": {
+      "src": "/assets/admin/IconBox-b82daf0b40.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgIconSettings": {
+      "src": "/assets/admin/IconSettings-f09c58599b.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgIconShield": {
+      "src": "/assets/admin/IconShield-9f94e4c0ed.svg",
+      "width": 24,
+      "height": 24
+    },
+    "imgIconSearch": {
+      "src": "/assets/admin/IconSearch-78e4aea8d7.svg",
+      "width": 19,
+      "height": 19
+    },
+    "imgIconBell": {
+      "src": "/assets/admin/IconBell-5e71941c64.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgDecorativeCircle": {
+      "src": "/assets/admin/DecorativeCircle-4ee4e9803a.svg",
+      "width": 8,
+      "height": 8
+    },
+    "imgIconWallet1": {
+      "src": "/assets/admin/IconWallet1-f1600683cf.svg",
+      "width": 24,
+      "height": 24
+    },
+    "imgDecorativeCircle1": {
+      "src": "/assets/admin/DecorativeCircle1-fc8d881d7b.svg",
+      "width": 240,
+      "height": 240
+    },
+    "imgIconClock": {
+      "src": "/assets/admin/IconClock-f40c639414.svg",
+      "width": 24,
+      "height": 24
+    },
+    "imgIconCalendar": {
+      "src": "/assets/admin/IconCalendar-1f1a85e7cb.svg",
+      "width": 23,
+      "height": 23
+    },
+    "imgIconCard": {
+      "src": "/assets/admin/IconCard-d2c3b19e7c.svg",
+      "width": 23,
+      "height": 23
+    },
+    "imgIconFile": {
+      "src": "/assets/admin/IconFile-177d7437e9.svg",
+      "width": 23,
+      "height": 23
+    }
+  },
+  "18:2667": {
+    "imgIconHome": {
+      "src": "/assets/admin/IconHome-f42a606c40.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgHaruhayFinalWebFallbackWordmark": {
+      "src": "/assets/landing/HaruhayFinalWebFallbackWordmark.png",
+      "width": 929,
+      "height": 247
+    },
+    "imgIconBook": {
+      "src": "/assets/admin/IconBook-55882fdba0.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgIconUsers": {
+      "src": "/assets/admin/IconUsers-ef3032d46a.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgIconWrench": {
+      "src": "/assets/admin/IconWrench-a324b4aa7c.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgHaruhayFinalWebFallbackMark": {
+      "src": "/assets/landing/HaruhayFinalWebFallbackMark.png",
+      "width": 683,
+      "height": 705
+    },
+    "imgIconWallet": {
+      "src": "/assets/admin/IconWallet-cbc83a6bec.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgIconMegaphone": {
+      "src": "/assets/admin/IconMegaphone-b20c312ee4.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgIconSettings": {
+      "src": "/assets/admin/IconSettings-d7aea78b23.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgIconBox": {
+      "src": "/assets/admin/IconBox-b82daf0b40.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgIconShield": {
+      "src": "/assets/admin/IconShield-9f94e4c0ed.svg",
+      "width": 24,
+      "height": 24
+    },
+    "imgIconSearch": {
+      "src": "/assets/admin/IconSearch-78e4aea8d7.svg",
+      "width": 19,
+      "height": 19
+    },
+    "imgIconBell": {
+      "src": "/assets/admin/IconBell-5e71941c64.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgDecorativeCircle": {
+      "src": "/assets/admin/DecorativeCircle-4ee4e9803a.svg",
+      "width": 8,
+      "height": 8
+    },
+    "imgIconShield1": {
+      "src": "/assets/admin/IconShield1-9409f19de4.svg",
+      "width": 26,
+      "height": 26
+    }
+  },
+  "18:2776": {
+    "imgIconUsers": {
+      "src": "/assets/admin/IconUsers-ef3032d46a.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgHaruhayFinalWebFallbackMark": {
+      "src": "/assets/landing/HaruhayFinalWebFallbackMark.png",
+      "width": 683,
+      "height": 705
+    },
+    "imgIconHome": {
+      "src": "/assets/admin/IconHome-f42a606c40.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgHaruhayFinalWebFallbackWordmark": {
+      "src": "/assets/landing/HaruhayFinalWebFallbackWordmark.png",
+      "width": 929,
+      "height": 247
+    },
+    "imgIconBook": {
+      "src": "/assets/admin/IconBook-55882fdba0.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgIconWrench": {
+      "src": "/assets/admin/IconWrench-a324b4aa7c.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgIconWallet": {
+      "src": "/assets/admin/IconWallet-2149c46935.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgIconShield": {
+      "src": "/assets/admin/IconShield-9f94e4c0ed.svg",
+      "width": 24,
+      "height": 24
+    },
+    "imgIconSettings": {
+      "src": "/assets/admin/IconSettings-275255dbac.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgIconBox": {
+      "src": "/assets/admin/IconBox-b82daf0b40.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgIconSearch": {
+      "src": "/assets/admin/IconSearch-78e4aea8d7.svg",
+      "width": 19,
+      "height": 19
+    },
+    "imgIconMegaphone": {
+      "src": "/assets/admin/IconMegaphone-13f21dd3e1.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgIconBell": {
+      "src": "/assets/admin/IconBell-5e71941c64.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgDecorativeCircle": {
+      "src": "/assets/admin/DecorativeCircle-4ee4e9803a.svg",
+      "width": 8,
+      "height": 8
+    }
+  },
+  "18:2872": {
+    "imgIconHome": {
+      "src": "/assets/admin/IconHome-f42a606c40.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgIconBook": {
+      "src": "/assets/admin/IconBook-55882fdba0.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgHaruhayFinalWebFallbackWordmark": {
+      "src": "/assets/landing/HaruhayFinalWebFallbackWordmark.png",
+      "width": 929,
+      "height": 247
+    },
+    "imgIconWrench": {
+      "src": "/assets/admin/IconWrench-f0a3fe45ad.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgIconUsers": {
+      "src": "/assets/admin/IconUsers-ef3032d46a.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgIconBox": {
+      "src": "/assets/admin/IconBox-b82daf0b40.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgIconWallet": {
+      "src": "/assets/admin/IconWallet-2149c46935.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgHaruhayFinalWebFallbackMark": {
+      "src": "/assets/landing/HaruhayFinalWebFallbackMark.png",
+      "width": 683,
+      "height": 705
+    },
+    "imgIconMegaphone": {
+      "src": "/assets/admin/IconMegaphone-b20c312ee4.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgIconSettings": {
+      "src": "/assets/admin/IconSettings-3767dc93df.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgIconSearch": {
+      "src": "/assets/admin/IconSearch-78e4aea8d7.svg",
+      "width": 19,
+      "height": 19
+    },
+    "imgIconBell": {
+      "src": "/assets/admin/IconBell-5e71941c64.svg",
+      "width": 21,
+      "height": 21
+    },
+    "imgIconShield": {
+      "src": "/assets/admin/IconShield-9f94e4c0ed.svg",
+      "width": 24,
+      "height": 24
+    },
+    "imgDecorativeCircle": {
+      "src": "/assets/admin/DecorativeCircle-4ee4e9803a.svg",
+      "width": 8,
+      "height": 8
+    },
+    "imgIconBuilding": {
+      "src": "/assets/admin/IconBuilding-8dc87cb7a0.svg",
+      "width": 25,
+      "height": 25
+    },
+    "imgIconUsers1": {
+      "src": "/assets/admin/IconUsers1-1fc5975fe7.svg",
+      "width": 25,
+      "height": 25
+    },
+    "imgIconCalendar": {
+      "src": "/assets/admin/IconCalendar-c89bbb0e7a.svg",
+      "width": 25,
+      "height": 25
+    },
+    "imgIconBell1": {
+      "src": "/assets/admin/IconBell1-0b0ef0a51a.svg",
+      "width": 25,
+      "height": 25
+    },
+    "imgIconDownload": {
+      "src": "/assets/admin/IconDownload-d74ad4ccf3.svg",
+      "width": 25,
+      "height": 25
+    },
+    "imgIconShield1": {
+      "src": "/assets/admin/IconShield1-86a153c1f0.svg",
+      "width": 25,
+      "height": 25
+    }
+  }
+}

@@ -3,6 +3,9 @@ import type { FormEvent } from 'react'
 import ResidentLayout from './ResidentLayout'
 import { getResidentProfile, profileInitials, saveResidentProfile } from './profileData'
 import './ResidentProfile.css'
+import { getCurrentResident } from './residentsData'
+import { getSettings } from './settingsData'
+import { usePreviewData } from './previewStore'
 
 type DialogMode = 'edit' | 'preferences'
 
@@ -14,6 +17,8 @@ const preferences = [
 
 export default function ResidentProfile() {
   const [profile, setProfile] = useState(getResidentProfile)
+  const resident = usePreviewData(getCurrentResident)
+  const settings = usePreviewData(getSettings)
   const [notice, setNotice] = useState('')
   const [error, setError] = useState('')
   const [mode, setMode] = useState<DialogMode>('edit')
@@ -96,8 +101,8 @@ export default function ResidentProfile() {
             <span>{profileInitials(profile.fullName)}</span>
           </div>
           <h3>{profile.fullName}</h3>
-          <p>Room 204 • Resident</p>
-          <span className="profile-verified">ACTIVE &amp; VERIFIED</span>
+          <p>Room {resident.room} · Resident</p>
+          <span className="profile-verified">{resident.status.toUpperCase()}{resident.verified ? ' · VERIFIED' : ' · NOT VERIFIED'}</span>
           <button className="profile-edit" type="button" onClick={() => openDialog('edit')}>Edit profile</button>
         </section>
 
@@ -107,9 +112,9 @@ export default function ResidentProfile() {
             <dl>
               <div><dt>Email</dt><dd>{profile.email}</dd></div>
               <div><dt>Mobile</dt><dd>{profile.mobile}</dd></div>
-              <div><dt>Residence</dt><dd>Haruhay Residences</dd></div>
-              <div><dt>Room</dt><dd>204 • 2nd floor</dd></div>
-              <div><dt>Move-in date</dt><dd><time dateTime="2026-06-15">June 15, 2026</time></dd></div>
+              <div><dt>Residence</dt><dd>{settings.property.name}</dd></div>
+              <div><dt>Room</dt><dd>{resident.room}</dd></div>
+              <div><dt>Move-in date</dt><dd><time dateTime={resident.moveIn}>{resident.moveIn}</time></dd></div>
             </dl>
           </section>
           <section className="profile-panel profile-preferences" aria-labelledby="profile-preferences-title">

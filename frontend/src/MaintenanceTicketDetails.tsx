@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import ResidentLayout from './ResidentLayout'
-import { getMaintenanceTicket, getTicketComments, saveTicketComment } from './maintenanceData'
+import { getMaintenanceTicket, getMaintenanceComments, saveTicketComment } from './maintenanceData'
 import ResidentDialog from './ResidentDialog'
 import type { MaintenanceStatus } from './maintenanceData'
 import './Maintenance.css'
@@ -32,7 +32,7 @@ export default function MaintenanceTicketDetails() {
 
 function TicketDetails({ ticket }: { ticket: NonNullable<ReturnType<typeof getMaintenanceTicket>> }) {
   const [notice, setNotice] = useState('')
-  const [comments, setComments] = useState(() => [ticket.comment, ...getTicketComments(ticket.id)])
+  const [comments, setComments] = useState(() => [{ text: ticket.comment, author: 'Front desk', created: ticket.submitted }, ...getMaintenanceComments(ticket.id)])
   const [commentOpen, setCommentOpen] = useState(false)
   const [error, setError] = useState('')
 
@@ -54,7 +54,7 @@ function TicketDetails({ ticket }: { ticket: NonNullable<ReturnType<typeof getMa
     const message = String(data.get('comment') ?? '').trim()
     try {
       saveTicketComment(ticket.id, message)
-      setComments([ticket.comment, ...getTicketComments(ticket.id)])
+      setComments([{ text: ticket.comment, author: 'Front desk', created: ticket.submitted }, ...getMaintenanceComments(ticket.id)])
       setCommentOpen(false)
       setNotice('Comment saved in this browser session.')
     } catch (error) { setError(error instanceof Error ? error.message : 'Could not save your comment.') }
@@ -90,9 +90,9 @@ function TicketDetails({ ticket }: { ticket: NonNullable<ReturnType<typeof getMa
           <section className="maintenance-comments">
             <h2>Updates &amp; comments</h2>
             <div className="maintenance-comment-list">
-              {comments.map((comment, index) => <article className="maintenance-comment" key={`${comment}-${index}`}>
+              {comments.map((comment, index) => <article className="maintenance-comment" key={`${comment.text}-${index}`}>
                 <img src={asset('maintenance-message.svg')} width="25" height="25" alt="" />
-                <div><strong>{index === 0 ? 'Front desk' : 'You'}</strong><p>{comment}</p></div>
+                <div><strong>{comment.author === 'Resident' ? 'You' : comment.author}</strong><p>{comment.text}</p></div>
               </article>)}
             </div>
             <button className="maintenance-comment-button" type="button" onClick={() => { setError(''); setCommentOpen(true) }}>Add a comment</button>
@@ -110,6 +110,7 @@ function TicketDetails({ ticket }: { ticket: NonNullable<ReturnType<typeof getMa
               </li>
             })}
           </ol>
+          {!!ticket.activity?.length && <><h2>Staff updates</h2><ol>{ticket.activity.map((activity, index) => <li className="done" key={index}><span className="maintenance-timeline-icon"><img src={asset('maintenance-check-timeline.svg')} width="19" height="19" alt="" /></span><div><strong>{activity.text}</strong><span>{activity.created.replace('T', ' ')} · Philippine time</span></div></li>)}</ol></>}
         </aside>
       </div>
     </div>
