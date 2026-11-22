@@ -7,6 +7,8 @@ import { getResident } from './residentsData'
 import { usePreviewData } from './previewStore'
 import { CURRENT_RESIDENT, HOLDING_CATEGORIES, getHoldingResidents, HOLDING_SLOTS, getHoldingState, holdingCode, holdingNow, saveHoldingState, useHoldingState } from './holdingData'
 import type { HoldingItem, HoldingState, ResidentId } from './holdingData'
+import { api } from './registrationApi'
+import { isLiveWorkspace } from './workspaceSession'
 import './HoldingStation.css'
 
 type Tab = 'records' | 'record' | 'inquiry'
@@ -23,9 +25,11 @@ function Status({ item }: { item: HoldingItem }) {
 }
 
 export default function HoldingStation({ desk = false, admin = false }: { desk?: boolean; admin?: boolean }) {
-  const state = useHoldingState()
+  const { state, loadError, refresh } = useHoldingState()
   const residents = usePreviewData(getHoldingResidents)
+  const live = isLiveWorkspace()
   const [registerOpen, setRegisterOpen] = useState(false)
+  const [registrationResidentId, setRegistrationResidentId] = useState('')
   const [tab, setTab] = useState<Tab>('records')
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState('all')
@@ -37,11 +41,15 @@ export default function HoldingStation({ desk = false, admin = false }: { desk?:
   const [visitor, setVisitor] = useState<Visitor | null>(null)
   const dialog = useRef<HTMLDialogElement>(null)
   const selected = modal && 'id' in modal ? state.items.find(item => item.id === modal.id) : undefined
-  const mine = state.items.filter(item => item.residentId === CURRENT_RESIDENT)
+  const mine = live ? state.items : state.items.filter(item => item.residentId === CURRENT_RESIDENT)
   const ready = mine.filter(item => item.status === 'Ready')
   const collected = (admin ? state.items : mine).filter(item => item.status === 'Claimed').slice().reverse()
   const held = state.items.filter(item => item.status === 'Ready').length
-  const occupied = state.items.filter(item => item.status === 'Ready').map(item => item.slot)
+  const registrationPropertyId = residents[registrationResidentId]?.propertyId
+  const occupied = state.items.filter(item => item.status === 'Ready' &&
+    (!live || !registrationPropertyId || item.propertyId === registrationPropertyId)).map(item => item.slot)
+  const selectedPropertyOccupied = state.items.filter(item => item.status === 'Ready' &&
+    (!live || !selected?.propertyId || item.propertyId === selected.propertyId)).map(item => item.slot)
   const visible = state.items.filter(item => (filter === 'all' || item.status === filter) &&
     [item.code, item.description, residentName(item.residentId), item.tracking, residents[item.residentId].room, item.slot].join(' ').toLowerCase().includes(query.trim().toLowerCase()))
   const matchItems = state.items.filter(item => matches?.includes(item.id) && item.status === 'Ready')
@@ -58,13 +66,13 @@ export default function HoldingStation({ desk = false, admin = false }: { desk?:
       saveHoldingState(next)
       setNotice(message)
       return true
-    } catch {
-      setError('Your changes could not be saved. Enable browser session storage and try again.')
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Your changes could not be saved.')
       return false
     }
   }
 
-  function addItem(event: FormEvent<HTMLFormElement>) {
+  async function addItem(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setError('')
     const data = new FormData(event.currentTarget)
@@ -73,8 +81,33 @@ export default function HoldingStation({ desk = false, admin = false }: { desk?:
     const description = value(data, 'description')
     const slot = value(data, 'slot')
     if (!Object.hasOwn(residents, residentId) || !description) { setError('Select a resident and describe the item.'); return }
-    if (!HOLDING_SLOTS.includes(slot) || current.items.some(item => item.status === 'Ready' && item.slot === slot)) { setError('Choose an available storage slot.'); return }
+    const propertyId = residents[residentId]?.propertyId
+    if (!HOLDING_SLOTS.includes(slot) || current.items.some(item => item.status === 'Ready' &&
+      (!live || !propertyId || item.propertyId === propertyId) && item.slot === slot)) { setError('Choose an available storage slot.'); return }
     if (getResident(residentId)?.status !== 'Active') { setError('Choose an active resident.'); return }
+    if (live) {
+      try {
+        await api('/owner/holding-items', {
+          applicationId: residentId,
+          description,
+          slot,
+          category: value(data, 'category'),
+          depositor: value(data, 'depositor'),
+          sender: value(data, 'sender'),
+          tracking: value(data, 'tracking'),
+        })
+        await refresh()
+        setNotice('Holding record saved. Ready for pickup.')
+        setTab('records')
+        setRegisterOpen(false)
+        setRegistrationResidentId('')
+        setQuery('')
+        setFilter('all')
+      } catch (error) {
+        setError(error instanceof Error ? error.message : 'The holding record could not be saved.')
+      }
+      return
+    }
     const random = crypto.getRandomValues(new Uint32Array(1))[0]
     const received = holdingNow()
     const item: HoldingItem = {
@@ -85,7 +118,7 @@ export default function HoldingStation({ desk = false, admin = false }: { desk?:
     if (commit({ ...current, nextId: current.nextId + 1, items: [item, ...current.items] }, item.code + ' saved. Ready for pickup.')) { setTab('records'); setRegisterOpen(false); setQuery(''); setFilter('all') }
   }
 
-  function searchInquiry(event: FormEvent<HTMLFormElement>) {
+  async function searchInquiry(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setError('')
     const data = new FormData(event.currentTarget)
@@ -94,6 +127,25 @@ export default function HoldingStation({ desk = false, admin = false }: { desk?:
     const residentId = value(data, 'residentId')
     const tracking = value(data, 'tracking')
     if (!name || !idNumber || (!residentId && !tracking)) { setError('Enter the visitor’s name, ID number, and a resident or tracking number.'); return }
+    if (live) {
+      if (idNumber.length < 4) { setError('Enter the last four characters of the presented ID.'); return }
+      try {
+        const result = await api<{ matches: HoldingItem[] }>('/owner/holding-inquiries', {
+          visitorName: name,
+          idType: value(data, 'idType'),
+          idLastFour: idNumber.slice(-4),
+          applicationId: residentId || null,
+          tracking,
+          purpose: value(data, 'purpose'),
+        })
+        await refresh()
+        setMatches(result.matches.map(item => item.id))
+        setVisitor({ name, idNumber: idNumber.slice(-4) })
+      } catch (error) {
+        setError(error instanceof Error ? error.message : 'The inquiry could not be searched.')
+      }
+      return
+    }
     const current = getHoldingState()
     const found = current.items.filter(item => item.status === 'Ready' &&
       (!residentId || item.residentId === residentId) && (!tracking || item.tracking.toLowerCase() === tracking.toLowerCase()))
@@ -108,7 +160,7 @@ export default function HoldingStation({ desk = false, admin = false }: { desk?:
     }
   }
 
-  function saveModal(event: FormEvent<HTMLFormElement>) {
+  async function saveModal(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setError('')
     if (!selected || !modal) return
@@ -116,6 +168,39 @@ export default function HoldingStation({ desk = false, admin = false }: { desk?:
     const current = getHoldingState()
     const item = current.items.find(entry => entry.id === selected.id)
     if (!item) { setError('This item is no longer available. Close this dialog and refresh the records.'); return }
+    if (live) {
+      try {
+        if (modal.mode === 'edit') {
+          const description = value(data, 'description')
+          const slot = value(data, 'slot')
+          if (!description) { setError('Description is required.'); return }
+          await api(`/owner/holding-items/${item.id}/edit`, { description, slot })
+        } else if (modal.mode === 'release') {
+          if (!data.has('verifiedId')) { setError('Confirm that the presented ID was checked before release.'); return }
+          if (!data.has('signed')) { setError('The claimant must confirm receipt.'); return }
+          const relationship = value(data, 'relationship')
+          if (relationship === 'Authorized representative' && !data.has('authorized')) { setError('Check the owner’s authorization before releasing to a representative.'); return }
+          await api(`/owner/holding-items/${item.id}/release`, {
+            claimedBy: value(data, 'claimedBy'),
+            relationship,
+            idType: value(data, 'idType'),
+            idLastFour: value(data, 'idLastFour'),
+            verifiedId: true,
+            authorized: data.has('authorized'),
+            signed: true,
+          })
+        } else if (modal.mode === 'delete') {
+          await api(`/owner/holding-items/${item.id}/delete`, {})
+        }
+        await refresh()
+        setNotice(modal.mode === 'release' ? 'Item released and transaction recorded.' : modal.mode === 'delete' ? 'Record archived. Its history was retained.' : 'Record updated.')
+        setModal(null)
+        setVisitor(null)
+      } catch (error) {
+        setError(error instanceof Error ? error.message : 'The holding record could not be updated.')
+      }
+      return
+    }
     let updated: HoldingItem = { ...item, history: [...item.history] }
     let message = 'Record updated.'
     if (modal.mode === 'edit') {
@@ -161,7 +246,7 @@ export default function HoldingStation({ desk = false, admin = false }: { desk?:
   }
 
   const recordForm = <form className="hs-form" onSubmit={addItem}>
-          <label>Held for (resident)<select name="residentId" required defaultValue=""><option value="" disabled>Select resident</option>{Object.entries(residents).map(([id, resident]) => <option key={id} value={id}>{residentName(id as ResidentId)} • Room {resident.room}</option>)}</select></label>
+          <label>Held for (resident)<select name="residentId" required defaultValue="" onChange={event => setRegistrationResidentId(event.target.value)}><option value="" disabled>Select resident</option>{Object.entries(residents).map(([id, resident]) => <option key={id} value={id}>{residentName(id as ResidentId)} • Room {resident.room}</option>)}</select></label>
           <label>Category<select name="category">{HOLDING_CATEGORIES.map(category => <option key={category}>{category}</option>)}</select></label>
           <label className="hs-full">Item description<input name="description" placeholder="e.g. Shopee parcel, medium box" maxLength={150} required /></label>
           <label>Dropped off by<select name="depositor"><option>Courier / sender</option><option>Visitor</option><option>Resident</option></select></label>
@@ -169,7 +254,7 @@ export default function HoldingStation({ desk = false, admin = false }: { desk?:
           <label>Tracking number (optional)<input name="tracking" maxLength={100} /></label>
           <label>Storage slot<select name="slot" required defaultValue=""><option value="" disabled>Select an available shelf</option>{HOLDING_SLOTS.map(slot => <option key={slot} value={slot} disabled={occupied.includes(slot)}>{slot}{occupied.includes(slot) ? ' (occupied)' : ''}</option>)}</select></label>
           {occupied.length >= HOLDING_SLOTS.length && <p className="hs-warning hs-full">All shelves are occupied. Release an item before recording another delivery.</p>}
-          <div className="hs-actions hs-full hs-form-actions"><button type="button" className="hs-button" onClick={() => { setTab('records'); setRegisterOpen(false) }}>Cancel</button><button className="hs-button hs-primary" type="submit" disabled={occupied.length >= HOLDING_SLOTS.length}>Save holding record</button></div>
+          <div className="hs-actions hs-full hs-form-actions"><button type="button" className="hs-button" onClick={() => { setTab('records'); setRegisterOpen(false); setRegistrationResidentId('') }}>Cancel</button><button className="hs-button hs-primary" type="submit" disabled={occupied.length >= HOLDING_SLOTS.length}>Save holding record</button></div>
         </form>
 
   return <HoldingWorkspace admin={admin} desk={desk} notice={notice} onNotice={setNotice} onDismissNotice={() => setNotice('')}>
@@ -180,8 +265,9 @@ export default function HoldingStation({ desk = false, admin = false }: { desk?:
           <nav aria-label="Holding station workspace"><a href="#/resident/holding-station" aria-current={!desk ? 'page' : undefined}>Resident</a><a href="#/front-desk/holding-station" aria-current={desk ? 'page' : undefined}>Front desk</a></nav>
           <button className="hs-button" type="button" aria-pressed={dark} onClick={() => setDark(!dark)}>{dark ? 'Light' : 'Dark'}</button>
         </div>
-      </header> : <AdminHeading eyebrow="DELIVERIES AND SAFEKEEPING" title="Holding station management" description="Know what arrived, where it is stored, and who collected it." action={<button className="admin-primary" onClick={() => { setError(''); setRegisterOpen(true) }}>Register package</button>} />}
-      {desk && !admin && <p className="hs-preview-note">Front desk preview • Changes are kept in this browser session. Staff sign-in and notifications are not connected yet.</p>}
+      </header> : <AdminHeading eyebrow="DELIVERIES AND SAFEKEEPING" title="Holding station management" description="Know what arrived, where it is stored, and who collected it." action={<button className="admin-primary" onClick={() => { setError(''); setRegistrationResidentId(''); setRegisterOpen(true) }}>Register package</button>} />}
+      {loadError && <p className="hs-error" role="alert">{loadError}</p>}
+      {desk && !admin && !live && <p className="hs-preview-note">Front desk preview • Changes are kept in this browser session. Staff sign-in and notifications are not connected yet.</p>}
       {!admin ? <section className="hs-hero" aria-label="Holding station summary">
         <img src={asset('holding-box-hero.svg')} width="39" height="39" alt="" />
         <div><h2>{desk ? held + ' item' + (held === 1 ? '' : 's') + ' held at the station' : ready.length ? ready.length + (ready.length === 1 ? ' package is' : ' packages are') + ' ready for you' : 'Nothing waiting right now'}</h2>
@@ -204,7 +290,7 @@ export default function HoldingStation({ desk = false, admin = false }: { desk?:
         <nav className="hs-tabs" aria-label="Front desk sections">{([['records', 'Holding records'], ...(!admin ? [['record', 'Record held item']] as const : []), ['inquiry', 'Walk-in inquiries']] as const).map(([id, title]) => <button key={id} type="button" aria-current={tab === id ? 'page' : undefined} onClick={() => { setTab(id); setError('') }}>{title}</button>)}</nav>
         {error && !modal && <p className="hs-error" role="alert">{error}</p>}
         {tab === 'records' && <>
-          <div className="hs-toolbar"><label><span className="hs-sr-only">Search holding records</span><input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Search code, item, resident or tracking number" /></label><label><span className="hs-sr-only">Filter by status</span><select value={filter} onChange={event => setFilter(event.target.value)}><option value="all">All statuses</option><option value="Ready">Ready for pickup</option><option value="Claimed">Collected</option></select></label><button type="button" className="hs-button hs-primary" onClick={() => { if (admin) setRegisterOpen(true); else setTab('record'); setError('') }}>Record held item</button></div>
+          <div className="hs-toolbar"><label><span className="hs-sr-only">Search holding records</span><input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Search code, item, resident or tracking number" /></label><label><span className="hs-sr-only">Filter by status</span><select value={filter} onChange={event => setFilter(event.target.value)}><option value="all">All statuses</option><option value="Ready">Ready for pickup</option><option value="Claimed">Collected</option></select></label><button type="button" className="hs-button hs-primary" onClick={() => { if (admin) { setRegistrationResidentId(''); setRegisterOpen(true) } else setTab('record'); setError('') }}>Record held item</button></div>
           <div className="hs-table-wrap"><table className="hs-table"><caption className="hs-sr-only">Holding station records</caption><thead><tr><th>Item</th><th>Held for</th><th>Shelf</th><th>Received</th><th>Status</th><th>Actions</th></tr></thead><tbody>
             {visible.map(item => <tr key={item.id}><th scope="row">{item.description}<small>{item.code}{item.tracking && ' • ' + item.tracking}</small></th><td>{residentName(item.residentId)}<small>Room {residents[item.residentId].room}</small></td><td>{item.slot}</td><td>{item.received}</td><td><Status item={item} /></td><td><div className="hs-actions">{item.status === 'Ready' && <button className="hs-button hs-primary" type="button" onClick={() => { setVisitor(null); open({ mode: 'release', id: item.id }) }}>Release</button>}<button className="hs-button" type="button" onClick={() => open({ mode: 'details', id: item.id })}>Details</button><button className="hs-button" type="button" onClick={() => open({ mode: 'edit', id: item.id })}>Edit</button><button className="hs-button hs-danger" type="button" onClick={() => open({ mode: 'delete', id: item.id })}>Delete</button></div></td></tr>)}
             {!visible.length && <tr><td colSpan={6} className="hs-empty">No records match your search and status filter.</td></tr>}
@@ -214,7 +300,7 @@ export default function HoldingStation({ desk = false, admin = false }: { desk?:
         {tab === 'inquiry' && <>
           <section className="hs-card"><h2>Walk-in inquiry</h2><p className="hs-subtitle">Record the visitor’s details and look for a held item.</p><form className="hs-form" onSubmit={searchInquiry}>
             <label>Visitor name<input name="visitorName" maxLength={100} required /></label><label>ID type<select name="idType"><option>Student ID</option><option>Driver’s license</option><option>UMID</option><option>National ID</option></select></label>
-            <label>ID number<input name="idNumber" maxLength={60} required /></label><label>Purpose<select name="purpose"><option>Pick up item</option><option>Ask about a delivery</option></select></label>
+            <label>{live ? 'Last four characters of ID' : 'ID number'}<input name="idNumber" maxLength={live ? 4 : 60} pattern={live ? '[A-Za-z0-9]{4}' : undefined} required /></label><label>Purpose<select name="purpose"><option>Pick up item</option><option>Ask about a delivery</option></select></label>
             <label>Looking for (resident)<select name="residentId" defaultValue=""><option value="">Not sure</option>{Object.keys(residents).map(id => <option value={id} key={id}>{residentName(id as ResidentId)}</option>)}</select></label>
             <label>Tracking number<input name="tracking" placeholder="Optional when resident is selected" maxLength={100} /></label>
             <div className="hs-actions hs-full hs-form-actions"><button type="submit" className="hs-button hs-primary">Search holding records</button></div>
@@ -223,7 +309,7 @@ export default function HoldingStation({ desk = false, admin = false }: { desk?:
           <div className="hs-section-heading"><h2>Inquiry log</h2></div><div className="hs-table-wrap"><table className="hs-table"><caption className="hs-sr-only">Walk-in inquiry log</caption><thead><tr><th>Time</th><th>Visitor</th><th>ID</th><th>Looking for</th><th>Purpose</th><th>Result</th></tr></thead><tbody>{state.inquiries.map(entry => <tr key={entry.id}><td>{entry.time}</td><td>{entry.name}</td><td>{entry.identity}</td><td>{entry.lookingFor}</td><td>{entry.purpose}</td><td>{entry.result}</td></tr>)}{!state.inquiries.length && <tr><td colSpan={6} className="hs-empty">No inquiries yet.</td></tr>}</tbody></table></div>
         </>}
       </>}
-      {admin && registerOpen && <ResidentDialog title="Register a package" eyebrow="HOLDING STATION" onClose={() => setRegisterOpen(false)}>{error && <p className="hs-error" role="alert">{error}</p>}{recordForm}</ResidentDialog>}
+      {admin && registerOpen && <ResidentDialog title="Register a package" eyebrow="HOLDING STATION" onClose={() => { setRegisterOpen(false); setRegistrationResidentId('') }}>{error && <p className="hs-error" role="alert">{error}</p>}{recordForm}</ResidentDialog>}
       <dialog ref={dialog} className="hs-dialog" aria-labelledby="hs-dialog-title" onClose={() => setModal(null)} onClick={event => { if (event.target === event.currentTarget) setModal(null) }}>
         {modal && <><div className="hs-dialog-heading"><h2 id="hs-dialog-title">{modal.mode === 'all' ? 'All items ready for pickup' : modal.mode === 'history' ? 'Collection history' : modal.mode === 'delete' ? 'Delete this record?' : modal.mode === 'release' ? 'Release held item' : modal.mode === 'edit' ? 'Edit holding record' : modal.mode === 'pickup' ? 'Pickup details' : 'Holding record details'}</h2><button type="button" aria-label="Close dialog" onClick={() => setModal(null)}>×</button></div>
           {error && <p className="hs-error" role="alert">{error}</p>}
@@ -233,9 +319,9 @@ export default function HoldingStation({ desk = false, admin = false }: { desk?:
             {modal.mode === 'pickup' && <><p>Show this pickup code or your resident ID at the front desk.</p><div className="hs-pickup-code" aria-label={'Pickup code ' + selected.pin}>{selected.pin}</div><p className="hs-subtitle">Received {selected.received}{selected.sender && ' • From ' + selected.sender}</p></>}
             {modal.mode === 'details' && <><dl className="hs-detail-list"><div><dt>Held for</dt><dd>{residentName(selected.residentId)}</dd></div><div><dt>Category</dt><dd>{selected.category}</dd></div><div><dt>Dropped off by</dt><dd>{selected.sender || 'Not provided'} • {selected.depositor}</dd></div><div><dt>Tracking number</dt><dd>{selected.tracking || 'Not provided'}</dd></div><div><dt>Status</dt><dd><Status item={selected} /></dd></div></dl><h3>Status history</h3><ul className="hs-log">{selected.history.map((line, index) => <li key={index}>{line}</li>)}</ul></>}
             {(modal.mode === 'edit' || modal.mode === 'release' || modal.mode === 'delete') && <form className="hs-form hs-modal-form" key={modal.mode + selected.id} onSubmit={saveModal}>
-              {modal.mode === 'edit' && <><label>Item description<input name="description" defaultValue={selected.description} maxLength={150} required /></label><label>Storage slot<select name="slot" defaultValue={selected.slot} required>{HOLDING_SLOTS.map(slot => <option value={slot} key={slot} disabled={selected.status === 'Ready' && slot !== selected.slot && occupied.includes(slot)}>{slot}{selected.status === 'Ready' && slot !== selected.slot && occupied.includes(slot) ? ' (occupied)' : ''}</option>)}</select></label></>}
-              {modal.mode === 'release' && <><label>ID number presented<input name="idNumber" defaultValue={visitor?.idNumber ?? ''} placeholder={'e.g. ' + selected.residentId} maxLength={60} required /></label><label>Claimed by<input name="claimedBy" defaultValue={visitor?.name ?? residentName(selected.residentId)} maxLength={100} required /></label><label>Relationship to owner<select name="relationship"><option>Owner</option><option>Authorized representative</option></select></label><label className="hs-checkbox"><input name="authorized" type="checkbox" />Owner’s authorization checked (required for a representative)</label><label className="hs-checkbox"><input name="signed" type="checkbox" required />Claimant signed / confirmed receipt</label><p className="hs-warning">Sample resident ID: {selected.residentId}. Verify identity before confirming release.</p></>}
-              {modal.mode === 'delete' && <p>This removes the holding record and its history from this browser session. This action cannot be undone.</p>}
+              {modal.mode === 'edit' && <><label>Item description<input name="description" defaultValue={selected.description} maxLength={150} required /></label><label>Storage slot<select name="slot" defaultValue={selected.slot} required>{HOLDING_SLOTS.map(slot => <option value={slot} key={slot} disabled={selected.status === 'Ready' && slot !== selected.slot && selectedPropertyOccupied.includes(slot)}>{slot}{selected.status === 'Ready' && slot !== selected.slot && selectedPropertyOccupied.includes(slot) ? ' (occupied)' : ''}</option>)}</select></label></>}
+              {modal.mode === 'release' && <><label>{live ? 'Last four characters of ID presented' : 'ID number presented'}<input name={live ? 'idLastFour' : 'idNumber'} defaultValue={visitor?.idNumber ?? ''} placeholder={live ? 'e.g. 1234' : 'e.g. ' + selected.residentId} maxLength={live ? 4 : 60} pattern={live ? '[A-Za-z0-9]{4}' : undefined} required /></label><label>Claimed by<input name="claimedBy" defaultValue={visitor?.name ?? residentName(selected.residentId)} maxLength={100} required /></label><label>Relationship to owner<select name="relationship"><option>Owner</option><option>Authorized representative</option></select></label>{live && <label className="hs-checkbox"><input name="verifiedId" type="checkbox" required />I checked the presented ID and confirmed it matches the claimant</label>}<label className="hs-checkbox"><input name="authorized" type="checkbox" />Owner’s authorization checked (required for a representative)</label><label className="hs-checkbox"><input name="signed" type="checkbox" required />Claimant signed / confirmed receipt</label>{!live && <p className="hs-warning">Sample resident ID: {selected.residentId}. Verify identity before confirming release.</p>}</>}
+                {modal.mode === 'delete' && <p>{live ? 'This archives the holding record and keeps its transaction history for accountability.' : 'This removes the holding record and its history from this browser session. This action cannot be undone.'}</p>}
               <div className="hs-actions hs-form-actions"><button type="button" className="hs-button" onClick={() => setModal(null)}>Cancel</button><button type="submit" className={'hs-button ' + (modal.mode === 'delete' ? 'hs-delete' : 'hs-primary')}>{modal.mode === 'edit' ? 'Save changes' : modal.mode === 'release' ? 'Confirm release' : 'Delete record'}</button></div>
             </form>}
           </>}

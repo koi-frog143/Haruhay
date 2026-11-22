@@ -1,11 +1,18 @@
-import { isLiveWorkspace, workspaceStorageKey } from './workspaceSession'
-import { useEffect, useState } from 'react'
+import { getWorkspaceSession, isLiveWorkspace, workspaceStorageKey } from './workspaceSession'
+import { api } from './registrationApi'
+import { useCallback, useEffect, useState } from 'react'
 
 import { CURRENT_RESIDENT_ID, getResidents } from './residentsData'
 
 export type ResidentId = string
 export const CURRENT_RESIDENT: ResidentId = CURRENT_RESIDENT_ID
-export function getHoldingResidents(): Record<string, { name: string; room: string }> { return Object.fromEntries(getResidents().map(resident => [resident.id, { name: resident.fullName, room: resident.room }])) }
+export function getHoldingResidents(): Record<string, { name: string; room: string; propertyId?: string }> {
+  const properties = new Map<string, string>()
+  getWorkspaceSession()?.applications.forEach(application => properties.set(application.id, application.property_id))
+  return Object.fromEntries(getResidents().map(resident => [resident.id, {
+    name: resident.fullName, room: resident.room, propertyId: properties.get(resident.id),
+  }]))
+}
 export const HOLDING_SLOTS = ['A-1', 'A-2', 'A-3', 'A-4', 'B-1', 'B-2']
 export const HOLDING_CATEGORIES = ['Parcel', 'Letter / document', 'Food delivery', 'Other']
 export type HoldingItem = {
@@ -19,10 +26,13 @@ export type HoldingItem = {
   residentId: ResidentId
   slot: string
   received: string
-  pin: string
+  pin: string | null
   status: 'Ready' | 'Claimed'
   claimed?: string
   history: string[]
+  residentName?: string
+  room?: string
+  propertyId?: string
 }
 export type HoldingInquiry = {
   id: string
@@ -36,6 +46,8 @@ export type HoldingInquiry = {
 export type HoldingState = { items: HoldingItem[]; inquiries: HoldingInquiry[]; nextId: number }
 const KEY = 'haruhay-holding-station-v1'
 const EVENT = 'haruhay-holding-updated'
+const EMPTY: HoldingState = { items: [], inquiries: [], nextId: 45 }
+let liveState = EMPTY
 
 function seed(): HoldingState {
   const rows: Array<[number, string, string, string, string, ResidentId, string, string, string, 'Ready' | 'Claimed']> = [
@@ -66,6 +78,7 @@ function isItem(value: unknown): value is HoldingItem {
     (item.claimed === undefined || typeof item.claimed === 'string')
 }
 export function getHoldingState(): HoldingState {
+  if (isLiveWorkspace()) return liveState
   try {
     const value = JSON.parse(sessionStorage.getItem(workspaceStorageKey(KEY)) ?? 'null') as HoldingState | null
     if (value && Number.isSafeInteger(value.nextId) && value.nextId >= 45 && Array.isArray(value.items) && value.items.every(isItem) &&
@@ -75,16 +88,63 @@ export function getHoldingState(): HoldingState {
   return isLiveWorkspace() ? { items: [], inquiries: [], nextId: 45 } : seed()
 }
 export function saveHoldingState(state: HoldingState) {
+  if (isLiveWorkspace()) throw new Error('Live Holding Station changes must be saved through the backend.')
   sessionStorage.setItem(workspaceStorageKey(KEY), JSON.stringify(state))
   window.dispatchEvent(new Event(EVENT))
 }
+
+export async function fetchHoldingState(): Promise<HoldingState> {
+  if (!isLiveWorkspace()) return getHoldingState()
+  const session = getWorkspaceSession()
+  if (!session) throw new Error('Sign in to load Holding Station records.')
+  const owner = session.account.role === 'OWNER'
+  const [items, inquiries] = await Promise.all([
+    api<HoldingItem[]>(owner ? '/owner/holding-items' : '/resident/holding-items'),
+    owner ? api<HoldingInquiry[]>('/owner/holding-inquiries') : Promise.resolve([]),
+  ])
+  const rows = items.map(item => ({
+    ...item,
+    residentId: owner ? item.residentId : CURRENT_RESIDENT_ID,
+    history: Array.isArray(item.history) ? item.history : [],
+  }))
+  liveState = {
+    items: rows,
+    inquiries,
+    nextId: Math.max(45, ...rows.map(item => item.id + 1)),
+  }
+  window.dispatchEvent(new Event(EVENT))
+  return liveState
+}
+
 export function useHoldingState() {
   const [state, setState] = useState(getHoldingState)
+  const [loadError, setLoadError] = useState('')
+  const refresh = useCallback(async () => {
+    try {
+      const current = await fetchHoldingState()
+      setState(current)
+      setLoadError('')
+      return current
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : 'Could not load Holding Station records.')
+      throw error
+    }
+  }, [])
   useEffect(() => {
     const update = () => setState(getHoldingState())
+    const workspaceChanged = () => {
+      if (isLiveWorkspace()) refresh().catch(() => {})
+      else { setLoadError(''); update() }
+    }
     window.addEventListener(EVENT, update)
-    return () => window.removeEventListener(EVENT, update)
-  }, [])
-  return state
+    window.addEventListener('haruhay-workspace-changed', workspaceChanged)
+    const timer = isLiveWorkspace() ? window.setTimeout(() => refresh().catch(() => {}), 0) : undefined
+    return () => {
+      if (timer !== undefined) window.clearTimeout(timer)
+      window.removeEventListener(EVENT, update)
+      window.removeEventListener('haruhay-workspace-changed', workspaceChanged)
+    }
+  }, [refresh])
+  return { state, loadError, refresh }
 }
 

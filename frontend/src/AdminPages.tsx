@@ -17,7 +17,7 @@ import { getAllAnnouncements } from './announcementData'
 import type { Announcement } from './announcementData'
 import { getLedgerPayments, getPropertyBilling, money, periodLabel } from './billingData'
 import type { LedgerPayment } from './billingData'
-import { getHoldingState } from './holdingData'
+import { useHoldingState } from './holdingData'
 import { downloadCsv, manilaInputDate, usePreviewData } from './previewStore'
 import { profileInitials } from './profileData'
 import ResidentDialog from './ResidentDialog'
@@ -31,16 +31,16 @@ export function AdminDashboard() {
   const residents = usePreviewData(getResidents)
   const tickets = usePreviewData(getAllMaintenanceTickets)
   const visits = usePreviewData(getAllVisits)
-  const holding = usePreviewData(getHoldingState)
+  const { state: holding, loadError: holdingError } = useHoldingState()
   const billing = usePreviewData(getPropertyBilling)
   const [today] = useState(() => manilaInputDate().slice(0, 10))
   const urgent = tickets.find(ticket => ticket.priority === 'High' && ticket.status !== 'Resolved')
-  return <AdminLayout active="Dashboard" node="18:1676"><AdminHeading eyebrow="PROPERTY OVERVIEW" title="A healthier home, at a glance" description="Manage the details that make Haruhay comfortable for everyone." /><AdminMetrics node="18:1676" items={[
+  return <AdminLayout active="Dashboard" node="18:1676"><AdminHeading eyebrow="PROPERTY OVERVIEW" title="A healthier home, at a glance" description="Manage the details that make Haruhay comfortable for everyone." />{holdingError && <p className="admin-error" role="alert">{holdingError}</p>}<AdminMetrics node="18:1676" items={[
     { value: residents.length, label: 'Total residents', icon: 'imgIconUsers1', href: '#/admin/residents' },
     { value: tickets.filter(ticket => ticket.status !== 'Resolved').length, label: 'Open maintenance tickets', icon: 'imgIconWrench1', href: '#/admin/maintenance' },
     { value: visits.filter(visit => visit.checkedIn.startsWith(today)).length, label: 'Visitor entries today', icon: 'imgIconBook1', href: '#/admin/logbook' },
     { value: money(billing.outstanding), label: 'Upcoming collections', icon: 'imgIconWallet1', href: '#/admin/billing' },
-  ]} /><div className="admin-two-column"><CollectionChart node="18:1676" /><section className="admin-panel admin-attention"><h2>Requires your attention</h2><p>Updates worth reviewing today</p><a className="admin-attention-link" href={urgent ? `#/admin/maintenance/${urgent.id}` : '#/admin/maintenance'}><span style={{ background: '#fcecef' }}><AdminIcon node="18:1676" name="imgIconZap" /></span><div><strong>{urgent?.title ?? 'No urgent maintenance concerns'}</strong><small>{urgent?.location ?? 'Review all maintenance requests'}</small></div></a><a className="admin-attention-link" href="#/admin/payments/approvals"><span style={{ background: '#fff2df' }}><AdminIcon node="18:1676" name="imgIconWallet2" /></span><div><strong>{billing.pending.length} payments to review</strong><small>Pending verification</small></div></a><a className="admin-attention-link" href="#/admin/holding-station"><span><AdminIcon node="18:1676" name="imgIconBox1" /></span><div><strong>{holding.items.filter(item => item.status === 'Ready').length} held packages</strong><small>Awaiting resident pickup</small></div></a></section></div></AdminLayout>
+  ]} /><div className="admin-two-column"><CollectionChart node="18:1676" /><section className="admin-panel admin-attention"><h2>Requires your attention</h2><p>Updates worth reviewing today</p><a className="admin-attention-link" href={urgent ? `#/admin/maintenance/${urgent.id}` : '#/admin/maintenance'}><span style={{ background: '#fcecef' }}><AdminIcon node="18:1676" name="imgIconZap" /></span><div><strong>{urgent?.title ?? 'No urgent maintenance concerns'}</strong><small>{urgent?.location ?? 'Review all maintenance requests'}</small></div></a><a className="admin-attention-link" href="#/admin/payments/approvals"><span style={{ background: '#fff2df' }}><AdminIcon node="18:1676" name="imgIconWallet2" /></span><div><strong>{billing.pending.length} payments to review</strong><small>Pending verification</small></div></a><a className="admin-attention-link" href="#/admin/holding-station"><span><AdminIcon node="18:1676" name="imgIconBox1" /></span><div><strong>{holdingError ? '—' : holding.items.filter(item => item.status === 'Ready').length} held packages</strong><small>{holdingError || 'Awaiting resident pickup'}</small></div></a></section></div></AdminLayout>
 }
 
 export function AdminResidents() {
