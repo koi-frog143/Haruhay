@@ -2,9 +2,9 @@ import { useEffect, useId, useRef } from 'react'
 import type { ReactNode } from 'react'
 import './ResidentInteractions.css'
 
-type Props = { title: string; eyebrow: string; onClose: () => void; children: ReactNode }
+type Props = { dismissOnBackdrop?:boolean; footerNote?:string; title: string; eyebrow: string; onClose: () => void; children: ReactNode }
 
-export default function ResidentDialog({ title, eyebrow, onClose, children }: Props) {
+export default function ResidentDialog({ title, eyebrow, onClose, children, footerNote, dismissOnBackdrop = true }: Props) {
   const dialog = useRef<HTMLDialogElement>(null)
   const opener = useRef(document.activeElement)
   const titleId = useId()
@@ -21,7 +21,7 @@ export default function ResidentDialog({ title, eyebrow, onClose, children }: Pr
       })
     }
   }, [])
-  return <dialog ref={dialog} className="resident-dialog" aria-labelledby={titleId} aria-describedby={descriptionId} onCancel={event => { event.preventDefault(); onClose() }} onClick={event => { if (event.target === event.currentTarget) onClose() }} onKeyDown={event => {
+  return <dialog ref={dialog} className="resident-dialog" aria-labelledby={titleId} aria-describedby={descriptionId} onCancel={event => { event.preventDefault(); onClose() }} onClick={event => { if (dismissOnBackdrop && event.target === event.currentTarget) onClose() }} onKeyDown={event => {
     if (event.key !== 'Tab') return
     const controls = Array.from(event.currentTarget.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href]')).filter(element => element.getClientRects().length)
     const first = controls[0]
@@ -32,6 +32,6 @@ export default function ResidentDialog({ title, eyebrow, onClose, children }: Pr
     <header><h2 id={titleId}>{title}</h2><button type="button" onClick={onClose} aria-label="Close dialog">×</button></header>
     <p className="dialog-eyebrow">{eyebrow}</p>
     {children}
-    <p className="dialog-preview" id={descriptionId}>Frontend preview · changes stay in this browser session.</p>
+    <p className="dialog-preview" id={descriptionId}>{footerNote ?? 'Frontend preview \u00b7 changes stay in this browser session.'}</p>
   </dialog>
 }

@@ -70,7 +70,9 @@ try {
   await send('Browser.setDownloadBehavior', { behavior: 'allow', downloadPath: downloadDirectory })
   await navigate('/resident/dashboard')
   // Clear only this isolated test tab's preview storage, never the user's browser.
-  await evaluate('sessionStorage.clear()')
+  await evaluate('sessionStorage.clear(); sessionStorage.setItem("haruhay-ui-mode","sample")')
+  await send('Page.reload')
+  await pause(350)
   const routes = ['dashboard', 'logbook', 'logbook/register', 'logbook/access-history', 'maintenance', 'maintenance/new', 'maintenance/TCK-1042', 'holding-station', 'payments', 'payments/history', 'community', 'profile']
   const geometry = []
   for (const width of process.env.UI_SKIP_BASELINE ? [] : [1440, 390]) {
@@ -173,7 +175,7 @@ try {
   await check('Payment details and preference save/cancel survive refresh', async () => {
     await navigate('/resident/payments')
     await click('.billing-center-card:first-child')
-    await textContains('This preview cannot accept or submit payments.')
+    await textContains('This app cannot process or submit payments.')
     await escape()
     await click('.billing-center-card:last-child')
     await click('dialog input[value="Bank transfer"]')

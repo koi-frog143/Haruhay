@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import type { FormEvent, InputHTMLAttributes } from 'react'
+import type { FormEvent, ReactNode } from 'react'
+import { AuthField as Field, WelcomePanel } from './AuthShared'
 import artwork from './auth-artwork.json'
 import './App.css'
 import BillingPayments from './BillingPayments'
@@ -16,11 +17,18 @@ import RegisterVisitor from './RegisterVisitor'
 import AccessHistory from './AccessHistory'
 import CommunityBoard from './CommunityBoard'
 import AdminApp from './AdminApp'
+import RegistrationFlow from './RegistrationFlow'
+import WorkspaceGate from './WorkspaceGate'
+import { setWorkspaceMode } from './workspaceSession'
 
 type Screen = 'login' | 'register' | 'reset'
-type Route = Screen | 'admin' | 'home' | 'resident-dashboard' | 'resident-logbook' | 'resident-register-visitor' | 'resident-access-history' | 'resident-community' | 'resident-maintenance' | 'resident-maintenance-new' | 'resident-maintenance-detail' | 'resident-payments' | 'resident-payment-history' | 'resident-profile' | 'resident-holding' | 'desk-holding'
+type Route = Screen | 'account' | 'admin' | 'home' | 'resident-dashboard' | 'resident-logbook' | 'resident-register-visitor' | 'resident-access-history' | 'resident-community' | 'resident-maintenance' | 'resident-maintenance-new' | 'resident-maintenance-detail' | 'resident-payments' | 'resident-payment-history' | 'resident-profile' | 'resident-holding' | 'desk-holding'
 function currentScreen(): Route {
   const route = window.location.hash.replace('#', '')
+  if (route === '/login' || route === '/register') return 'account'
+  if (route === '/preview/login') return 'login'
+  if (route === '/preview/register') return 'register'
+  if (route === '/account' || route.startsWith('/account/')) return 'account'
   if (route === '/admin' || route.startsWith('/admin/')) return 'admin'
   if (route === '/resident/holding-station') return 'resident-holding'
   if (route === '/front-desk/holding-station') return 'desk-holding'
@@ -46,42 +54,6 @@ const copy = {
   reset: { badge: 'RESET ACCESS', title: 'Forgot your password?', subtitle: "We'll email a secure reset link so you can regain access.", action: 'Send reset link' },
 }
 
-type FieldProps = InputHTMLAttributes<HTMLInputElement> & { label: string; icon: string }
-function Field({ label, icon, id, type = 'text', ...props }: FieldProps) {
-  const [visible, setVisible] = useState(false)
-  const password = type === 'password'
-  return <div className="form-field">
-    <label htmlFor={id}>{label}</label>
-    <div className="input-wrap">
-      <img src={icon} alt="" aria-hidden="true" className="field-icon" />
-      <input {...props} id={id} type={password && visible ? 'text' : type} required />
-      {password && <button className="password-toggle" type="button" onClick={() => setVisible(!visible)} aria-label={visible ? 'Hide password' : 'Show password'} aria-pressed={visible}>{visible ? 'Hide' : 'Show'}</button>}
-    </div>
-  </div>
-}
-
-function WelcomePanel({ screen }: { screen: Screen }) {
-  const art = artwork[screen]
-  return <aside className="welcome-panel" aria-label="Welcome to Haruhay">
-    <img className="circle circle-bottom" src={art.DecorativeCircle} alt="" />
-    <img className="circle circle-top" src={art.DecorativeCircle1} alt="" />
-    <a className="brand" href="#/" aria-label="Haruhay home">
-      <img className="brand-mark" src={art.HaruhayFinalWebFallbackMark} alt="" width="56" height="56" />
-      <img className="brand-wordmark" src={art.HaruhayFinalWebFallbackWordmark} alt="Haruhay" width="172" height="46" />
-    </a>
-    <div className="welcome-content">
-      <span className="badge welcome-badge">A SAFE SPACE FOR EVERYONE</span>
-      <h2>Room to breathe.<br />Space to grow.<br />People who care.</h2>
-      <p className="welcome-description">Stay connected to your home and the people who make it feel like one.</p>
-      <div className="peace-card">
-        <div className="peace-icon"><img src={art.IconShield} alt="" /></div>
-        <div><h3>Your peace of mind matters.</h3><p>Simple, secure everyday living for residents and staff.</p></div>
-      </div>
-      <img className="stars" src={art.BackgroundMotifStars} alt="" />
-    </div>
-  </aside>
-}
-
 function AuthForm({ screen }: { screen: Screen }) {
   const art = artwork[screen]
   const content = copy[screen]
@@ -103,6 +75,7 @@ function AuthForm({ screen }: { screen: Screen }) {
       event.currentTarget.querySelector<HTMLInputElement>('#full-name')?.focus()
       return
     }
+    setWorkspaceMode('sample')
     // UI preview only: never send, save, or log credentials.
     setNotice(screen === 'login'
       ? 'Login preview complete. Your form is valid; no sign-in request was sent.'
@@ -141,12 +114,13 @@ function AuthForm({ screen }: { screen: Screen }) {
         <div className="form-notice" role="status" aria-live="polite">{notice}</div>
       </form>
       <nav className="auth-nav" aria-label="Account">
-        {screen === 'login' ? <a href="#/register">New here? <strong>Create an account</strong></a>
-          : screen === 'register' ? <a href="#/login">Already registered? <strong>Log in</strong></a>
-            : <a href="#/login">Back to log in <span aria-hidden="true"> →</span></a>}
+        <a href="#/account/login">Registration & owner approval</a>
+        {screen === 'login' ? <a href="#/preview/register">New here? <strong>Create an account</strong></a>
+          : screen === 'register' ? <a href="#/preview/login">Already registered? <strong>Log in</strong></a>
+            : <a href="#/preview/login">Back to log in <span aria-hidden="true"> →</span></a>}
       </nav>
       {screen === 'login' && <footer className="auth-footer">
-        <button type="button" className="admin-preview" onClick={() => { window.location.hash = '/admin/dashboard' }}>Preview administrator workspace</button>
+        <button type="button" className="admin-preview" onClick={() => { setWorkspaceMode('sample'); window.location.hash = '/admin/dashboard' }}>Preview administrator workspace</button>
         <p><img src={artwork.login.IconShield1} alt="" />Safe, private and made for your community.</p>
       </footer>}
     </div>
@@ -164,21 +138,23 @@ export default function App() {
   useEffect(() => {
     if (screen !== 'home' || !['#haruhay-way', '#features', '#community'].includes(window.location.hash)) window.scrollTo(0, 0)
   }, [screen])
-  if (screen === 'admin') return <AdminApp key={routeHash} />
-  if (screen === 'resident-holding') return <HoldingStation key='resident' />
+  const guard = (page: ReactNode, kind: 'account' | 'admin' | 'resident') => <WorkspaceGate key={routeHash} kind={kind}>{page}</WorkspaceGate>
+  if (screen === 'admin') return guard(<AdminApp key={routeHash} />, 'admin')
+  if (screen === 'account') return ['/account/status', '/account/property', '/account/activate'].includes(window.location.hash.split('?')[0].slice(1)) ? guard(<RegistrationFlow key={routeHash} />, 'account') : <RegistrationFlow key={routeHash} />
+  if (screen === 'resident-holding') return guard(<HoldingStation key='resident' />, 'resident')
   if (screen === 'desk-holding') return <HoldingStation key='desk' desk />
-  if (screen === 'resident-profile') return <ResidentProfile />
+  if (screen === 'resident-profile') return guard(<ResidentProfile />, 'resident')
   if (screen === 'home') return <LandingPage />
-  if (screen === 'resident-dashboard') return <ResidentDashboard />
-  if (screen === 'resident-logbook') return <VisitorLogbook />
-  if (screen === 'resident-register-visitor') return <RegisterVisitor />
-  if (screen === 'resident-access-history') return <AccessHistory />
-  if (screen === 'resident-community') return <CommunityBoard />
-  if (screen === 'resident-maintenance') return <MaintenanceTickets />
-  if (screen === 'resident-maintenance-new') return <CreateMaintenanceTicket />
-  if (screen === 'resident-maintenance-detail') return <MaintenanceTicketDetails key={routeHash} />
-  if (screen === 'resident-payments') return <BillingPayments />
-  if (screen === 'resident-payment-history') return <PaymentHistory />
+  if (screen === 'resident-dashboard') return guard(<ResidentDashboard />, 'resident')
+  if (screen === 'resident-logbook') return guard(<VisitorLogbook />, 'resident')
+  if (screen === 'resident-register-visitor') return guard(<RegisterVisitor />, 'resident')
+  if (screen === 'resident-access-history') return guard(<AccessHistory />, 'resident')
+  if (screen === 'resident-community') return guard(<CommunityBoard />, 'resident')
+  if (screen === 'resident-maintenance') return guard(<MaintenanceTickets />, 'resident')
+  if (screen === 'resident-maintenance-new') return guard(<CreateMaintenanceTicket />, 'resident')
+  if (screen === 'resident-maintenance-detail') return guard(<MaintenanceTicketDetails key={routeHash} />, 'resident')
+  if (screen === 'resident-payments') return guard(<BillingPayments />, 'resident')
+  if (screen === 'resident-payment-history') return guard(<PaymentHistory />, 'resident')
   return <main className="auth-shell">
     <WelcomePanel screen={screen} />
     <AuthForm key={screen} screen={screen} />

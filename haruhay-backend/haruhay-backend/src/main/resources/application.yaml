@@ -6,11 +6,16 @@
 spring:
   application:
     name: haruhay-backend
+  mail:
+    properties:
+      mail.smtp.connectiontimeout: 5000
+      mail.smtp.timeout: 5000
+      mail.smtp.writetimeout: 5000
 
   # PostgreSQL Database
   datasource:
-    url: jdbc:postgresql://localhost:5432/haruhay_db
-    username: postgres
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/haruhay_db}
+    username: ${DB_USERNAME:postgres}
     password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
 
@@ -18,7 +23,7 @@ spring:
   jpa:
     hibernate:
       ddl-auto: validate
-    show-sql: true
+    show-sql: false
     open-in-view: false
     properties:
       hibernate:
@@ -30,3 +35,18 @@ spring:
 
 server:
   port: 8080
+  servlet:
+    session:
+      cookie:
+        http-only: true
+        same-site: lax
+        secure: ${SESSION_COOKIE_SECURE:false}
+      timeout: 30m
+
+haruhay:
+  invitation-ttl: ${INVITATION_TTL:72h}
+  verification-ttl: ${VERIFICATION_TTL:24h}
+  activation-ttl: ${ACTIVATION_TTL:24h}
+  frontend-url: ${FRONTEND_URL:http://localhost:5173}
+  mail-from: ${MAIL_FROM:no-reply@localhost}
+  delivery: smtp

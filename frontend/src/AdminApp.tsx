@@ -1,3 +1,4 @@
+import RegistrationFlow from './RegistrationFlow'
 import AdminLayout from './AdminLayout'
 import { AdminEmpty } from './AdminUI'
 import { AdminAnnouncements, AdminBilling, AdminDashboard, AdminLogbook, AdminMaintenance, AdminMaintenanceDetails, AdminPayments, AdminResidentDetails, AdminResidents } from './AdminPages'
@@ -9,6 +10,8 @@ export default function AdminApp() {
   const [path, query = ''] = hash.split('?')
   const residentId = new URLSearchParams(query).get('resident') ?? ''
   const recordId = (prefix: string) => { try { return decodeURIComponent(path.slice(prefix.length)) } catch { return '' } }
+  if (path === '/admin/applications') return <RegistrationFlow />
+  if (path === '/admin/property') return <RegistrationFlow />
   if (path === '/admin' || path === '/admin/' || path === '/admin/dashboard') return <AdminDashboard />
   if (path === '/admin/residents') return <AdminResidents />
   if (path.startsWith('/admin/residents/')) return <AdminResidentDetails id={recordId('/admin/residents/')} />

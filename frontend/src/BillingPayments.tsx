@@ -1,3 +1,4 @@
+import { isLiveWorkspace, loadWorkspaceSession } from './workspaceSession'
 import { useEffect, useState } from 'react'
 import ResidentLayout from './ResidentLayout'
 import './Billing.css'
@@ -60,24 +61,24 @@ export default function BillingPayments() {
     <div className="resident-content billing-content">
       <header className="resident-page-heading">
         <span>MONTHLY DUES</span>
-        <h1>Payments &amp; billing</h1>
+        <div className="billing-heading-actions"><h1>Payments &amp; billing</h1>{isLiveWorkspace()&&<button className="admin-secondary" onClick={async()=>{try{await loadWorkspaceSession();setNotice('Billing records refreshed.')}catch(error){setNotice(error instanceof Error?error.message:'Could not refresh billing.')}}}>Refresh billing</button>}</div>
         <p>Your rent, utilities, and receipts — in one organized place.</p>
       </header>
 
       <section className="billing-overview" aria-label={`${upcomingBill.period} billing overview`}>
         <article className="billing-balance">
           <img className="billing-balance-circle" src={asset('billing-balance-circle.svg')} width="233" height="233" alt="" />
-          <span>TOTAL UPCOMING</span>
-          <strong>{money(upcomingTotal)}</strong>
-          <p>{upcomingBill.period} rent and utilities</p>
-          <time dateTime={upcomingBill.due}>DUE {billDueLabel.toUpperCase()}</time>
+          <span>{isLiveWorkspace()&&!upcomingBill.posted?'AGREED MONTHLY CHARGES':'TOTAL UPCOMING'}</span>
+          <strong>{money(isLiveWorkspace()&&!upcomingBill.posted?upcomingBill.agreedMonthly:upcomingTotal)}</strong>
+          <p>{isLiveWorkspace()&&!upcomingBill.posted?'Your accepted room rate. No bill posted yet.':upcomingBill.period+' rent and fixed charges'}</p>
+          <time dateTime={upcomingBill.due||undefined}>{isLiveWorkspace()&&!upcomingBill.posted?'NOT YET BILLED':'DUE '+billDueLabel.toUpperCase()}</time>
         </article>
 
         <article className="billing-breakdown">
-          <h2>Payment breakdown</h2>
+          <h2>{isLiveWorkspace()&&!upcomingBill.posted?'Agreed monthly breakdown':'Bill breakdown'}</h2>
           <dl>
             <div><dt>Monthly rent</dt><dd>{money(upcomingBill.rent)}</dd></div>
-            <div><dt>Utilities</dt><dd>{money(upcomingBill.utilities)}</dd></div>
+            <div><dt>{isLiveWorkspace()?'Fixed monthly charges':'Utilities'}</dt><dd>{money(upcomingBill.utilities)}</dd></div>
             <div><dt>Outstanding balance</dt><dd>{money(upcomingBill.outstanding)}</dd></div>
             {upcomingBill.paid > 0 && <div><dt>Approved payments</dt><dd>{money(upcomingBill.paid)}</dd></div>}
           </dl>
@@ -104,10 +105,11 @@ export default function BillingPayments() {
           })}
         </div>
       </section>
-      <p className="resident-preview-label">Sample billing period: {upcomingBill.period} · Preferred channel: {channel}. {upcomingBill.paid > 0 ? `Approved locally: ${money(upcomingBill.paid)}. Remaining: ${money(upcomingBill.balance)}.` : ''} No payments are processed.</p>
+      <p className="resident-preview-label">{isLiveWorkspace()?'Billing period:':'Sample billing period:'} {upcomingBill.period} · Preferred channel: {channel}. {upcomingBill.paid > 0 ? `Approved locally: ${money(upcomingBill.paid)}. Remaining: ${money(upcomingBill.balance)}.` : ''} No payments are processed.</p>
     </div>
-    {panel && <ResidentDialog title={panel === 'upcoming' ? 'Upcoming payments' : 'Payment methods'} eyebrow="MONTHLY DUES" onClose={() => setPanel(null)}>
-      {panel === 'upcoming' ? <><div className="dialog-body"><p><strong>{upcomingBill.period} · {money(upcomingTotal)}</strong></p><p>Sample due date: {billDueLabel}, {upcomingBill.periodKey.slice(0, 4)}. {billTiming()}.</p><p>Rent {money(upcomingBill.rent)} + utilities {money(upcomingBill.utilities)}. Preferred channel: {channel}.</p><p>For actual balances and payment instructions, check with the front desk. This preview cannot accept or submit payments.</p><a href="#/resident/payments/history" onClick={() => setPanel(null)}>View payment history</a></div><button className="dialog-primary" onClick={() => setPanel(null)}>Done</button></> : <form onSubmit={event => { event.preventDefault(); try { savePaymentChannel(selectedChannel); setPanel(null); setNotice('Preferred payment channel saved locally.') } catch (error) { setError(error instanceof Error ? error.message : 'Could not save your preference.') } }}>
+    {isLiveWorkspace()&&<p className="room-note">Agreed monthly charges: {money(upcomingBill.agreedMonthly)}. {upcomingBill.variableCharges?'Metered and unconfirmed charges are not included. ':''}{upcomingBill.posted?'Only posted bills count toward your balance.':'No amount is due until the owner posts a bill.'}</p>}
+    {panel && <ResidentDialog footerNote={isLiveWorkspace()?'Posted bills are saved property records. This app does not process payments.':undefined} title={panel === 'upcoming' ? 'Upcoming payments' : 'Payment methods'} eyebrow="MONTHLY DUES" onClose={() => setPanel(null)}>
+      {panel === 'upcoming' ? <><div className="dialog-body"><p><strong>{upcomingBill.period} · {money(upcomingTotal)}</strong></p><p>{isLiveWorkspace()?'Bill status:':'Sample due date:'} {billDueLabel}{upcomingBill.posted?', '+upcomingBill.periodKey.slice(0,4):''}. {billTiming()}.</p><p>Rent {money(upcomingBill.rent)} + fixed charges {money(upcomingBill.utilities)}. Preferred channel: {channel}.</p><p>Confirm payment instructions with your property owner. This app cannot process or submit payments.</p><a href="#/resident/payments/history" onClick={() => setPanel(null)}>View payment history</a></div><button className="dialog-primary" onClick={() => setPanel(null)}>Done</button></> : <form onSubmit={event => { event.preventDefault(); try { savePaymentChannel(selectedChannel); setPanel(null); setNotice('Preferred payment channel saved locally.') } catch (error) { setError(error instanceof Error ? error.message : 'Could not save your preference.') } }}>
         <div className="dialog-body"><p>Choose your preferred channel. Only the channel name is stored; no account or financial details are collected.</p><fieldset><legend>Preferred payment channel</legend>{paymentChannels.map(value => <label className="dialog-choice" key={value}><input type="radio" name="channel" value={value} checked={selectedChannel === value} onChange={() => setSelectedChannel(value)} />{value}</label>)}</fieldset><p>Confirm actual payment instructions with the front desk.</p></div>
         {error && <p className="dialog-error" role="alert">{error}</p>}<button className="dialog-primary">Save preference (preview)</button>
       </form>}

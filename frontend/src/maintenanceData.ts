@@ -1,3 +1,4 @@
+import { isLiveWorkspace, workspaceStorageKey } from './workspaceSession'
 import { readPreview, savePreview, manilaInputDate } from './previewStore'
 import { CURRENT_RESIDENT_ID, getCurrentResident, getResident } from './residentsData'
 
@@ -85,6 +86,7 @@ function readStoredTickets(): MaintenanceTicket[] {
 }
 
 export function getAllMaintenanceTickets(): MaintenanceTicket[] {
+  if (isLiveWorkspace()) return readStoredTickets()
   const extra: MaintenanceTicket[] = [
     { id: 'TCK-1043', residentId: 'RES-0045', priority: 'High', title: 'Broken hallway light', category: 'Electrical', categoryLabel: 'Electrical concern', location: 'Second floor, near Room 206', status: 'In progress', description: 'The shared hallway light flickers repeatedly and occasionally shuts off at night.', submitted: 'Oct 12, 2026', assignedTo: 'Marco Reyes', comment: 'Assigned to maintenance.', activity: [{ text: 'Assigned to maintenance', created: '2026-10-12T09:05' }] },
     { id: 'TCK-1040', residentId: 'RES-0045', priority: 'Normal', title: 'AC unit inspection', category: 'Air conditioning', categoryLabel: 'Air conditioning', location: 'Room 302', status: 'Assigned', description: 'Please inspect the air-conditioning unit.', submitted: 'Oct 10, 2026', assignedTo: 'Marco Reyes', comment: 'Inspection scheduled.' },
@@ -131,7 +133,7 @@ export function createMaintenanceTicket(draft: MaintenanceDraft) {
     activity: [{ text: `Request submitted by ${getCurrentResident().fullName}`, created: manilaInputDate() }],
   }
   savePreview(TICKETS_KEY, [ticket, ...stored])
-  try { sessionStorage.removeItem(DRAFT_KEY) } catch { /* Ticket is already saved. */ }
+  try { sessionStorage.removeItem(workspaceStorageKey(DRAFT_KEY)) } catch { /* Ticket is already saved. */ }
   return ticket
 }
 

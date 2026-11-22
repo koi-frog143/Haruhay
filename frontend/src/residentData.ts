@@ -1,3 +1,4 @@
+import { isLiveWorkspace } from './workspaceSession'
 import { readPreview, savePreview, manilaInputDate } from './previewStore'
 
 export { money, getBillingSummary, getResidentPayments } from './billingData'
@@ -10,7 +11,7 @@ export type PaymentChannel = typeof paymentChannels[number]
 export function getPaymentChannel() { return readPreview<PaymentChannel>('haruhay-payment-channel', 'GCash', (value): value is PaymentChannel => paymentChannels.includes(value as PaymentChannel)) }
 export function savePaymentChannel(value: PaymentChannel) { savePreview('haruhay-payment-channel', value) }
 
-export const accessRecords = [
+const sampleAccessRecords = [
   { date: 'Oct 12, 2026', isoDate: '2026-10-12', time: '8:11 AM', activity: 'Resident check-in', entryPoint: 'Main entrance', verification: 'Verified' },
   { date: 'Oct 12, 2026', isoDate: '2026-10-12', time: '7:19 AM', activity: 'Resident check-out', entryPoint: 'Main entrance', verification: 'Verified' },
   { date: 'Oct 11, 2026', isoDate: '2026-10-11', time: '9:25 PM', activity: 'Resident check-in', entryPoint: 'Main entrance', verification: 'Verified' },
@@ -25,3 +26,6 @@ export function saveSupportRequest(subject: string, message: string) {
 }
 export function getReadNotifications() { return readPreview<string[]>('haruhay-read-notifications', [], (value): value is string[] => Array.isArray(value) && value.every(id => typeof id === 'string')) }
 export function markNotificationsRead(ids: string[]) { savePreview('haruhay-read-notifications', [...new Set([...getReadNotifications(), ...ids])]) }
+
+export let accessRecords = isLiveWorkspace() ? [] : sampleAccessRecords
+window.addEventListener('haruhay-workspace-changed', () => { accessRecords = isLiveWorkspace() ? [] : sampleAccessRecords })

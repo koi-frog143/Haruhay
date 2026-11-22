@@ -1,4 +1,6 @@
-﻿import { useEffect, useRef, useState } from 'react'
+import { ConfirmedAgreement } from './RoomFlow'
+import { isLiveWorkspace } from './workspaceSession'
+import { useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import ResidentLayout from './ResidentLayout'
 import { getResidentProfile, profileInitials, saveResidentProfile } from './profileData'
@@ -87,6 +89,7 @@ export default function ResidentProfile() {
 
   return <ResidentLayout activeSection="My profile" breadcrumb="My profile" notice={notice} onNotice={setNotice} onDismissNotice={() => setNotice('')}>
     <div className="resident-content profile-content">
+      {isLiveWorkspace() && <ConfirmedAgreement/>}
       <header className="resident-page-heading">
         <span>PERSONAL INFORMATION</span>
         <h1>My Haruhay profile</h1>

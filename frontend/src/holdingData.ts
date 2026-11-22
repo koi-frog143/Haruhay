@@ -1,4 +1,5 @@
-﻿import { useEffect, useState } from 'react'
+import { isLiveWorkspace, workspaceStorageKey } from './workspaceSession'
+import { useEffect, useState } from 'react'
 
 import { CURRENT_RESIDENT_ID, getResidents } from './residentsData'
 
@@ -66,15 +67,15 @@ function isItem(value: unknown): value is HoldingItem {
 }
 export function getHoldingState(): HoldingState {
   try {
-    const value = JSON.parse(sessionStorage.getItem(KEY) ?? 'null') as HoldingState | null
+    const value = JSON.parse(sessionStorage.getItem(workspaceStorageKey(KEY)) ?? 'null') as HoldingState | null
     if (value && Number.isSafeInteger(value.nextId) && value.nextId >= 45 && Array.isArray(value.items) && value.items.every(isItem) &&
       value.nextId > Math.max(0, ...value.items.map(item => item.id)) && Array.isArray(value.inquiries) &&
       value.inquiries.every(entry => entry && ['id', 'time', 'name', 'identity', 'lookingFor', 'purpose', 'result'].every(key => typeof (entry as unknown as Record<string, unknown>)[key] === 'string'))) return value
   } catch { /* Invalid or unavailable session data falls back to the sample records. */ }
-  return seed()
+  return isLiveWorkspace() ? { items: [], inquiries: [], nextId: 45 } : seed()
 }
 export function saveHoldingState(state: HoldingState) {
-  sessionStorage.setItem(KEY, JSON.stringify(state))
+  sessionStorage.setItem(workspaceStorageKey(KEY), JSON.stringify(state))
   window.dispatchEvent(new Event(EVENT))
 }
 export function useHoldingState() {
