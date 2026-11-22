@@ -59,7 +59,7 @@ Each file identifies its recipient. The account ID is available from GET /api/ac
 
 The gmail profile configures smtp.gmail.com:587 with required STARTTLS, certificate-host checks and authentication. The From address and login default to earldomingo165@gmail.com. It overrides development file delivery when enabled after dev.
 
-Enable Google 2-Step Verification and generate an app password at https://myaccount.google.com/apppasswords while signed in to that Gmail account. Use the app password, not your normal Google password. Do not share it in chat or commit it.
+Enable Google 2-Step Verification and generate an app password at httpvvs://myaccount.google.com/apppasswords while signed in to that Gmail account. Use the app password, not your normal Google password. Do not share it in chat or commit it.
 
 From the backend folder:
 
@@ -100,7 +100,7 @@ Local development preference: after requested changes, back up and reset test re
 
 Login opens the original complete admin dashboard for the owner and the original resident dashboard for an approved resident. Existing tabs, pages, dialogs, exports and Holding Station interactions are retained. Applications and Property & rooms are additional admin tabs; pending residents can view their application status while resident services remain approval-gated.
 
-The workspace uses the signed-in account identity and approved room assignment. The owner resident directory is derived from approved backend applications. Payments, maintenance, visitor records, access logs, packages and announcements start empty rather than loading dummy records. Other modules retain their frontend-only interactions and account-scoped browser storage; registration, verification and approval use the backend database. Those other modules are not yet backend integrations.
+The workspace uses the signed-in account identity and approved room assignment. The owner resident directory is derived from approved backend applications. Payments, maintenance, visitor records, access logs and announcements start empty rather than loading dummy records. Holding Station records and transaction history are stored in the backend database; owners manage records and approved residents see only their own items. Other modules retain their frontend-only interactions and account-scoped browser storage; registration, verification, approval and Holding Station use the backend database. Those other modules are not yet backend integrations.
 
 To test registration with the existing UI: sign in as owner, open Applications, register a separate resident through Create an account, verify that email once, approve the room in Applications, then sign in as the resident. All original resident tabs remain available after approval. The owner account, property and rooms were preserved when local test registrations were reset. A database backup and the old local delivery files were archived under backend .local/backups before reset.
 

@@ -113,17 +113,17 @@ Run `node scripts/check-admin-ui.mjs` with Vite and the same isolated Chrome deb
 
 The former standalone holding-station page is integrated into the React application.
 Use the resident sidebar or dashboard package card, or open either Holding Station URL above.
-The Resident / Front desk links switch between the two frontend workspaces.
+Sample mode keeps its Resident / Front desk workspaces separate in browser session storage. Signed-in owner and approved-resident workspaces use the backend database.
 
 - Residents can see their ready items, pickup codes, all available items, and collection history.
 - Front desk can search/filter records, register items, edit descriptions/shelves, view history, and confirm deletions.
 - Shelf occupancy prevents two ready items from using the same slot. Full shelves disable registration.
-- Release requires a presented ID, claimant name, and receipt confirmation. Owner IDs must match; representatives require an explicit authorization check.
-- Walk-in inquiries record visitor details and search by resident and/or tracking number. If both are supplied, both must match.
-- Dashboard pickup counts use the same records. Changes and inquiries survive navigation and refresh within the same browser session.
+- Live release requires the owner to confirm an in-person ID check, record the claimant, and confirm receipt. Only the ID type and last four characters are stored; representatives require explicit authorization.
+- Walk-in inquiries search by resident and/or tracking number. Live inquiry logs retain visitor details and only the ID type and last four characters.
+- Dashboard pickup counts use the same records. Sample changes persist within the browser tab; live records and transaction history persist in the backend database.
 - Light/dark controls affect Holding Station content without changing other screens.
 
-HoldingStation.tsx and HoldingStation.css contain the UI. holdingData.ts contains the sample records and shared session-storage helpers.
+HoldingStation.tsx and HoldingStation.css contain the UI. holdingData.ts contains sample fixtures and backend loading helpers.
 Sample resident IDs are RES-0204 (current resident), RES-0101 (Marco), and RES-0312 (Lea).
-The front desk view is a preview, not an authenticated staff area. Backend persistence, real notifications, and staff authorization are not connected.
+The sample front desk view is not an authenticated staff area. Live Holding Station APIs are owner-only; separate staff accounts and notifications are not implemented.
 No standalone folder or separate server is required.

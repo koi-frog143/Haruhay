@@ -26,8 +26,9 @@ const services = [
 ]
 
 export default function ResidentDashboard() {
-  const holdingState = useHoldingState()
-  const pickupCount = holdingState.items.filter(item => item.residentId === CURRENT_RESIDENT && item.status === 'Ready').length
+  const { state: holdingState, loadError: holdingError } = useHoldingState()
+  const pickupCount = (isLiveWorkspace() ? holdingState.items : holdingState.items.filter(item => item.residentId === CURRENT_RESIDENT))
+    .filter(item => item.status === 'Ready').length
   const [notice, setNotice] = useState('')
   const [servicesOpen, setServicesOpen] = useState(false)
   const profile = usePreviewData(getResidentProfile)
@@ -37,7 +38,7 @@ export default function ResidentDashboard() {
   const resident = usePreviewData(getCurrentResident)
   const values: Record<string, string> = {
     'Upcoming rent': money(isLiveWorkspace()&&!bill.posted?bill.agreedMonthly:bill.balance),
-    'Items for pickup': String(pickupCount).padStart(2, '0'),
+    'Items for pickup': holdingError ? '—' : String(pickupCount).padStart(2, '0'),
     'Active maintenance ticket': String(tickets.filter(ticket => ticket.status !== 'Resolved').length).padStart(2, '0'),
     'Recent guest entries': String(visitorEntries.length).padStart(2, '0'),
   }
@@ -58,6 +59,7 @@ export default function ResidentDashboard() {
     onDismissNotice={() => setNotice('')}
   >
     <div className="resident-content">
+      {holdingError && <p className="resident-inline-error" role="alert">{holdingError}</p>}
       <header className="resident-page-heading">
         <span>YOUR SPACE&nbsp; / &nbsp;ROOM {resident.room}</span>
         <h1>Welcome home, {profile.fullName.trim().split(/\s+/u)[0]}!</h1>
