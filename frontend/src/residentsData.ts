@@ -1,5 +1,6 @@
 import { readPreview, savePreview } from './previewStore'
 import { getSettings } from './settingsData'
+import { isLiveWorkspace, workspaceResident } from './workspaceSession'
 
 export const CURRENT_RESIDENT_ID = 'RES-0204'
 export type ResidentRecord = { id: string; fullName: string; email: string; mobile: string; room: string; moveIn: string; status: 'Active' | 'Inactive'; verified: boolean; paymentReminders: boolean; maintenanceUpdates: boolean; communityAnnouncements: boolean }
@@ -24,8 +25,8 @@ function validResident(value: unknown): value is ResidentRecord {
   const r = value as Record<string, unknown>
   return ['id', 'fullName', 'email', 'mobile', 'room', 'moveIn'].every(key => typeof r[key] === 'string' && String(r[key]).trim()) && ['Active', 'Inactive'].includes(String(r.status)) && ['verified', 'paymentReminders', 'maintenanceUpdates', 'communityAnnouncements'].every(key => typeof r[key] === 'boolean')
 }
-export function getResidents(): ResidentRecord[] { return readPreview('haruhay-residents-v1', defaults(), (value): value is ResidentRecord[] => Array.isArray(value) && value.every(validResident) && value.some(resident => resident.id === CURRENT_RESIDENT_ID) && new Set(value.map(resident => resident.id)).size === value.length) }
-export function getCurrentResident() { return getResidents().find(resident => resident.id === CURRENT_RESIDENT_ID)! }
+export function getResidents(): ResidentRecord[] { return readPreview('haruhay-residents-v1', defaults(), (value): value is ResidentRecord[] => Array.isArray(value) && value.every(validResident) && (isLiveWorkspace() || value.some(resident => resident.id === CURRENT_RESIDENT_ID)) && new Set(value.map(resident => resident.id)).size === value.length) }
+export function getCurrentResident() { return getResidents().find(resident => resident.id === CURRENT_RESIDENT_ID) ?? (isLiveWorkspace() ? workspaceResident() : defaults()[0]) }
 export function getResident(id: string) { return getResidents().find(resident => resident.id === id) }
 export function saveResident(input: ResidentInput, id?: string) {
   const residents = getResidents()

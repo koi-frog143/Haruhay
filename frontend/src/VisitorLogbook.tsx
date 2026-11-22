@@ -1,3 +1,4 @@
+import { isLiveWorkspace } from './workspaceSession'
 import { useEffect, useMemo, useState } from 'react'
 import ResidentLayout from './ResidentLayout'
 import './VisitorLogbook.css'
@@ -119,7 +120,7 @@ export default function VisitorLogbook() {
         {error && <p className="dialog-error" role="alert">{error}</p>}
         {!requests.length ? <p>No visitor requests yet. <a href="#/resident/logbook/register">Register a visitor</a></p> : <ul className="dialog-list">{requests.map(request => <li key={request.id}><div><strong>{request.fullName}</strong><small>{request.expectedArrival.replace('T', ' ')} · {request.purpose}</small><span>{request.status}</span></div>{request.status === 'Pending review' && <button className="dialog-secondary" onClick={() => { setError(''); setCancelId(request.id) }}>Cancel request for {request.fullName}</button>}</li>)}</ul>}
       </section>
-      <p className="resident-preview-label">Sample recorded activity · October 2026</p>
+      <p className="resident-preview-label">{isLiveWorkspace() ? "No sample visits are loaded. Module test changes stay in this browser." : <>Sample recorded activity {"\u00b7"} October 2026</>}</p>
     </div>
     {cancelId && <ResidentDialog title="Cancel visitor request?" eyebrow="VISITOR REQUEST" onClose={() => setCancelId(null)}>
       <div className="dialog-body"><p>This cancels the locally saved request. Recorded check-ins remain unchanged.</p></div>

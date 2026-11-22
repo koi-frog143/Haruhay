@@ -1,3 +1,4 @@
+import { getWorkspaceSession, isLiveWorkspace } from './workspaceSession'
 import { readPreview, savePreview, manilaInputDate } from './previewStore'
 import { CURRENT_RESIDENT_ID, getResidents } from './residentsData'
 import { getSettings } from './settingsData'
@@ -14,7 +15,7 @@ function defaults(): LedgerPayment[] {
   ]
 }
 function valid(value: unknown): value is LedgerPayment[] { return Array.isArray(value) && value.every(row => row && ['id', 'residentId', 'period', 'date', 'method', 'reference', 'evidence', 'reviewNote', 'reviewedAt'].every(key => typeof row[key] === 'string') && /^\d{4}-\d{2}$/u.test(row.period) && Number.isFinite(row.amount) && row.amount > 0 && ['Needs review', 'Approved', 'Rejected'].includes(row.status)) }
-export function getLedgerPayments() { return readPreview('haruhay-payment-ledger', defaults(), valid) }
+export function getLedgerPayments() { if(isLiveWorkspace())return []; return readPreview('haruhay-payment-ledger', defaults(), valid) }
 export const periodLabel = (period: string) => new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Manila', month: 'long', year: 'numeric' }).format(new Date(`${period}-01T00:00:00+08:00`))
 export function reviewPayment(id: string, status: 'Approved' | 'Rejected', note: string, verified: boolean) {
   const rows = getLedgerPayments()
@@ -26,19 +27,36 @@ export function reviewPayment(id: string, status: 'Approved' | 'Rejected', note:
   savePreview('haruhay-payment-ledger', rows.map(row => row.id === id ? { ...row, status, reviewNote: note.trim(), reviewedAt: manilaInputDate() } : row))
 }
 export function getBillingSummary(residentId = CURRENT_RESIDENT_ID) {
+  if(isLiveWorkspace())return liveBill(residentId)
   const rules = getSettings().billing
   const total = rules.rent + rules.utilities
   const paid = getLedgerPayments().filter(payment => payment.residentId === residentId && payment.period === rules.period && payment.status === 'Approved').reduce((sum, payment) => sum + payment.amount, 0)
   const due = `${rules.period}-${String(rules.dueDay).padStart(2, '0')}`
   const dueLabel = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Manila', month: 'long', day: 'numeric' }).format(new Date(`${due}T00:00:00+08:00`))
   const days = Math.round((Date.parse(due + 'T00:00:00+08:00') - Date.parse(manilaInputDate().slice(0, 10) + 'T00:00:00+08:00')) / 86400000)
-  return { period: periodLabel(rules.period), periodKey: rules.period, due, dueLabel, rent: rules.rent, utilities: rules.utilities, outstanding: 0, total, paid, credit: Math.max(0, paid - total), balance: Math.max(0, total - paid), timing: days < 0 ? `${-days} days past sample due date` : days === 0 ? 'Due today' : `${days} days remaining` }
+  return { period: periodLabel(rules.period), periodKey: rules.period, due, dueLabel: isLiveWorkspace() && total === 0 ? 'No bill issued' : dueLabel, rent: rules.rent, utilities: rules.utilities, outstanding: 0, total, paid, credit: Math.max(0, paid - total), balance: Math.max(0, total - paid), posted:true,agreedMonthly:total,hasAgreement:true,variableCharges:false,timing: isLiveWorkspace() && total === 0 ? 'No payment scheduled' : days < 0 ? `${-days} days past sample due date` : days === 0 ? 'Due today' : `${days} days remaining` }
+}
+function liveBill(residentId:string){
+  const session=getWorkspaceSession()
+  const owner=session?.account.role==='OWNER'
+  const app=session?.applications.find(a=>a.status==='APPROVED'&&(owner?a.id===residentId:a.email===session.account.email))
+  const terms=app?.offers?.[0]?.terms
+  const rent=terms?.applicant_monthly_rent==null?0:Number(terms.applicant_monthly_rent)
+  const fixed=(terms?.charges||[]).filter(c=>c.basis==='FIXED_MONTHLY').reduce((sum,c)=>sum+Number(c.amount||0),0)
+  const bills=(session?.bills||[]).filter(b=>b.application_id===app?.id).sort((a,b)=>a.due_date.localeCompare(b.due_date))
+  const bill=bills[0]
+  const period=bill?.period||manilaInputDate().slice(0,7)
+  const outstanding=bills.slice(1).reduce((sum,b)=>sum+Number(b.rent)+Number(b.fixed_charges),0)
+  const postedTotal=bill?Number(bill.rent)+Number(bill.fixed_charges):0
+  const due=bill?.due_date||''
+  const days=bill?Math.round((Date.parse(due+'T00:00:00+08:00')-Date.parse(manilaInputDate().slice(0,10)+'T00:00:00+08:00'))/86400000):0
+  return {period:periodLabel(period),periodKey:period,due,dueLabel:bill?new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Manila',month:'long',day:'numeric'}).format(new Date(due+'T00:00:00+08:00')):'No bill posted',rent:bill?Number(bill.rent):rent,utilities:bill?Number(bill.fixed_charges):fixed,outstanding,total:postedTotal+outstanding,paid:0,credit:0,balance:postedTotal+outstanding,timing:bill?(days<0?(-days)+' days overdue':days===0?'Due today':days+' days remaining'):'Awaiting a posted bill',posted:Boolean(bill),agreedMonthly:rent+fixed,hasAgreement:Boolean(terms),variableCharges:(terms?.charges||[]).some(c=>['USAGE_BASED','TO_CONFIRM'].includes(c.basis))}
 }
 export function getResidentPayments() {
   return getLedgerPayments().filter(payment => payment.residentId === CURRENT_RESIDENT_ID).map(payment => ({ id: payment.id, period: periodLabel(payment.period), date: new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Manila', month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(payment.date + 'T00:00:00+08:00')), method: payment.method, amount: money(payment.amount), status: payment.status === 'Approved' ? 'Paid' : payment.status === 'Rejected' ? 'Rejected' : 'Pending', reviewNote: payment.reviewNote }))
 }
 export function getPropertyBilling() {
-  const period = getSettings().billing.period
+  const period = isLiveWorkspace() ? manilaInputDate().slice(0,7) : getSettings().billing.period
   const ledger = getLedgerPayments()
   const balances = getResidents().filter(resident => resident.status === 'Active').map(resident => ({ resident, ...getBillingSummary(resident.id) }))
   return { period, balances, collected: ledger.filter(payment => payment.period === period && payment.status === 'Approved').reduce((sum, payment) => sum + payment.amount, 0), pending: ledger.filter(payment => payment.status === 'Needs review'), outstanding: balances.reduce((sum, bill) => sum + bill.balance, 0), monthly: Array.from({ length: Number(period.slice(5, 7)) }, (_, index) => { const month = `${period.slice(0, 4)}-${String(index + 1).padStart(2, '0')}`; return { label: new Intl.DateTimeFormat('en-US', { month: 'short', timeZone: 'Asia/Manila' }).format(new Date(month + '-01T00:00:00+08:00')), amount: ledger.filter(payment => payment.period === month && payment.status === 'Approved').reduce((sum, payment) => sum + payment.amount, 0) } }) }

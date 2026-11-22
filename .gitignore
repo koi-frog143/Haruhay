@@ -12,6 +12,7 @@ frontend/.ui-verification/
 
 # Spring Boot / Maven
 **/target/
+**/.local/
 **/*.class
 
 # Environment variables and secrets

@@ -1,5 +1,6 @@
+import { getWorkspaceSession, signOutWorkspace } from './workspaceSession'
 import { useEffect, useRef, useState } from 'react'
-import type { FormEvent, ReactNode } from 'react'
+import type { FormEvent, MouseEvent, ReactNode } from 'react'
 import './ResidentDashboard.css'
 import { getResidentProfile, profileInitials } from './profileData'
 import ResidentTools from './ResidentTools'
@@ -9,7 +10,7 @@ import { usePreviewData } from './previewStore'
 
 const asset = (name: string) => `./assets/dashboard/${name}`
 
-export type ResidentSection = 'Dashboard' | 'Logbook' | 'Maintenance' | 'Holding station' | 'Payments' | 'Community' | 'My profile'
+export type ResidentSection = 'Dashboard' | 'Logbook' | 'Maintenance' | 'Holding station' | 'Payments' | 'Community' | 'My profile' | 'Application status'
 
 const navigation: Array<{ label: ResidentSection; icon: string; href?: string }> = [
   { label: 'Dashboard', icon: 'icon-home.svg', href: '#/resident/dashboard' },
@@ -32,7 +33,15 @@ type ResidentLayoutProps = {
   children: ReactNode
 }
 
-export default function ResidentLayout({ activeSection, breadcrumb, notice, onDismissNotice, children }: ResidentLayoutProps) {
+export default function ResidentLayout({ activeSection, breadcrumb, notice, onNotice, onDismissNotice, children }: ResidentLayoutProps) {
+  const live = getWorkspaceSession()
+  const applicationOnly = Boolean(live && !live.applications.some(a => a.status === 'APPROVED'))
+  async function signout(event: MouseEvent<HTMLAnchorElement>) {
+    if (!live) return
+    event.preventDefault()
+    try { await signOutWorkspace() }
+    catch (error) { onNotice(error instanceof Error ? error.message : 'Could not sign out. Please try again.') }
+  }
   const [profile, setProfile] = useState(getResidentProfile)
   useEffect(() => {
     const update = () => setProfile(getResidentProfile())
@@ -108,14 +117,15 @@ export default function ResidentLayout({ activeSection, breadcrumb, notice, onDi
     />
 
     <aside ref={sidebar} inert={narrow && !navigationOpen} id="resident-navigation" className={'resident-sidebar ' + (navigationOpen ? 'is-open' : '')} aria-label="Resident portal navigation">
-      <a className="resident-brand" href="#/" aria-label="Haruhay home">
+      <a className="resident-brand" href={applicationOnly ? '#/account/status' : '#/resident/dashboard'} aria-label="Haruhay home">
         <img src={asset('haruhay-mark.png')} width="56" height="56" alt="" />
         <img src={asset('haruhay-wordmark.png')} width="172" height="46" alt="Haruhay" />
       </a>
 
       <nav className="resident-nav" aria-label="Resident portal">
-        <p>RESIDENT PORTAL</p>
-        {navigation.map(item => {
+        <p>{applicationOnly ? 'YOUR APPLICATION' : 'RESIDENT PORTAL'}</p>
+        {applicationOnly && <a className="active" aria-current="page" href="#/account/status" onClick={() => setNavigationOpen(false)}><img src={asset('icon-book-nav.svg')} width="21" height="21" alt="" /><span>Application status</span></a>}
+        {!applicationOnly && navigation.map(item => {
           const className = item.label === activeSection ? 'active' : ''
           const content = <>
             <img src={asset(item.icon)} width="21" height="21" alt="" />
@@ -135,14 +145,14 @@ export default function ResidentLayout({ activeSection, breadcrumb, notice, onDi
       </nav>
 
       <div className="resident-sidebar-footer">
-        <a className="resident-signout" href="#/login">Sign out</a>
-        <button className="resident-support" type="button" onClick={() => { setTool('support'); setNavigationOpen(false) }}>
+        <a className="resident-signout" href="#/login" onClick={signout}>Sign out</a>
+        {applicationOnly ? <div className="resident-support application-sidebar-note"><span className="resident-support-title"><img src={asset('icon-shield.svg')} width="24" height="24" alt="" /><strong>A place to belong.</strong></span><span>Your resident services will be ready once your owner approves your stay.</span></div> : <button className="resident-support" type="button" onClick={() => { setTool('support'); setNavigationOpen(false) }}>
           <span className="resident-support-title">
             <img src={asset('icon-shield.svg')} width="24" height="24" alt="" />
             <strong>Here for you, always.</strong>
           </span>
           <span>Need support? Talk to our team.</span>
-        </button>
+        </button>}
       </div>
     </aside>
 
@@ -160,7 +170,7 @@ export default function ResidentLayout({ activeSection, breadcrumb, notice, onDi
         <p className="resident-breadcrumb">My home / {breadcrumb}</p>
 
         <div className="resident-topbar-actions">
-          <form className="resident-search" role="search" onSubmit={submitSearch}>
+          {!applicationOnly && <><form className="resident-search" role="search" onSubmit={submitSearch}>
             <img src={asset('icon-search.svg')} width="19" height="19" alt="" />
             <input value={search} onChange={event => setSearch(event.target.value)} aria-label="Search Haruhay" placeholder="Search Haruhay..." />
           </form>
@@ -177,7 +187,7 @@ export default function ResidentLayout({ activeSection, breadcrumb, notice, onDi
               <img src={asset('icon-bell.svg')} width="21" height="21" alt="" />
               {unread > 0 && <img className="resident-notification-dot" src={asset('notification-dot.svg')} width="8" height="8" alt="" />}
             </button>
-          </div>
+          </div></>}
 
           <div className="resident-popover-anchor">
             <button
@@ -190,15 +200,15 @@ export default function ResidentLayout({ activeSection, breadcrumb, notice, onDi
               <span>{profileInitials(profile.fullName)}</span><strong>{profile.fullName.trim().split(/\s+/u)[0]} {profile.fullName.trim().split(/\s+/u).length > 1 ? Array.from(profile.fullName.trim().split(/\s+/u).at(-1) ?? '')[0] + '.' : ''}</strong>
             </button>
             {openPanel === 'account' && <div className="resident-popover resident-account-menu">
-              <a href="#/resident/profile" onClick={() => setOpenPanel(null)}>My profile</a>
-              <a href="#/login">Sign out</a>
+              {!applicationOnly && <a href="#/resident/profile" onClick={() => setOpenPanel(null)}>My profile</a>}
+              <a href="#/login" onClick={signout}>Sign out</a>
             </div>}
           </div>
         </div>
       </header>
 
       {children}
-      {tool && <ResidentTools mode={tool} initialQuery={search} onClose={() => setTool(null)} />}
+      {!applicationOnly && tool && <ResidentTools mode={tool} initialQuery={search} onClose={() => setTool(null)} />}
 
       <div className={'resident-status ' + (notice ? 'is-visible' : '')} role="status" aria-live="polite">
         {notice}

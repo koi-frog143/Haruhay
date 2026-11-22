@@ -1,0 +1,14 @@
+# Explicit, isolated LOCAL sample environment. Never activate in production.
+spring:
+  datasource:
+    url: jdbc:h2:file:./.local/haruhay-live;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH
+    username: sa
+    password: ""
+    driver-class-name: org.h2.Driver
+haruhay:
+  delivery: local-file
+  local-mail-dir: .local/mail
+  dev-owner-email: ${DEV_OWNER_EMAIL:}
+  dev-owner-password: ${DEV_OWNER_PASSWORD:}
+  dev-owner-name: ${DEV_OWNER_NAME:Property owner}
+  dev-sample-data: ${HARUHAY_DEV_SAMPLE_DATA:false}

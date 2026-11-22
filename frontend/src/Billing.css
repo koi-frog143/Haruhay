@@ -234,3 +234,7 @@
 @media (prefers-reduced-motion: reduce) {
   .billing-center-card { transition: none; }
 }
+.billing-heading-actions { display:flex; align-items:center; justify-content:space-between; gap:20px; }
+.billing-heading-actions h1 { margin:0; }
+.billing-heading-actions button { flex-shrink:0; font-size:12px; }
+@media(max-width:650px) { .billing-heading-actions { align-items:flex-start; flex-direction:column; gap:12px; } }

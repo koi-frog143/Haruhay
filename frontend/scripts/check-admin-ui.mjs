@@ -6,7 +6,7 @@ const { check, viewport, navigate, route, evaluate, click, fill, submit, contain
 const geometry = []
 try {
   await navigate('/admin/dashboard')
-  await evaluate('sessionStorage.clear()')
+  await evaluate('sessionStorage.clear(); sessionStorage.setItem("haruhay-ui-mode","sample")')
   const routes = ['dashboard', 'residents', 'residents/RES-0204', 'logbook', 'maintenance', 'maintenance/TCK-1043', 'holding-station', 'billing', 'payments/approvals', 'announcements', 'settings']
   if (!process.env.UI_SKIP_BASELINE) for (const width of [1440, 390]) {
     await viewport(width)
@@ -21,7 +21,7 @@ try {
     })
   }
   await viewport(1440)
-  await check('Login provides explicit administrator preview entry', async () => { await navigate('/login'); await click('.admin-preview'); await contains('A healthier home, at a glance') })
+  await check('Login provides explicit administrator preview entry', async () => { await navigate('/preview/login'); await click('.admin-preview'); await contains('A healthier home, at a glance') })
   await check('Resident directory search, filter, reset and empty states', async () => {
     await navigate('/admin/residents')
     await fill('input[aria-label="Search residents"]', 'no-matching-resident')

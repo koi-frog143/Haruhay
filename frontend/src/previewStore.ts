@@ -1,16 +1,17 @@
 import { useEffect, useState } from 'react'
+import { liveFallback, workspaceStorageKey } from './workspaceSession'
 
 export const PREVIEW_EVENT = 'haruhay-preview-updated'
 
 export function readPreview<T>(key: string, fallback: T, valid: (value: unknown) => value is T): T {
   try {
-    const value: unknown = JSON.parse(sessionStorage.getItem(key) ?? 'null')
-    return valid(value) ? value : fallback
-  } catch { return fallback }
+    const value: unknown = JSON.parse(sessionStorage.getItem(workspaceStorageKey(key)) ?? 'null')
+    return valid(value) ? value : liveFallback(key, fallback)
+  } catch { return liveFallback(key, fallback) }
 }
 
 export function savePreview(key: string, value: unknown) {
-  try { sessionStorage.setItem(key, JSON.stringify(value)) }
+  try { sessionStorage.setItem(workspaceStorageKey(key), JSON.stringify(value)) }
   catch { throw new Error('Could not save. Allow browser storage and try again; your changes have not been saved.') }
   window.dispatchEvent(new Event(PREVIEW_EVENT))
 }
@@ -19,7 +20,7 @@ export function usePreviewData<T>(read: () => T): T {
   const [value, setValue] = useState(read)
   useEffect(() => {
     const update = () => setValue(read())
-    const events = [PREVIEW_EVENT, 'haruhay-profile-updated', 'haruhay-holding-updated', 'storage']
+    const events = [PREVIEW_EVENT, 'haruhay-profile-updated', 'haruhay-holding-updated', 'haruhay-workspace-changed', 'storage']
     events.forEach(event => window.addEventListener(event, update))
     return () => events.forEach(event => window.removeEventListener(event, update))
   }, [read])

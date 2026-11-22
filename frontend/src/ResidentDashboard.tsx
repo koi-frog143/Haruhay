@@ -1,3 +1,4 @@
+import { isLiveWorkspace } from './workspaceSession'
 import { getCurrentResident } from './residentsData'
 import { useEffect, useState } from 'react'
 import ResidentLayout from './ResidentLayout'
@@ -35,7 +36,7 @@ export default function ResidentDashboard() {
   const visitorEntries = usePreviewData(getVisitorEntries)
   const resident = usePreviewData(getCurrentResident)
   const values: Record<string, string> = {
-    'Upcoming rent': money(bill.balance),
+    'Upcoming rent': money(isLiveWorkspace()&&!bill.posted?bill.agreedMonthly:bill.balance),
     'Items for pickup': String(pickupCount).padStart(2, '0'),
     'Active maintenance ticket': String(tickets.filter(ticket => ticket.status !== 'Resolved').length).padStart(2, '0'),
     'Recent guest entries': String(visitorEntries.length).padStart(2, '0'),
@@ -76,7 +77,7 @@ export default function ResidentDashboard() {
           const content = <>
             <span className="resident-card-icon"><img src={asset(metric.icon)} width="24" height="24" alt="" /></span>
             <strong>{values[metric.label]}</strong>
-            <span>{metric.label}</span>
+            <span>{metric.label==='Upcoming rent'&&isLiveWorkspace()&&!bill.posted?'Agreed monthly charges':metric.label}</span>
           </>
           return metric.href
             ? <a className="resident-metric-card" href={metric.href} key={metric.label}>{content}</a>
@@ -110,7 +111,7 @@ export default function ResidentDashboard() {
           </a>
         </div>
       </section>
-      <p className="resident-preview-label">Frontend preview · sample records with changes saved in this browser session.</p>
+      <p className="resident-preview-label">{isLiveWorkspace() ? 'No sample records are loaded. Module test changes stay in this browser.' : <>Frontend preview · sample records with changes saved in this browser session.</>}</p>
     </div>
     {servicesOpen && <ResidentTools mode="services" onClose={() => setServicesOpen(false)} />}
   </ResidentLayout>

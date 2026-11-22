@@ -1,0 +1,16 @@
+# Enable AFTER dev: --spring.profiles.active=dev,gmail
+# Secrets are supplied only through the environment by start-gmail.ps1.
+spring:
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${GMAIL_ADDRESS:earldomingo165@gmail.com}
+    password: ${GMAIL_APP_PASSWORD}
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.starttls.enable: true
+      mail.smtp.starttls.required: true
+      mail.smtp.ssl.checkserveridentity: true
+haruhay:
+  delivery: smtp
+  mail-from: ${GMAIL_ADDRESS:earldomingo165@gmail.com}

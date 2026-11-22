@@ -1,3 +1,4 @@
+import { isLiveWorkspace } from './workspaceSession'
 import { useEffect, useMemo, useState } from 'react'
 import ResidentLayout from './ResidentLayout'
 import './AccessHistory.css'
@@ -14,8 +15,8 @@ export default function AccessHistory() {
   const [filter, setFilter] = useState<AccessFilter>('All records')
   const [notice, setNotice] = useState('')
   const [exportOpen, setExportOpen] = useState(false)
-  const [start, setStart] = useState('2026-10-10')
-  const [end, setEnd] = useState('2026-10-12')
+  const [start, setStart] = useState(isLiveWorkspace() ? '' : '2026-10-10')
+  const [end, setEnd] = useState(isLiveWorkspace() ? '' : '2026-10-12')
 
   useEffect(() => {
     document.title = 'Resident access history | Haruhay'
@@ -90,9 +91,9 @@ export default function AccessHistory() {
 
       <aside className="access-privacy-note">
         <img src={asset('access-lock.svg')} width="27" height="27" alt="" />
-        <p>This preview shows sample records locally. Real access history requires authorized account access.</p>
+        <p>{isLiveWorkspace() ? 'Access history will appear here when entrance records are connected.' : 'This preview shows sample records locally. Real access history requires authorized account access.'}</p>
       </aside>
-      <p className="resident-preview-label">Sample access records · October 2026</p>
+      <p className="resident-preview-label">{isLiveWorkspace() ? 'No sample records are loaded. Module test changes stay in this browser.' : <>Sample access records · October 2026</>}</p>
     </div>
     {exportOpen && <ResidentDialog title="Export access log" eyebrow="ACCESS HISTORY" onClose={() => setExportOpen(false)}>
       <form onSubmit={event => { event.preventDefault(); downloadLog() }}>

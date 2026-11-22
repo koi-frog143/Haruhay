@@ -2,6 +2,8 @@
 
 React + TypeScript + Vite implementation of the Haruhay website, authentication previews, resident portal and administrator workspace from Figma.
 
+Canonical #/login and #/register now use the backend: signup, one email verification, and owner approval that immediately starts the tenancy. See [registration setup and API guide](../REGISTRATION.md) for blank owner setup, SMTP/local delivery, state transitions and tests. Owner and approved-resident sign-in open the full existing UI, starting with empty activity and the actual account identity. Sample previews are explicitly separate.
+
 ## Preview without a backend or database
 
 Open a terminal in this `frontend` folder and run:
@@ -14,8 +16,8 @@ npm run dev
 Open the localhost URL printed by Vite (normally http://localhost:5173).
 
 - Landing page (default): http://localhost:5173/
-- Login: http://localhost:5173/#/login
-- Registration: http://localhost:5173/#/register
+- Login preview: http://localhost:5173/#/preview/login
+- Registration preview: http://localhost:5173/#/preview/register
 - Password reset: http://localhost:5173/#/forgot-password
 - Resident dashboard: http://localhost:5173/#/resident/dashboard
 - Visitor logbook: http://localhost:5173/#/resident/logbook
