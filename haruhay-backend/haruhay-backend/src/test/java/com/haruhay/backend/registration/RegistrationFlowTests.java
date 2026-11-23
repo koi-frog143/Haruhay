@@ -41,7 +41,7 @@ class RegistrationFlowTests {
     @BeforeEach void setup() {
         String url=db.execute((java.sql.Connection c) -> c.getMetaData().getURL());
         assertThat(url).containsAnyOf("registration-tests","haruhay_registration_test");
-        for (String table: List.of("holding_item_transactions","holding_inquiries","holding_items","registration_audit","monthly_bills","application_offers","room_charges","tenancy_activation_codes","email_verifications","tenancies","registration_applications","invitations","reservations","rooms","properties","accounts"))
+        for (String table: List.of("visitor_movements","visitor_audit","visitor_qr_credentials","visitor_visits","visitor_requests","visitor_profiles","property_guard_assignments","holding_item_transactions","holding_inquiries","holding_items","registration_audit","monthly_bills","application_offers","room_charges","tenancy_activation_codes","email_verifications","tenancies","registration_applications","invitations","reservations","rooms","properties","accounts"))
             db.update("DELETE FROM "+table);
         owner=seedUser("owner@example.test","OWNER",true);
         otherOwner=seedUser("other-owner@example.test","OWNER",true);

@@ -40,7 +40,7 @@ public class SecurityConfig {
             .requestMatchers("/api/resident/**").access((authentication, context) -> new AuthorizationDecision(
                 db.queryForObject("SELECT count(*) FROM tenancies t JOIN accounts a ON a.id=t.account_id WHERE a.email=? AND t.status='ACTIVE'",
                     Integer.class, authentication.get().getName()) > 0))
-            .requestMatchers("/api/account", "/api/account/**", "/api/auth/logout").authenticated()
+            .requestMatchers("/api/account", "/api/account/**", "/api/auth/logout", "/api/logbook/**").authenticated()
             .anyRequest().denyAll())
             .requestCache(c -> c.disable())
             .formLogin(f -> f.loginProcessingUrl("/api/auth/login")
@@ -57,7 +57,8 @@ public class SecurityConfig {
                     throws ServletException, IOException {
                 if ((q.getRequestURI().startsWith("/api/public/") && !q.getRequestURI().endsWith("/health"))
                         || q.getRequestURI().equals("/api/auth/login") || q.getRequestURI().equals("/api/account/verification")
-                        || q.getRequestURI().matches("/api/(account|owner)/admissions/[^/]+/(activate|resend)")) {
+                        || q.getRequestURI().matches("/api/(account|owner)/admissions/[^/]+/(activate|resend)")
+                        || q.getRequestURI().matches("/api/logbook/properties/[^/]+/(scan|visits/[^/]+/movement)")) {
                     if (!limiter.allow(q.getRemoteAddr())) {
                         s.setStatus(429); s.setHeader("Retry-After", "600"); s.setContentType("application/json");
                         s.getWriter().write("{\"message\":\"Too many attempts. Try again in ten minutes.\"}"); return;

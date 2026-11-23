@@ -1,5 +1,5 @@
 import type { RoomOffer } from './RoomFlow'
-export type Account = { id: string; email: string; full_name: string; contact: string; role: 'OWNER' | 'APPLICANT'; email_verified: boolean }
+export type Account = { id: string; email: string; full_name: string; contact: string; role: 'OWNER' | 'APPLICANT' | 'GUARD'; email_verified: boolean }
 export type Room = { id: string; property_id: string; property_name: string; label: string; capacity: number; held: number; active: number; sample: boolean }
 export type Application = { id: string; invitation_id: string; email: string; full_name: string; contact: string; status: string; review_reason: string | null; reservation_status: string; property_name: string; room_label: string; email_verified: boolean; sample: boolean }
 export type Invitation = { id: string; email: string; status: string; token_expires_at: string; reservation_status: string; property_name: string; room_label: string; application_status: string | null; sample: boolean }

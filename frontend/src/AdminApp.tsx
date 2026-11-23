@@ -4,6 +4,8 @@ import { AdminEmpty } from './AdminUI'
 import { AdminAnnouncements, AdminBilling, AdminDashboard, AdminLogbook, AdminMaintenance, AdminMaintenanceDetails, AdminPayments, AdminResidentDetails, AdminResidents } from './AdminPages'
 import AdminSettings from './AdminSettings'
 import HoldingStation from './HoldingStation'
+import LiveLogbook from './LiveLogbook'
+import { isLiveWorkspace } from './workspaceSession'
 
 export default function AdminApp() {
   const hash = window.location.hash.slice(1)
@@ -15,7 +17,7 @@ export default function AdminApp() {
   if (path === '/admin' || path === '/admin/' || path === '/admin/dashboard') return <AdminDashboard />
   if (path === '/admin/residents') return <AdminResidents />
   if (path.startsWith('/admin/residents/')) return <AdminResidentDetails id={recordId('/admin/residents/')} />
-  if (path === '/admin/logbook') return <AdminLogbook residentId={residentId} />
+  if (path === '/admin/logbook') return isLiveWorkspace() ? <LiveLogbook staff residentId={residentId} /> : <AdminLogbook residentId={residentId} />
   if (path === '/admin/maintenance') return <AdminMaintenance />
   if (path.startsWith('/admin/maintenance/')) return <AdminMaintenanceDetails id={recordId('/admin/maintenance/')} />
   if (path === '/admin/holding-station') return <HoldingStation admin desk />

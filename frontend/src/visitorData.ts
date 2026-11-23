@@ -1,5 +1,7 @@
 import { readPreview, savePreview, manilaInputDate } from './previewStore'
 import { CURRENT_RESIDENT_ID, getResident } from './residentsData'
+import { isLiveWorkspace, getWorkspaceSession } from './workspaceSession'
+import { liveVisitorRecords } from './visitorApi'
 
 export type VisitorRequest = { id: string; fullName: string; contactNumber: string; purpose: string; expectedArrival: string; status: 'Pending review' | 'Cancelled' | 'Registered' | 'Declined' }
 export type Visit = { id: string; residentId: string; fullName: string; contactNumber: string; purpose: string; arrival: string; status: 'Expected' | 'Checked in' | 'Checked out'; checkedIn: string; checkedOut: string; requestId: string }
@@ -24,7 +26,14 @@ function seed(): VisitorState {
     { id: 'visit-jane', residentId: 'RES-0045', fullName: 'Jane Rivera', contactNumber: '09171230004', purpose: 'Personal', arrival: '2026-10-10T13:28', checkedIn: '2026-10-10T13:28', checkedOut: '2026-10-10T14:30', status: 'Checked out', requestId: '' },
   ] }
 }
-export function getVisitorState() { return readPreview('haruhay-visitors-v1', seed(), (value): value is VisitorState => !!value && typeof value === 'object' && Array.isArray((value as VisitorState).requests) && (value as VisitorState).requests.every(isRequest) && Array.isArray((value as VisitorState).visits) && (value as VisitorState).visits.every(isVisit)) }
+export function getVisitorState():VisitorState {
+  if (isLiveWorkspace()) {
+    const local=(s:string|null)=>s?manilaInputDate(new Date(s)):''
+    return { requests:liveVisitorRecords().map(r=>({id:r.id,fullName:r.full_name,contactNumber:r.contact,purpose:r.purpose,expectedArrival:local(r.arrival),status:r.status==='PENDING'?'Pending review':r.status==='APPROVED'?'Registered':r.status==='DECLINED'?'Declined':'Cancelled'})),
+      visits:liveVisitorRecords().filter(r=>r.visit_id&&r.visit_status!=='CANCELLED'&&!r.voided).map(r=>({id:r.visit_id!,residentId:getWorkspaceSession()?.account.role==='OWNER'?r.host_application_id:CURRENT_RESIDENT_ID,fullName:r.full_name,contactNumber:r.contact,purpose:r.purpose,arrival:local(r.arrival),status:r.visit_status==='CHECKED_IN'?'Checked in':r.visit_status==='CHECKED_OUT'?'Checked out':'Expected',checkedIn:local(r.checked_in),checkedOut:local(r.checked_out),requestId:r.id})) }
+  }
+  return readPreview('haruhay-visitors-v1', seed(), (value): value is VisitorState => !!value && typeof value === 'object' && Array.isArray((value as VisitorState).requests) && (value as VisitorState).requests.every(isRequest) && Array.isArray((value as VisitorState).visits) && (value as VisitorState).visits.every(isVisit))
+}
 export function getVisitorRequests() { return getVisitorState().requests }
 export function getAllVisits() { return getVisitorState().visits }
 export function getVisitorEntries() {

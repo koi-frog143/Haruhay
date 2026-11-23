@@ -19,12 +19,14 @@ import CommunityBoard from './CommunityBoard'
 import AdminApp from './AdminApp'
 import RegistrationFlow from './RegistrationFlow'
 import WorkspaceGate from './WorkspaceGate'
+import LiveLogbook from './LiveLogbook'
 import { setWorkspaceMode } from './workspaceSession'
 
 type Screen = 'login' | 'register' | 'reset'
-type Route = Screen | 'account' | 'admin' | 'home' | 'resident-dashboard' | 'resident-logbook' | 'resident-register-visitor' | 'resident-access-history' | 'resident-community' | 'resident-maintenance' | 'resident-maintenance-new' | 'resident-maintenance-detail' | 'resident-payments' | 'resident-payment-history' | 'resident-profile' | 'resident-holding' | 'desk-holding'
+type Route = Screen | 'guard' | 'account' | 'admin' | 'home' | 'resident-dashboard' | 'resident-logbook' | 'resident-register-visitor' | 'resident-access-history' | 'resident-community' | 'resident-maintenance' | 'resident-maintenance-new' | 'resident-maintenance-detail' | 'resident-payments' | 'resident-payment-history' | 'resident-profile' | 'resident-holding' | 'desk-holding'
 function currentScreen(): Route {
   const route = window.location.hash.replace('#', '')
+  if (route === '/guard/logbook') return 'guard'
   if (route === '/login' || route === '/register') return 'account'
   if (route === '/preview/login') return 'login'
   if (route === '/preview/register') return 'register'
@@ -138,7 +140,8 @@ export default function App() {
   useEffect(() => {
     if (screen !== 'home' || !['#haruhay-way', '#features', '#community'].includes(window.location.hash)) window.scrollTo(0, 0)
   }, [screen])
-  const guard = (page: ReactNode, kind: 'account' | 'admin' | 'resident') => <WorkspaceGate key={routeHash} kind={kind}>{page}</WorkspaceGate>
+  const guard = (page: ReactNode, kind: 'account' | 'admin' | 'resident' | 'guard') => <WorkspaceGate key={routeHash} kind={kind}>{page}</WorkspaceGate>
+  if (screen === 'guard') return guard(<LiveLogbook staff />, 'guard')
   if (screen === 'admin') return guard(<AdminApp key={routeHash} />, 'admin')
   if (screen === 'account') return ['/account/status', '/account/property', '/account/activate'].includes(window.location.hash.split('?')[0].slice(1)) ? guard(<RegistrationFlow key={routeHash} />, 'account') : <RegistrationFlow key={routeHash} />
   if (screen === 'resident-holding') return guard(<HoldingStation key='resident' />, 'resident')

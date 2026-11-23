@@ -1,3 +1,5 @@
+import LiveLogbook from './LiveLogbook'
+import { isLiveWorkspace } from './workspaceSession'
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import ResidentLayout from './ResidentLayout'
@@ -21,7 +23,8 @@ function value(data: FormData, key: string) {
   return String(data.get(key) ?? '').trim()
 }
 
-export default function RegisterVisitor() {
+export default function RegisterVisitor() { return isLiveWorkspace() ? <LiveLogbook register /> : <SampleRegisterVisitor /> }
+function SampleRegisterVisitor() {
   const [notice, setNotice] = useState('')
   const [error, setError] = useState('')
   const profile = usePreviewData(getResidentProfile)

@@ -90,7 +90,7 @@ export default function RegistrationFlow() {
         setNotice(deliveryText(result)); setSubmitted(true); form.reset()
       } else {
         await api('/auth/login', new URLSearchParams({ username: String(d.get('email')), password: String(d.get('password')) }))
-        const identity = await api<Account>('/account'); const workspace = await loadWorkspaceSession(identity); setAccount(identity); window.location.hash = identity.role === 'OWNER' ? '/admin/dashboard' : workspace.applications.some(a => a.status === 'APPROVED') ? '/resident/dashboard' : '/account/status'
+        const identity = await api<Account>('/account'); const workspace = await loadWorkspaceSession(identity); setAccount(identity); window.location.hash = identity.role === 'GUARD' ? '/guard/logbook' : identity.role === 'OWNER' ? '/admin/dashboard' : workspace.applications.some(a => a.status === 'APPROVED') ? '/resident/dashboard' : '/account/status'
       }
     })
   }

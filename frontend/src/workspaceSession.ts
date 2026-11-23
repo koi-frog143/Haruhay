@@ -1,10 +1,12 @@
 export type MonthlyBill={id:string;application_id:string;period:string;due_date:string;rent:number;fixed_charges:number}
 import { api } from './registrationApi'
+import { clearVisitorRecords, loadVisitorRecords } from './visitorApi'
 import type { Account, Admission, Property, Room } from './registrationApi'
 
 export type WorkspaceSession = { account: Account; applications: Admission[]; properties: Property[]; rooms: Room[]; bills:MonthlyBill[] }
 let session: WorkspaceSession | null = null
 let sampleMode = false
+let sessionGeneration = 0
 export function isSampleWorkspace() {
   try { sampleMode = sessionStorage.getItem('haruhay-ui-mode') === 'sample' } catch { /* Keep the current mode if storage is unavailable. */ }
   return sampleMode
@@ -15,20 +17,25 @@ export function workspaceStorageKey(key: string) { return isSampleWorkspace() ? 
 export function setWorkspaceMode(mode: 'live' | 'sample') {
   sampleMode = mode === 'sample'
   try { sessionStorage.setItem('haruhay-ui-mode', mode) } catch { /* Backend login still works without browser-local storage. */ }
-  if (mode === 'sample') session = null
-  window.dispatchEvent(new Event('haruhay-workspace-changed'))
+  if (mode === 'sample') { sessionGeneration++; clearVisitorRecords(); session = null }
+  window.dispatchEvent(new CustomEvent('haruhay-workspace-changed',{detail:{accountId:mode==='live'?session?.account.id||null:null}}))
 }
 export async function loadWorkspaceSession(account?: Account) {
+  const version = ++sessionGeneration
   const identity = account || await api<Account>('/account')
   const owner = identity.role === 'OWNER'
   const [applications, properties, rooms] = await Promise.all([
-    api<Admission[]>(owner ? '/owner/admissions' : '/account/admissions'),
+    identity.role === 'GUARD' ? Promise.resolve([]) : api<Admission[]>(owner ? '/owner/admissions' : '/account/admissions'),
     owner ? api<Property[]>('/owner/properties') : Promise.resolve([]),
     owner ? api<Room[]>('/owner/rooms') : Promise.resolve([]),
   ])
   const bills=owner?await api<MonthlyBill[]>('/owner/bills'):applications.some(a=>a.status==='APPROVED')?await api<MonthlyBill[]>('/resident/bills'):[]
-  session = { account: identity, applications, properties, rooms, bills }
+  const next = { account: identity, applications, properties, rooms, bills }
+  if (version !== sessionGeneration) return next
+  if (session?.account.id !== identity.id) clearVisitorRecords()
+  session = next
   setWorkspaceMode('live')
+  if (identity.role !== 'GUARD') await loadVisitorRecords().catch(() => null)
   return session
 }
 export async function signOutWorkspace() {
@@ -38,6 +45,8 @@ export async function signOutWorkspace() {
   window.location.reload()
 }
 export function clearWorkspaceSession() {
+  sessionGeneration++
+  clearVisitorRecords()
   session = null
   setWorkspaceMode('live')
 }
