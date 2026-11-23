@@ -4,7 +4,7 @@ Visitor requests, approvals, passes, visits, movements and audit events are now 
 
 ## Run and use locally
 
-Follow [REGISTRATION.md](REGISTRATION.md) for the existing owner credentials and backend startup. This feature needs no new secrets, SMTP configuration or external QR service. Flyway applies V7 automatically. The project targets Java 21 / Spring Boot 4.1.1; development verification used Temurin 25, H2 and PostgreSQL 18.
+Follow [REGISTRATION.md](REGISTRATION.md) for credentials and backend startup. Flyway applies V7 and V8 automatically. The dev profile creates and reuses `.local/visitor-pass.key`.
 
 From `haruhay-backend/haruhay-backend`:
 
@@ -21,13 +21,13 @@ npm.cmd ci
 npm.cmd run dev
 ```
 
-1. Sign in at `http://localhost:5173/#/login`. Complete the existing resident registration, email verification and owner approval flow to obtain an active tenancy.
-2. Resident: **Logbook → Add visitor**. Enter identity/contact, purpose and both expected times. If there are several active tenancies, select the authorized host/property. Pending requests do not create visits or count as arrivals.
-3. Owner: **Visitor logbook**, choose the property and **Review request**. Approve or decline with a reason. Approval creates an **Expected** visit.
-4. Resident: open **Visitor pass → Generate visitor pass**. Download the QR image or share/copy its code privately. A visitor needs no account. After refresh, the previous code cannot be redisplayed; explicitly choose **Replace** to invalidate old copies and obtain a new pass.
-5. Owner or guard: **Scan QR**, start the camera or paste the pass code. Validate, check the presented ID and explicitly **Confirm check-in**. Scanning alone records no movement. Without a readable pass, find the expected visit and use **Verify entry**, recording the manual verification reason.
-6. At departure, scan again or find the open visit and select **Check out**. Confirm explicitly. An expired or revoked arrival pass never prevents controlled checkout through the open record.
-7. Use search/status filters and **Export CSV** for the visible property-scoped records. Residents see and export only their hosted records. **History**, **Record correction** and **Property activity** retain actor/time/reason evidence.
+1. Sign in at `http://localhost:5173/#/login` as a resident with an active tenancy.
+2. In **Logbook**, select **Invite a guest**. Enter their name and purpose. Contact is optional. Open **Planning for another day?** to choose a Philippine calendar date. **Invite again** prefills details from a previous visit in a new request.
+3. Staff select the property and open **Needs review**. Select **Approve visit** or **Decline visit**. The resident can read the decline reason.
+4. The resident selects **Share pass** and copies the private guest link. The guest can open or refresh it without signing in. Send the link from the deployed site when the guest uses another device. Localhost only works on the Haruhay development machine.
+5. On arrival, use **Scan pass** or **Find guest**. Review the guest, host, room and status. Check the presented ID and select **Confirm check-in**. If a camera fails, **Find guest** opens record search. Manual confirmation requires a reason.
+6. At departure, scan again or select **Who’s inside?**, find the open record and select **Confirm checkout**. Staff can check out an open visit after expiry or without the QR.
+7. Use **Export CSV** for the visible records. Consult **History**, **Record correction**, and **Property activity** for evidence.
 
 ### Guard setup
 
@@ -55,9 +55,13 @@ The browser scanner uses [ZXing Browser](https://github.com/zxing-js/browser); Q
 
 Separate tables: `visitor_profiles`, `visitor_requests`, `visitor_visits`, `visitor_qr_credentials`, `visitor_movements`, `visitor_audit`, `property_guard_assignments`. Existing Account, Property, Room and Tenancy remain intact. Request tenancy determines the host/property; the client cannot supply an arbitrary resident identity. Only an active host can request/approve/enter; checkout remains possible when tenancy eligibility later changes.
 
-Tokens contain 32 cryptographically random bytes, encoded as `haruhay:visit:<base64url>`, with no personal information. Only SHA-256 verification hashes are stored. The secret exists only in the issuance response and component memory, or in a pass deliberately downloaded/shared by the resident. It is excluded from workspace caches, list/history endpoints, database audit and CSV exports. Sensitive request/response DTOs redact their logging representation. Reissue is explicit and audited; request/visit locks replace the prior active token atomically. Closing the pass loses its raw token, so save it before closing.
+Passes use two independent credentials derived with HMAC-SHA256 from a random credential ID and a persistent 32-byte key. The QR retains the `haruhay:visit:<base64url>` format. The guest link uses a separate token in `/#/visitor-pass/<token>`. The fragment stays out of HTTP request paths and is submitted in a POST body. The public route returns the QR, property name and entry window for just that pass. It has no movement controls. The database keeps only verification hashes. Raw credentials stay out of log representations, record lists, audit history and CSV. Both pass endpoints send `Cache-Control: no-store`.
 
-Entry is permitted from the exact expected arrival (inclusive) until expected departure (exclusive), using the server clock. There is no implicit early-arrival grace period. A different window requires a new request. Pass expiry equals the approved departure. A revoked pass prevents QR and manual entry until an authorized new pass is issued. Revoked/replaced/expired credentials can identify their already-open visit for checkout; property scope and explicit staff confirmation still apply. Completed visits cannot re-enter: a returning visitor needs a new request/visit.
+Set `VISITOR_PASS_KEY` in deployment to a base64-encoded, randomly generated 32-byte secret. Keep it consistent across restarts and instances and back it up securely with the database. For dev, `HARUHAY_VISITOR_PASS_KEY_FILE` overrides the local file path. If the key changes, issued scanner QR codes still verify against their hashes. Reopening existing links requires the original key. Staff or the resident can explicitly replace a pass before entry. V7 credentials retain their original validity and require explicit replacement to get a shareable link.
+
+Without a date, a new invitation allows entry for 24 hours after approval. With a date, entry starts at the later of approval or midnight on the selected Philippine calendar day and ends at the next local midnight. Approval rejects a date already in the past. V8 preserves legacy arrival and departure windows. Actual check-in and checkout use separate server timestamps.
+
+Replacement invalidates all earlier links and QR copies. Revocation blocks new entry until an authorized replacement. The most recent revoked or expired pass can still identify its open visit for a controlled checkout under the existing audit rules. Staff can also check out through record search. Completed visits cannot be opened for entry again.
 
 All movement/cancellation/credential writes lock the request before the visit. DB uniqueness on `(visit_id, movement)` prevents duplicate entry/exit evidence. Repeated same-state movement calls return an already-recorded result. Repeating ENTRY after completed checkout is denied. An idempotent repeated request approval returns the same visit. Administrative correction appends a note; voiding keeps movement evidence, cancels an expected visit and revokes its pass. An open visit must first be checked out before it can be voided. Voided records remain visible and labelled; inside counts reflect open visits.
 
@@ -74,10 +78,11 @@ All endpoints are under `/api/logbook`, authenticated and CSRF-protected for POS
 | GET `/properties` | Owned/assigned properties and current review capability |
 | GET `/hosts?property=UUID` | Active hosts for authorized staff; omit property for own active tenancies |
 | GET `/records?property=UUID` | Staff property records; omit property for own hosted records (owners receive records across their owned properties for dashboard totals) |
-| POST `/requests` | `{tenancyId,fullName,contact,purpose,arrival,departure}` (ISO timestamps with offset) |
+| POST `/requests` | `{tenancyId,fullName,purpose,contact?,plannedDate?}` with optional `YYYY-MM-DD` date. Legacy clients may still send both ISO `arrival` and `departure` instead. |
 | POST `/requests/{id}/review` | `{action: APPROVE or DECLINE,reason}`; owner/reviewer |
 | POST `/requests/{id}/cancel` | Host or authorized reviewer, before entry |
-| POST `/visits/{id}/pass` | `{replace:false}` for first issuance; `{replace:true}` for audited replacement |
+| POST `/visits/{id}/pass` | `{replace:false}` opens or issues the current pass. `{replace:true}` replaces it and records an audit event. |
+| POST `/visits/{id}/pass/revoke` | `{reason}` revokes the current pass. Host or authorized reviewer. |
 | POST `/properties/{property}/scan` | `{token}`; returns allowed/message or verified record; no movement |
 | POST `/properties/{property}/visits/{id}/movement` | `{action:ENTRY or EXIT,method:QR or MANUAL,token?,identityConfirmed,idType?,idLastFour?,reason?}` |
 | POST `/walk-ins` | `{visitor:{...request fields},hostAuthorized:true,reason}`; reviewer creates expected visit, then explicit identity/check-in |
@@ -87,7 +92,7 @@ All endpoints are under `/api/logbook`, authenticated and CSRF-protected for POS
 | GET / POST `/properties/{property}/guards` | Owner lists/creates guards (`email,fullName,password,canReview`) |
 | POST `/properties/{property}/guards/{account}` | Owner updates `{enabled,canReview}` |
 
-Lists deliberately expose no password hashes or token hashes. A failed scan/movement can return HTTP 200 with `allowed:false`, preserving the denial audit transaction; consumers must check that field. Authorization, validation and state conflicts use 4xx responses with clear messages. Successful no-body mutations return 204.
+Outside the authenticated namespace, `POST /api/public/visitor-pass` accepts `{token}` with CSRF from `/api/auth/csrf`. It returns display data and the QR for that pass. Ordinary record lists expose no password hashes or token hashes. A failed scan/movement can return HTTP 200 with `allowed:false`, preserving the denial audit transaction; consumers must check that field. Authorization, validation and state conflicts use 4xx responses with clear messages. Successful no-body mutations return 204.
 
 ## Verification
 
@@ -97,18 +102,8 @@ For PostgreSQL configure `SPRING_DATASOURCE_URL=jdbc:postgresql://127.0.0.1:<tes
 
 From frontend: `npm.cmd run lint`, `npm.cmd run build`. Browser scripts use a disposable backend with local-file email, `UI_ORIGIN`, `UI_DEBUG` (Chrome debugging endpoint), and `DEV_OWNER_PASSWORD`. Run `scripts/check-onboarding-ui.mjs` first to seed its isolated scenario, then `scripts/check-live-workspaces-ui.mjs` while activity is empty, followed by `scripts/check-visitor-qr-ui.mjs`. `check-approval-billing-ui.mjs` and `check-holding-fixes-ui.mjs` provide adjacent regression checks. Ignored artifacts go under `frontend/.ui-verification/`.
 
-After `check-visitor-qr-ui`, stop and restart that disposable backend with the **same file-backed database**, then run `scripts/check-visitor-restart-ui.mjs`. It checks stored movement evidence, direct routes, refresh, Back/Forward, the existing resident-specific logbook URL, and delayed responses during property switching. Its second test property is created only in that disposable database. Use a fresh Vite process when running scripts that directly import source modules, to avoid duplicate module instances left over from hot reload during development.
+After `check-visitor-qr-ui`, restart the disposable backend with the same database file and pass key. Run `scripts/check-visitor-restart-ui.mjs` to verify pass recovery, movement history, direct routes, Back/Forward, and property isolation. Use a fresh Vite process for suites that import source modules directly.
 
-Verification performed on 2026-11-23:
+The visitor browser suite uses 390 px and 1440 px layouts. It checks anonymous pass refresh, QR decoding, optional dates, replacement, keyboard focus, ID confirmation, camera denial, and manual checkout after expiry. Scanning with a physical camera requires a camera-enabled device.
 
-- Backend: **43 tests passed on isolated H2; 43 on dedicated PostgreSQL 18**. Includes registration/billing/Holding Station regression tests, concurrent entry and pass replacement, lifecycle/permissions, validation, CSRF and secret redaction.
-- Frontend lint/build passed. QR/scanner code loads on demand. Vite retains a non-failing main-chunk size advisory.
-- Dependency audit reports nine moderate advisories in the existing ESLint/TypeScript lint toolchain through minimatch; those dependency versions were unchanged by this feature. No advisories were reported for the added QR runtime libraries. Lint-toolchain dependency updates remain follow-up maintenance.
-- Browser: **96 checks passed** across registration (17), existing live resident/admin pages (48), approval/billing (6), Holding Station cache/release (7), visitor QR/walk-in flow (14), and restart/navigation/property isolation (4).
-- Viewed actual screenshots of desktop admin/resident logbooks, narrow resident/guard logbooks, the QR pass and identity confirmation. Browser geometry, dialog focus, camera denial/manual fallback, generated PNG decoding, exports and simulated server failure were checked. Screenshots are in the ignored verification folders above. Physical-camera scanning was not performed.
-- Checked the disposable server and final test logs: no raw visitor-pass tokens were present.
-- The configured normal local H2 test database was backed up under `.local/backups/visitor-qr-2026-11-23T11-23-01.128344100Z/` before clearing test accounts/registration dependencies. Comparison checks preserved the existing owner record/password, one property, two rooms and room pricing. Unrelated owner inquiry history was retained; the archived legacy database was not touched. V7 applies when the normal backend next starts.
-
-Figma references inspected: resident logbook **18:479**, register visitor **18:610**, admin logbook **18:2055**, file **BrWLcw8zdtGPEEXgmSzRJ4**. The workbook's UC-05–UC-08, visitor activity and class diagrams informed separation of visitor identity, visit approval, QR credential and explicit movements. Scanner, pass, staff-permission and audit dialogs are adaptations using existing Haruhay layout/dialog components and colors because those detailed states are absent from the supplied Figma screens. Native dialog keyboard/focus behavior is retained. Passes are not automatically emailed; departure is never inferred from a second scan.
-
-Physical-camera/device scanning requires manual testing on camera hardware. Automated camera-denial/manual fallback checks do not establish physical-camera reliability. ID-provider verification, resident movement QR, automatic retention/archival policies, staff password-recovery/self-service, distributed rate limiting and real-time cross-browser updates remain separate integration work.
+The implementation follows the desktop and narrow front desk screens in the [Haruhay redesign](https://www.figma.com/design/BrWLcw8zdtGPEEXgmSzRJ4/?node-id=165-2). The invite form reuses the existing visitor design and dialog components. The guest pass uses the same cards, typography, and colors.

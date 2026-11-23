@@ -10,3 +10,38 @@
 .visitor-table{overflow:auto;border:1px solid #dee8ef;border-radius:16px;background:white}.visitor-table table{width:100%;border-collapse:collapse;font-size:14px;min-width:820px}.visitor-table th{text-align:left;background:#f3f9fd;font-size:12px;color:#6d88a1;font-weight:500;padding:20px}.visitor-table td{padding:18px 20px;border-bottom:1px solid #e8eff5;vertical-align:top}.visitor-table small{display:block;color:#6d88a1;margin-top:5px}.visitor-status{display:inline-block;border-radius:20px;padding:7px 12px;background:#e2f1fa;white-space:nowrap;font-size:12px}.visitor-status.inside{background:#e3f3ef;color:#216557}.visitor-toolbar{display:grid;grid-template-columns:2fr 1fr auto;gap:12px;align-items:end}.visitor-toolbar label{font-size:13px;display:grid;gap:6px}.visitor-pass{text-align:center;display:grid;gap:15px;justify-items:center}.visitor-pass img{width:240px;max-width:100%;border-radius:12px}.visitor-pass code{overflow-wrap:anywhere;max-width:100%;font-size:12px;user-select:all}.visitor-camera{position:relative;background:#e2f1fa;border-radius:16px;overflow:hidden;margin-bottom:20px;text-align:center}.visitor-camera video{width:100%;max-height:280px}.visitor-camera button{margin:16px}.guard-shell{min-height:100vh;background:#f3f9fd;padding:28px clamp(16px,5vw,90px)}.guard-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:40px;gap:12px}.guard-header img{width:160px}.guard-header div{display:flex;gap:16px;align-items:center}.visitor-note{white-space:pre-wrap;line-height:1.6}.visitor-live button:disabled,.visitor-form button:disabled{opacity:.55;cursor:wait}
 @media(max-width:900px){.visitor-metrics{grid-template-columns:1fr 1fr}.visitor-register{grid-template-columns:1fr}.visitor-heading{align-items:flex-start;flex-direction:column}.visitor-toolbar{grid-template-columns:1fr 1fr}.visitor-toolbar>button{grid-column:1/-1}.visitor-form-grid{grid-template-columns:1fr}}
 @media(max-width:480px){.visitor-summary{grid-template-columns:1fr}.visitor-card,.visitor-metrics article{padding:18px}.visitor-live h1{font-size:27px}.guard-header{align-items:flex-start;flex-direction:column}}
+
+.visitor-desk-actions { justify-content: flex-start; }
+.guard-shell .guard-header .guard-brand img { width: 156px; height: auto; }
+.guard-header .guard-brand strong { color: var(--muted); font-size: .875rem; }
+.visitor-results, .visitor-record, .visitor-share, .visitor-schedule { display: grid; gap: 12px; }
+.visitor-results h3 { margin: 0 0 4px; font-size: 1.1rem; }
+.visitor-records { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 290px), 1fr)); }
+.visitor-record { align-content: start; overflow-wrap: anywhere; }
+.visitor-record > header { display: flex; justify-content: space-between; flex-wrap: wrap; align-items: start; gap: 6px 12px; }
+.visitor-record .visitor-actions { margin-top: 4px; }
+.visitor-record .visitor-note { padding: 10px 12px; border-radius: var(--radius-control, 10px); background: var(--mist, #f3f9fd); }
+.visitor-times { display: grid; gap: 3px; color: var(--muted); font-size: .875rem; }
+.visitor-times:empty { display: none; }
+.visitor-summary .visitor-summary-times { grid-column: 1 / -1; }
+.visitor-schedule button { justify-self: start; }
+.visitor-status { max-width: 100%; white-space: normal; }
+.visitor-status.state-expired, .visitor-status.state-voided { background: var(--error-bg); color: var(--error-ink); }
+.visitor-guest-page { min-height: 100vh; display: grid; align-content: start; justify-items: center; gap: 20px; padding: 24px 16px; color: var(--ink); background: var(--mist, #f3f9fd); }
+.visitor-guest-page header { display: flex; align-items: center; gap: 10px; font-size: 1.25rem; }
+.visitor-guest-page .visitor-card { width: min(100%, 420px); text-align: center; }
+.visitor-guest-page .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.visitor-pass h2, .visitor-pass p, .visitor-pass-window { margin: 0; }
+.visitor-pass img { width: min(100%, 256px); height: auto; }
+.visitor-pass-window { display: grid; gap: 8px; line-height: 1.5; }
+.visitor-pass-window dt { font-size: .875rem; color: var(--muted); }
+.visitor-pass-window dd { margin: 0; font-weight: 700; }
+.visitor-share input { font-size: .875rem; }
+.visitor-camera-fallback { margin-bottom: 16px; }
+.visitor-camera-fallback p { margin: 0 0 12px; }
+
+@media (max-width: 480px) {
+  .visitor-guest-page { padding-top: 16px; }
+  .visitor-desk-actions button { flex: 1 1 auto; }
+  .visitor-toolbar { grid-template-columns: minmax(0, 1fr); }
+}

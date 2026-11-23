@@ -22,6 +22,8 @@ import WorkspaceGate from './WorkspaceGate'
 import LiveLogbook from './LiveLogbook'
 import { setWorkspaceMode } from './workspaceSession'
 
+import GuestVisitorPass from './GuestVisitorPass'
+
 type Screen = 'login' | 'register' | 'reset'
 type Route = Screen | 'guard' | 'account' | 'admin' | 'home' | 'resident-dashboard' | 'resident-logbook' | 'resident-register-visitor' | 'resident-access-history' | 'resident-community' | 'resident-maintenance' | 'resident-maintenance-new' | 'resident-maintenance-detail' | 'resident-payments' | 'resident-payment-history' | 'resident-profile' | 'resident-holding' | 'desk-holding'
 function currentScreen(): Route {
@@ -141,6 +143,9 @@ export default function App() {
     if (screen !== 'home' || !['#haruhay-way', '#features', '#community'].includes(window.location.hash)) window.scrollTo(0, 0)
   }, [screen])
   const guard = (page: ReactNode, kind: 'account' | 'admin' | 'resident' | 'guard') => <WorkspaceGate key={routeHash} kind={kind}>{page}</WorkspaceGate>
+  if (routeHash === '#/visitor-pass' || routeHash.startsWith('#/visitor-pass/')) {
+    return <GuestVisitorPass key={routeHash} shareToken={routeHash.slice('#/visitor-pass/'.length)} />
+  }
   if (screen === 'guard') return guard(<LiveLogbook staff />, 'guard')
   if (screen === 'admin') return guard(<AdminApp key={routeHash} />, 'admin')
   if (screen === 'account') return ['/account/status', '/account/property', '/account/activate'].includes(window.location.hash.split('?')[0].slice(1)) ? guard(<RegistrationFlow key={routeHash} />, 'account') : <RegistrationFlow key={routeHash} />

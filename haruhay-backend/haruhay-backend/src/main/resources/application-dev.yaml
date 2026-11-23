@@ -7,6 +7,7 @@ spring:
     driver-class-name: org.h2.Driver
 haruhay:
   delivery: local-file
+  visitor-pass-key-file: .local/visitor-pass.key
   local-mail-dir: .local/mail
   dev-owner-email: ${DEV_OWNER_EMAIL:}
   dev-owner-password: ${DEV_OWNER_PASSWORD:}
