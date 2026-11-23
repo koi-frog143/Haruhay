@@ -5,7 +5,6 @@ import java.security.SecureRandom;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
@@ -87,7 +86,7 @@ public class HoldingStationService {
             INSERT INTO holding_items(owner_id,property_id,application_id,tenancy_id,category,description,
                 sender,depositor,tracking,slot,pickup_pin,status,received_at,received_by)
             VALUES(?,?,?,?,?,?,?,?,?,?,?,'READY',?,?)
-            """, Statement.RETURN_GENERATED_KEYS);
+            """, new String[]{"id"});
             statement.setObject(1, ownerId);
             statement.setObject(2, propertyId);
             statement.setObject(3, request.applicationId());

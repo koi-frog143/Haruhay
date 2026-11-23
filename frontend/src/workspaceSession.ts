@@ -33,10 +33,13 @@ export async function loadWorkspaceSession(account?: Account) {
 }
 export async function signOutWorkspace() {
   await api('/auth/logout', {})
-  session = null
-  setWorkspaceMode('live')
+  clearWorkspaceSession()
   window.location.hash = '/login'
   window.location.reload()
+}
+export function clearWorkspaceSession() {
+  session = null
+  setWorkspaceMode('live')
 }
 export function workspaceResident() {
   const account = session?.account

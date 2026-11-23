@@ -48,6 +48,23 @@ const KEY = 'haruhay-holding-station-v1'
 const EVENT = 'haruhay-holding-updated'
 const EMPTY: HoldingState = { items: [], inquiries: [], nextId: 45 }
 let liveState = EMPTY
+let liveScope = ''
+let generation = 0
+function holdingScope() {
+  if (!isLiveWorkspace()) return 'sample'
+  const account = getWorkspaceSession()?.account
+  return account ? `${account.role}:${account.id}` : 'signed-out'
+}
+function syncScope() {
+  const scope = holdingScope()
+  if (scope !== liveScope) {
+    liveScope = scope
+    liveState = EMPTY
+    generation++
+  }
+  return scope
+}
+window.addEventListener('haruhay-workspace-changed', syncScope)
 
 function seed(): HoldingState {
   const rows: Array<[number, string, string, string, string, ResidentId, string, string, string, 'Ready' | 'Claimed']> = [
@@ -78,7 +95,7 @@ function isItem(value: unknown): value is HoldingItem {
     (item.claimed === undefined || typeof item.claimed === 'string')
 }
 export function getHoldingState(): HoldingState {
-  if (isLiveWorkspace()) return liveState
+  if (isLiveWorkspace()) { syncScope(); return liveState }
   try {
     const value = JSON.parse(sessionStorage.getItem(workspaceStorageKey(KEY)) ?? 'null') as HoldingState | null
     if (value && Number.isSafeInteger(value.nextId) && value.nextId >= 45 && Array.isArray(value.items) && value.items.every(isItem) &&
@@ -97,11 +114,19 @@ export async function fetchHoldingState(): Promise<HoldingState> {
   if (!isLiveWorkspace()) return getHoldingState()
   const session = getWorkspaceSession()
   if (!session) throw new Error('Sign in to load Holding Station records.')
+  const scope = syncScope()
+  const requestGeneration = generation
   const owner = session.account.role === 'OWNER'
-  const [items, inquiries] = await Promise.all([
+  let result: [HoldingItem[], HoldingInquiry[]]
+  try { result = await Promise.all([
     api<HoldingItem[]>(owner ? '/owner/holding-items' : '/resident/holding-items'),
     owner ? api<HoldingInquiry[]>('/owner/holding-inquiries') : Promise.resolve([]),
-  ])
+  ]) } catch (error) {
+    if (syncScope() !== scope || generation !== requestGeneration) return getHoldingState()
+    throw error
+  }
+  if (syncScope() !== scope || generation !== requestGeneration) return getHoldingState()
+  const [items, inquiries] = result
   const rows = items.map(item => ({
     ...item,
     residentId: owner ? item.residentId : CURRENT_RESIDENT_ID,
@@ -117,24 +142,30 @@ export async function fetchHoldingState(): Promise<HoldingState> {
 }
 
 export function useHoldingState() {
-  const [state, setState] = useState(getHoldingState)
+  const snapshot = () => ({ scope: syncScope(), generation, value: getHoldingState() })
+  const [state, setState] = useState(snapshot)
   const [loadError, setLoadError] = useState('')
   const refresh = useCallback(async () => {
+    const scope = syncScope()
+    const requestGeneration = generation
     try {
       const current = await fetchHoldingState()
-      setState(current)
-      setLoadError('')
+      if (syncScope() === scope && generation === requestGeneration) {
+        setState({ scope, generation, value: current })
+        setLoadError('')
+      }
       return current
     } catch (error) {
-      setLoadError(error instanceof Error ? error.message : 'Could not load Holding Station records.')
+      if (syncScope() === scope && generation === requestGeneration) setLoadError(error instanceof Error ? error.message : 'Could not load Holding Station records.')
       throw error
     }
   }, [])
   useEffect(() => {
-    const update = () => setState(getHoldingState())
+    const update = () => setState({ scope: syncScope(), generation, value: getHoldingState() })
     const workspaceChanged = () => {
+      update()
+      setLoadError('')
       if (isLiveWorkspace()) refresh().catch(() => {})
-      else { setLoadError(''); update() }
     }
     window.addEventListener(EVENT, update)
     window.addEventListener('haruhay-workspace-changed', workspaceChanged)
@@ -145,6 +176,7 @@ export function useHoldingState() {
       window.removeEventListener('haruhay-workspace-changed', workspaceChanged)
     }
   }, [refresh])
-  return { state, loadError, refresh }
+  const scope = holdingScope()
+  return { state: state.scope === scope && state.generation === generation ? state.value : getHoldingState(), loadError, refresh }
 }
 
