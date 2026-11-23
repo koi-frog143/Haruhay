@@ -37,18 +37,17 @@ export default function LandingPage() {
         <button type="button" onClick={() => contact.current?.showModal()}>Contact</button>
       </nav>
       <div className="landing-account">
-        <a className="landing-button landing-button-secondary" href="#/login">Log in</a>
-        <a className="landing-button landing-button-primary" href="#/register">Join Haruhay</a>
+        <a className="landing-button landing-button-secondary" href="#/login">Sign in</a>
+        <a className="landing-button landing-button-primary" href="#/register">Browse rooms</a>
       </div>
     </header>
     <main className="landing-main">
       <section id="haruhay-way" className="landing-hero" aria-labelledby="landing-title">
         <div className="landing-intro">
-          <span className="badge landing-badge">A BETTER WAY TO FEEL AT HOME</span>
-          <h1 id="landing-title">Your space. Your people.<br />A place to belong.</h1>
-          <p className="landing-description">A thoughtful home for boarding-house life — manage visitors, service concerns, rent, and community updates, all in one safe and welcoming place.</p>
+          <h1 id="landing-title">Find a room.<br />Feel at home.</h1>
+          <p className="landing-description">Compare available rooms and their costs before you apply. Once you move in, manage bills, guests, packages and maintenance in one place.</p>
           <div className="landing-cta">
-            <a className="landing-button landing-button-primary" href="#/login">Explore your space</a>
+            <a className="landing-button landing-button-primary" href="#/register">Browse rooms</a>
             <a className="landing-button landing-button-secondary" href="#features">Learn how it works</a>
           </div>
           <p id="community" className="landing-trust"><img src={art.IconShield} width="21" height="21" alt="" />A caring community, supported by secure records</p>

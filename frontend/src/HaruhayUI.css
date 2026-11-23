@@ -1,0 +1,205 @@
+/* Shared interaction and surface tokens. Page styles own their layout. */
+:where(main, section, article, fieldset, form, dl, dd) { min-inline-size: 0; }
+:where(input[type=checkbox], input[type=radio]) { accent-color: var(--blue); }
+button:disabled { opacity: .62; cursor: not-allowed; }
+:is(.admin-primary, .admin-secondary, .landing-button, .primary-button, .dialog-primary, .hs-primary, .hs-secondary) {
+  min-height: 44px;
+  border-radius: var(--radius-control);
+  line-height: 1.35;
+  white-space: normal;
+}
+:is(.admin-primary, .landing-button-primary, .primary-button, .dialog-primary) { background: var(--blue); color: white; }
+:is(.admin-secondary, .landing-button-secondary) { border-color: var(--control-border); }
+:is(.input-wrap, .registration-form, .visitor-form, .visitor-toolbar, .onboarding-toolbar, .admin-dialog-form, .dialog-body, .hs-form) :is(input:not([type=checkbox],[type=radio],[type=hidden]), textarea, select) {
+  border-color: var(--control-border);
+  min-width: 0;
+}
+.input-wrap:focus-within { border-color: var(--focus); }
+.input-wrap input, .input-wrap select { border: 0; }
+:is(.admin-panel, .application-card, .resident-metric-card, .resident-service-card, .visitor-metrics article, .room-card, .visitor-card, .hs-panel) {
+  border-radius: var(--radius-panel);
+}
+:is(.admin-content, .resident-content, .visitor-live, .hs-content) {
+  overflow-wrap: anywhere;
+  scroll-margin-block-start: 16px;
+}
+:is(.admin-heading, .resident-page-heading, .hs-heading) h1 { line-height: 1.15; text-wrap: balance; }
+:is(.admin-heading, .resident-page-heading, .visitor-heading, .application-heading) p { color: var(--muted); }
+:is(.admin-metric, .resident-metric-card, .resident-service-card):is(a, button):hover {
+  border-color: var(--control-border);
+  text-decoration: none;
+}
+:is(.admin-table, .visitor-table) small { color: var(--muted); }
+:is(.form-error, .admin-error, .resident-inline-error, .application-error) {
+  color: var(--error-ink);
+  background: var(--error-bg);
+}
+.ux-status { padding: 14px 16px; border-radius: var(--radius-control); background: var(--powder); color: var(--ink); }
+.ux-status[data-tone=error] { background: var(--error-bg); color: var(--error-ink); }
+.ux-status[data-tone=warning] { background: var(--warning-bg); color: var(--warning-ink); }
+.ux-status[data-tone=success] { background: var(--success-bg); color: var(--success-ink); }
+.ux-skip {
+  position: absolute;
+  inset: 12px auto auto 12px;
+  z-index: 40;
+  padding: 12px 16px;
+  background: var(--surface);
+  border-radius: var(--radius-control);
+}
+.ux-skip:not(:focus) { clip-path: inset(50%); }
+.ux-skip:focus-visible { clip-path: none; }
+.ux-nav-group { margin: 0; padding: 0; list-style: none; }
+.ux-nav-group + .ux-nav-group { margin-top: 1rem; }
+.admin-sidebar .ux-nav-group > li > p { margin: 0 10px 5px; font-size: .75rem; font-weight: 700; color: var(--muted); }
+.admin-sidebar .ux-nav-group a {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  padding: 8px 10px;
+  border-radius: var(--radius-control);
+  color: var(--ink);
+}
+.admin-sidebar .ux-nav-group a:is(.active, :hover) { background: var(--powder); text-decoration: none; }
+.admin-sidebar .ux-nav-group a.active { font-weight: 700; border-inline-start: 3px solid var(--blue); }
+.ux-workspace-content { min-width: 0; }
+.ux-form-header { padding-block: .5rem; color: var(--muted); }
+.ux-form-header h2 { font-size: 1.125rem; color: var(--ink); margin: 0 0 .25rem; }
+.ux-form-header p { margin: 0; }
+.ux-field-error { display: block; color: var(--error-ink); font-weight: 600; font-size: .875rem; }
+.ux-error-summary { padding: 1rem; border-inline-start: 4px solid var(--error-ink); background: var(--error-bg); color: var(--error-ink); border-radius: 8px; }
+.ux-error-summary p { margin-block: 0 .5rem; font-weight: 700; }
+.ux-error-summary ul { margin-block: 0; padding-inline-start: 1.25rem; }
+.ux-error-summary a { color: inherit; text-decoration: underline; }
+[aria-invalid=true] { outline: 2px solid var(--error-ink); outline-offset: 1px; }
+.resident-dialog.ux-dialog { width: min(var(--dialog-width, 560px), calc(100% - 24px)); padding: 0; max-height: calc(100dvh - 24px); border-color: var(--line); background: var(--surface); }
+.ux-dialog .ux-dialog-header { padding: 18px 22px 12px; background: var(--surface); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 3; }
+.ux-dialog .ux-dialog-header h2 { margin: 0; font-size: clamp(1.15rem, 3.5vw, 1.45rem); }
+.ux-dialog .ux-dialog-header button { min-width: 44px; border-radius: var(--radius-control); color: var(--ink); }
+.ux-dialog .ux-dialog-header button:hover { background: var(--mist); }
+.ux-dialog .ux-dialog-body { padding: 18px 22px 22px; }
+.ux-dialog :is(input,select,textarea,button,a,summary) { scroll-margin-block: 85px 76px; }
+.ux-dialog .dialog-eyebrow { margin-block: 0 12px; color: var(--muted); }
+.ux-dialog .dialog-preview { margin: 16px 0 0; color: var(--muted); }
+.ux-dialog:has(.room-editor) { --dialog-width: 760px; }
+.ux-toast {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-inline-start: 4px solid var(--blue);
+  padding: 12px 14px;
+  border-radius: var(--radius-panel);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.ux-toast button { margin-inline-start: auto; min-width: 36px; min-height: 36px; background: transparent; color: var(--ink); }
+.ux-preview-label { background: var(--powder); padding: .4rem .65rem; border-radius: 999px; color: var(--ink); font-weight: 700; font-size: .75rem; }
+.ux-queue-links { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 16px; padding: 0; list-style: none; }
+.admin-metrics + .ux-queue-links { margin-top: 16px; }
+.ux-queue-links button { min-height: 44px; border: 1px solid var(--control-border); border-radius: 999px; color: var(--ink); background: var(--surface); padding: 8px 14px; }
+.ux-queue-links button[aria-pressed=true] { background: var(--powder); border-color: var(--blue); font-weight: 700; }
+.ux-queue-links strong { font-variant-numeric: tabular-nums; margin-inline-start: .5ch; }
+.ux-results-count { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; color: var(--muted); font-size: .875rem; }
+.ux-results-count button { min-height: 32px; }
+.ux-discard { margin-block-end: 14px; }
+.ux-discard p { margin-block-start: 0; }
+.ux-discard button { margin: 0 8px 4px 0; }
+.resident-next-task { min-height: 0; padding-block: 22px; }
+.resident-next-task .admin-primary { display: inline-flex; align-items: center; margin-top: 14px; }
+.resident-services-layout:not(:has(.resident-heads-up)) { grid-template-columns: minmax(0, 1fr); }
+.live-auth { min-height: 100svh; border-radius: 0; }
+.live-signup { grid-template-columns: minmax(240px, 32%) minmax(0, 1fr); }
+.live-signup .form-panel { padding-block: clamp(24px, 5vw, 70px); }
+.live-signup .auth-content { width: min(86%, 720px); margin-inline: auto; max-width: none; }
+.live-signup .room-cards { margin-block: 12px; }
+.live-signup .room-review-summary { margin-block: 0 20px; }
+.live-signup .ux-form-header { margin-block: 18px 8px; border-bottom: 1px solid var(--line); }
+.live-signup .welcome-content h2 { font-size: clamp(25px, 3vw, 44px); }
+.live-signup .room-picker h3 { margin-bottom: 4px; }
+.live-signup .room-picker > p { margin-top: 0; color: var(--muted); }
+.registration-form .room-editor-section { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 18px; padding: 16px; margin: 0; }
+.room-editor-section > label:has(textarea) { grid-column: 1 / -1; }
+.room-editor-actions { bottom: -22px; padding-inline: 6px; background: var(--surface); }
+.room-picker .room-card .ux-status { color: var(--warning-ink); }
+.room-note small, .room-terms dd small { font-size: .8rem; }
+.visitor-property-bar { display: flex; flex-wrap: wrap; align-items: end; gap: 8px 12px; padding: 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-panel); }
+.visitor-property-bar label { display: grid; gap: 6px; min-width: min(220px, 100%); font-size: .875rem; font-weight: 700; }
+.guard-shell .guard-header { padding-bottom: 14px; margin-bottom: 22px; border-bottom: 1px solid var(--line); }
+.guard-shell .guard-header .guard-brand img { width: 42px; height: 42px; }
+.guard-shell > .ux-toast { margin-bottom: 16px; }
+.visitor-queue {
+  text-align: start;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-panel);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.visitor-queue:hover, .visitor-queue[aria-pressed=true] { border-color: var(--blue); background: var(--powder); }
+.visitor-metrics .visitor-queue strong { font-size: 1.5rem; margin: 5px 0 3px; }
+.visitor-metrics .visitor-queue img { width: 38px; height: 38px; box-sizing: border-box; padding: 8px; }
+.visitor-live .visitor-muted, .visitor-form .visitor-muted, .visitor-metrics .visitor-queue span { color: var(--muted); }
+.visitor-status.state-checked_in, .visitor-status.state-checked_out { background: var(--success-bg); color: var(--success-ink); }
+.visitor-status.state-pending { background: var(--warning-bg); color: var(--warning-ink); }
+.visitor-status.state-declined, .visitor-status.state-cancelled { background: var(--error-bg); color: var(--error-ink); }
+.visitor-camera:has(video) { padding: 8px; }
+.visitor-camera:has(video) video { display: block; border-radius: 10px; object-fit: contain; }
+.visitor-live .visitor-table table { min-width: 0; }
+.visitor-live .visitor-table th, .visitor-live .visitor-table td { padding: 14px 16px; color: var(--ink); }
+.visitor-table .visitor-actions button { padding-inline: .65rem; font-size: .8rem; }
+.visitor-table .visitor-actions { gap: 6px; }
+.application-status-card .application-verify-action { margin: 16px 0 0; }
+.application-status-card .application-verify-action p { margin-bottom: 10px; }
+.hs-toolbar > .hs-button { flex-shrink: 0; }
+.hs-table td, .hs-table th { overflow-wrap: anywhere; }
+.hs-status-summary { margin: 10px 0; }
+@media (max-width: 860px) {
+  .visitor-live .visitor-table { overflow: visible; background: transparent; border: 0; }
+  .visitor-table table, .visitor-table tbody { display: block; }
+  .visitor-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .visitor-table tr { display: block; padding: 12px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-panel); margin-block: 0 10px; }
+  .visitor-live .visitor-table td { display: block; padding: 8px 0; border: 0; overflow-wrap: anywhere; }
+  .visitor-table td::before { content: attr(data-label); display: block; font-size: .75rem; color: var(--muted); margin-bottom: 2px; }
+  .visitor-table td:first-child strong { font-size: 1.075rem; }
+  .visitor-table .visitor-actions { gap: 8px; }
+}
+@media (max-width: 700px) {
+  .hs-table-wrap:has(.hs-table [data-label]) { overflow: visible; border: 0; background: transparent; }
+  .hs-table:has([data-label]) { display: block; min-width: 0; }
+  .hs-table:has([data-label]) thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .hs-table:has([data-label]) tbody { display: grid; gap: 12px; }
+  .hs-table:has([data-label]) tr { display: block; padding: 12px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-panel); color: var(--ink); }
+  .hs-table:has([data-label]) tbody :is(th,td) { display: block; width: auto; padding: 8px 0; border: 0; }
+  .hs-table [data-label]::before { content: attr(data-label); display: block; font-size: .75rem; color: var(--muted); margin-bottom: 2px; }
+}
+@media (max-width: 760px) {
+  .landing-header .landing-account { margin-inline-start: auto; }
+  .landing-header .landing-account .landing-button-primary { display: none; }
+  .landing-header .landing-links { gap: 10px 14px; }
+  .landing-header .landing-links :is(a,button) { min-height: 28px; display: inline-flex; align-items: center; }
+  .landing-main { padding-top: 24px; }
+  .live-auth .welcome-panel { padding: 16px 20px; }
+  .live-auth .welcome-content, .live-auth .welcome-panel .circle { display: none; }
+  .live-signup .auth-content { width: 100%; }
+  .visitor-property-bar label { width: 100%; }
+  .admin-table tbody th small, .admin-table tbody td small { display: block; }
+  .onboarding-content .admin-metrics { gap: 10px; margin-block: 18px 0; }
+  .onboarding-content .admin-metric { min-height: 0; padding: 12px 14px; }
+  .onboarding-content .admin-metric-icon { width: 30px; height: 30px; }
+  .onboarding-content .admin-metric > strong { margin-block: 6px 2px; }
+  .resident-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .resident-metric-card { padding: 13px; min-height: 0; }
+  .resident-metric-card > strong { font-size: clamp(1.125rem, 5.6vw, 1.5rem); }
+}
+@media (max-width: 600px) {
+  .ux-dialog .ux-dialog-header { padding: 12px 16px; }
+  .ux-dialog .ux-dialog-body { padding: 14px 16px 16px; }
+  .registration-form .room-editor-section { grid-template-columns: minmax(0, 1fr); }
+  .room-editor-actions { bottom: -16px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+}

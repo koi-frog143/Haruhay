@@ -36,6 +36,8 @@ export default function ResidentDashboard() {
   const bill = usePreviewData(getBillingSummary)
   const visitorEntries = usePreviewData(getVisitorEntries)
   const resident = usePreviewData(getCurrentResident)
+  const hasBillDue = bill.balance > 0 && (!isLiveWorkspace() || bill.posted)
+  const showPickup = !hasBillDue && pickupCount > 0
   const values: Record<string, string> = {
     'Upcoming rent': money(isLiveWorkspace()&&!bill.posted?bill.agreedMonthly:bill.balance),
     'Items for pickup': holdingError ? '—' : String(pickupCount).padStart(2, '0'),
@@ -66,12 +68,12 @@ export default function ResidentDashboard() {
         <p>Another day in a space that cares for you.</p>
       </header>
 
-      <section className="resident-welcome" aria-labelledby="resident-welcome-title">
+      <section className="resident-welcome resident-next-task" aria-labelledby="resident-welcome-title">
         <img className="resident-welcome-stars" src={asset('motif-stars.svg')} width="92" height="114" alt="" />
         <img className="resident-welcome-heart" src={asset('icon-heart-welcome.svg')} width="45" height="45" alt="" />
-        <h2 id="resident-welcome-title">Your little corner of belonging.</h2>
-        <p>Everything about your stay, calmly in one place. Check in, stay informed, and let us handle the rest.</p>
-        <span className="resident-room-badge">HOME&nbsp; • &nbsp;ROOM {resident.room}</span>
+        <h2 id="resident-welcome-title">{hasBillDue ? 'Your next bill' : showPickup ? 'A package is ready for pickup' : 'Your stay at a glance'}</h2>
+        <p>{hasBillDue ? money(bill.balance) + ' due · ' + bill.dueLabel : showPickup ? pickupCount + (pickupCount === 1 ? ' item is' : ' items are') + ' waiting at the Holding Station.' : 'Check your payments, packages, and requests below.'}</p>
+        <a className="admin-primary" href={showPickup ? '#/resident/holding-station' : '#/resident/payments'}>{showPickup ? 'View packages' : 'View payments'}</a>
       </section>
 
       <section className="resident-metrics" aria-label="Your stay at a glance">
@@ -105,15 +107,14 @@ export default function ResidentDashboard() {
                 : <button className="resident-service-card" type="button" key={service.title} onClick={preview}>{content}</button>
             })}
           </div>
-          <a className="resident-heads-up" href="#/resident/payments">
+          {(!isLiveWorkspace() || bill.posted) && <a className="resident-heads-up" href="#/resident/payments">
             <strong>Heads up</strong>
             <span className="resident-due-date">{bill.dueLabel.toUpperCase()}</span>
             <b>Rent due</b>
             <span>{bill.timing}</span>
-          </a>
+          </a>}
         </div>
       </section>
-      <p className="resident-preview-label">{isLiveWorkspace() ? 'No sample records are loaded. Module test changes stay in this browser.' : <>Frontend preview · sample records with changes saved in this browser session.</>}</p>
     </div>
     {servicesOpen && <ResidentTools mode="services" onClose={() => setServicesOpen(false)} />}
   </ResidentLayout>

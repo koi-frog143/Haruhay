@@ -1,12 +1,12 @@
 import { useState } from 'react'
-import type { InputHTMLAttributes } from 'react'
+import type { InputHTMLAttributes, ReactNode } from 'react'
 import artwork from './auth-artwork.json'
 import './App.css'
 
 type Screen = 'login' | 'register' | 'reset'
 
-type FieldProps = InputHTMLAttributes<HTMLInputElement> & { label: string; icon: string }
-export function AuthField({ label, icon, id, type = 'text', ...props }: FieldProps) {
+type FieldProps = InputHTMLAttributes<HTMLInputElement> & { label: string; icon: string; error?: ReactNode }
+export function AuthField({ label, icon, error, id, type = 'text', ...props }: FieldProps) {
   const [visible, setVisible] = useState(false)
   const password = type === 'password'
   return <div className="form-field">
@@ -16,6 +16,7 @@ export function AuthField({ label, icon, id, type = 'text', ...props }: FieldPro
       <input {...props} id={id} type={password && visible ? 'text' : type} required />
       {password && <button className="password-toggle" type="button" onClick={() => setVisible(!visible)} aria-label={visible ? 'Hide password' : 'Show password'} aria-pressed={visible}>{visible ? 'Hide' : 'Show'}</button>}
     </div>
+    {error}
   </div>
 }
 
