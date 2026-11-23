@@ -6,3 +6,4 @@ spring:
     driver-class-name: org.h2.Driver
 haruhay:
   attempt-limit: 10000
+  visitor-pass-key: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA

@@ -44,6 +44,7 @@ server:
       timeout: 30m
 
 haruhay:
+  visitor-pass-key: ${VISITOR_PASS_KEY:}
   invitation-ttl: ${INVITATION_TTL:72h}
   verification-ttl: ${VERIFICATION_TTL:24h}
   activation-ttl: ${ACTIVATION_TTL:24h}
