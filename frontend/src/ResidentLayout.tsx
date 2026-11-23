@@ -107,6 +107,7 @@ export default function ResidentLayout({ activeSection, breadcrumb, notice, onNo
   }
 
   return <main className="resident-dashboard">
+    <a className="ux-skip" href="#resident-main" onClick={event => { event.preventDefault(); document.getElementById('resident-main')?.focus() }}>Skip to content</a>
     <button
       className={'resident-sidebar-backdrop ' + (navigationOpen ? 'is-open' : '')}
       type="button"
@@ -207,10 +208,10 @@ export default function ResidentLayout({ activeSection, breadcrumb, notice, onNo
         </div>
       </header>
 
-      {children}
+      <div className="ux-workspace-content" id="resident-main" tabIndex={-1}>{children}</div>
       {!applicationOnly && tool && <ResidentTools mode={tool} initialQuery={search} onClose={() => setTool(null)} />}
 
-      <div className={'resident-status ' + (notice ? 'is-visible' : '')} role="status" aria-live="polite">
+      <div className={'resident-status ux-toast ' + (notice ? 'is-visible' : '')} role="status" aria-live="polite">
         {notice}
         {notice && <button type="button" aria-label="Dismiss message" onClick={onDismissNotice}>×</button>}
       </div>

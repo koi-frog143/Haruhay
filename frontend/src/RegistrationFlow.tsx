@@ -11,6 +11,8 @@ import './RegistrationFlow.css'
 import './Onboarding.css'
 import AdminLayout from './AdminLayout'
 import ResidentLayout from './ResidentLayout'
+import ResidentDialog from './ResidentDialog'
+import { useFormFeedback } from './FormFeedback'
 import { loadWorkspaceSession, clearWorkspaceSession } from './workspaceSession'
 
 const node = '18:1809'
@@ -22,21 +24,11 @@ const approvalDelivery = (result: Delivery) => result.delivery === 'LOCAL_FILE'
 type Tools = { busy: boolean; run: (action: () => Promise<void>) => Promise<void>; notice: (value: string) => void; refresh: () => void }
 type Review = { app: Admission; action: 'offer' | 'approve' | 'corrections' | 'reject' | 'release' }
 
-function Dialog({ title, children, close, error }: { title: string; children: ReactNode; close: () => void; error: string }) {
-  const ref = useRef<HTMLDialogElement>(null)
-  const opener = useRef(document.activeElement)
-  useEffect(() => {
-    const d = ref.current; const previous = opener.current; d?.showModal()
-    d?.querySelector<HTMLElement>('input, select, textarea, h2')?.focus({ preventScroll: true })
-    if (d) d.scrollTop = 0
-    return () => { d?.close(); queueMicrotask(() => { if (previous instanceof HTMLElement && previous.isConnected) previous.focus() }) }
-  }, [])
-  return <dialog className="registration-dialog onboarding-dialog" ref={ref} aria-labelledby="onboarding-dialog-title" onCancel={e => { e.preventDefault(); close() }} onKeyDown={e => {
-    if (e.key !== 'Tab') return
-    const controls = [...e.currentTarget.querySelectorAll<HTMLElement>('input:not([disabled]),select:not([disabled]),textarea:not([disabled]),button:not([disabled]),a[href]')].filter(c => c.getClientRects().length)
-    if (e.shiftKey && (document.activeElement === controls[0] || !controls.includes(document.activeElement as HTMLElement))) { e.preventDefault(); controls.at(-1)?.focus() }
-    if (!e.shiftKey && document.activeElement === controls.at(-1)) { e.preventDefault(); controls[0]?.focus() }
-  }}><header><h2 id="onboarding-dialog-title" tabIndex={-1}>{title}</h2><button type="button" className="admin-secondary" aria-label="Close dialog" onClick={close}>×</button></header>{error && <p className="form-error" role="alert">{error}</p>}{children}</dialog>
+function Dialog({ title, children, close, error, busy }: { title: string; children: ReactNode; close: () => void; error: string; busy: boolean }) {
+  return <ResidentDialog title={title} onClose={close} dismissOnBackdrop={false} footerNote="" busy={busy}>
+    {error && <p className="form-error" role="alert">{error}</p>}
+    {children}
+  </ResidentDialog>
 }
 
 function Workspace({ account, children, message, dismiss }: { account: Account; children: ReactNode; message:string; dismiss:()=>void }) {
@@ -57,6 +49,8 @@ export default function RegistrationFlow() {
   const [chosenRoom,setChosenRoom] = useState<RoomTerms|null>(null)
   const chooseRoom=useCallback((room:RoomTerms|null)=>setChosenRoom(room),[])
   const [properties, setProperties] = useState<Property[]>([])
+  const [propertyLoad, setPropertyLoad] = useState<'loading'|'ready'|'error'>('loading')
+  const [propertyRetry, setPropertyRetry] = useState(0)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [busy, setBusy] = useState(false)
@@ -64,15 +58,24 @@ export default function RegistrationFlow() {
   const [verified, setVerified] = useState(false)
   const [version, setVersion] = useState(0)
   const heading = useRef<HTMLHeadingElement>(null)
+  const feedback = useFormFeedback()
   useEffect(() => {
     let active = true
     document.title = (signup ? 'Create your account' : 'Welcome home') + ' | Haruhay'
     api<Account>('/account').then(async a => { await loadWorkspaceSession(a); if (active) setAccount(a) }).catch(e => {
       if (active && !(e instanceof ApiError && e.status === 401)) setError(errorText(e))
     }).finally(() => { if (active) setLoading(false) })
-    if (signup) api<Property[]>('/public/properties').then(p => { if (active) setProperties(p) }).catch(e => { if (active) setError(errorText(e)) })
+
     return () => { active = false }
   }, [signup])
+  useEffect(() => {
+    if (!signup) return
+    let active = true
+    api<Property[]>('/public/properties').then(list => {
+      if (active) { setProperties(list); setPropertyLoad('ready') }
+    }).catch(() => { if (active) setPropertyLoad('error') })
+    return () => { active = false }
+  }, [signup, propertyRetry])
   async function run(action: () => Promise<void>) {
     setBusy(true); setError(''); setNotice('')
     try { await action() } catch (e) { setError(errorText(e)) } finally { setBusy(false) }
@@ -83,7 +86,7 @@ export default function RegistrationFlow() {
   }
   const tools: Tools = { run, busy, notice: setNotice, refresh }
   async function submit(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault(); const form = e.currentTarget; const d = new FormData(form)
+    e.preventDefault(); const form = e.currentTarget; if (!feedback.validate(form)) return; const d = new FormData(form)
     await run(async () => {
       if (signup) {
         const result = await api<Delivery>('/public/accounts/signup', { email: String(d.get('email')), fullName: String(d.get('fullName')), contact: String(d.get('contact')), password: account ? undefined : String(d.get('password')), propertyId: String(d.get('propertyId')), roomId: chosenRoom?.id, roomVersion: chosenRoom?.terms_version, acceptedTerms:d.has('acceptedTerms') })
@@ -95,21 +98,26 @@ export default function RegistrationFlow() {
     })
   }
   if (loading) return <main className="onboarding-loading" role="status">Opening your Haruhay account…</main>
-  if (!account || signup || verify) return <main className="auth-shell" data-design-node={signup ? '18:158' : '18:106'}>
+  if (!account || signup || verify) return <main className={'auth-shell live-auth'+(signup?' live-signup':'')} data-design-node={signup ? '18:158' : '18:106'}>
     <WelcomePanel screen={signup ? 'register' : 'login'} />
     <section className={'form-panel ' + (signup ? 'register onboarding-signup' : 'login')} aria-labelledby="live-auth-title"><div className="auth-content">
-      <header className="auth-header"><span className="badge">{verify ? 'YOUR EMAIL, VERIFIED' : signup ? 'JOIN OUR COMMUNITY' : 'WELCOME HOME'}</span><h1 ref={heading} id="live-auth-title" tabIndex={-1}>{verify ? 'Verify your email' : signup ? 'Create your account' : 'Welcome back'}</h1><p>{verify ? 'One small step before your property owner reviews your application.' : signup ? 'Create your account, choose your property, and apply for your place.' : 'Sign in to manage your stay and stay in touch.'}</p></header>
+      <header className="auth-header"><span className="badge">{verify ? 'APPLICATION EMAIL' : signup ? 'JOIN OUR COMMUNITY' : 'WELCOME HOME'}</span><h1 ref={heading} id="live-auth-title" tabIndex={-1}>{verify ? 'Verify your email' : signup ? 'Create your account' : 'Welcome back'}</h1><p>{verify ? 'One small step before your property owner reviews your application.' : signup ? 'Choose a room and review its terms before you send your application.' : 'Sign in to manage your stay and stay in touch.'}</p></header>
       {signup && account && <div className="form-notice"><p>You are signed in as <strong>{account.email}</strong>. Apply with this account, or sign out to register someone else.</p><button className="admin-secondary" type="button" disabled={busy} onClick={() => run(async () => { await api('/auth/logout', {}); clearWorkspaceSession(); setAccount(null); setSubmitted(false); setNotice('You can now create a new account with a different email address.'); })}>Create account with another email</button></div>}
       {error && <p role="alert" className="form-error">{error}</p>}{notice && <p role="status" className="form-notice">{notice}</p>}
       {verify ? <div className="onboarding-auth-status">{verified ? <><h2>Email verified</h2><p>Your application is now pending owner approval. Owner approval will automatically activate your tenancy.</p></> : token ? <button className="primary-button" disabled={busy} onClick={() => run(async () => { await api('/public/email/verify', { token }); setVerified(true); setNotice('Your email has been verified.') })}>Verify my email</button> : <p>The verification link is missing. Sign in to request a new one.</p>}<a href="#/account/status">Continue to my account</a></div>
         : submitted ? <div className="onboarding-auth-status"><h2>Your application is on its way</h2><p>Verify your email, then sign in to follow your application. Your owner will review the room assignment and approval.</p><a className="admin-primary" href="#/login">Continue to sign in</a></div>
-          : <form key={account?.id || 'new-account'} className="auth-form" onSubmit={submit} aria-label={signup ? 'Create your account' : 'Sign in to your account'}>
-            {signup && <><AuthField id="live-full-name" name="fullName" label="Full name" icon={artwork.register.IconUser} placeholder="Your full name" defaultValue={account?.full_name} autoComplete="name" maxLength={100} /><AuthField id="live-contact" name="contact" label="Contact number" icon={artwork.register.IconUser} placeholder="Your contact number" defaultValue={account?.contact} type="tel" autoComplete="tel" maxLength={100} /></>}
-            <AuthField id="live-email" name="email" label="Email address" icon={artwork.login.IconMail} placeholder="you@example.com" type="email" autoComplete="email" defaultValue={account?.email} readOnly={Boolean(account)} maxLength={254} />
-            {!(signup && account) && <AuthField id="live-password" name="password" label={signup ? 'Password (at least 12 characters)' : 'Password'} icon={artwork.login.IconLock} type="password" placeholder={signup ? 'Create a secure password' : 'Enter your password'} autoComplete={signup ? 'new-password' : 'current-password'} minLength={signup ? 12 : undefined} maxLength={72} />}
-            {signup && <div className="form-field"><label htmlFor="live-property">Dormitory / property</label><div className="input-wrap"><img className="field-icon" src={artwork.register.IconBuilding} alt="" /><select id="live-property" name="propertyId" required defaultValue="" onChange={e=>{setPropertyChoice(e.target.value);setChosenRoom(null)}}><option value="" disabled>Choose your boarding house</option>{properties.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select></div>{properties.length === 0 && <p className="onboarding-hint">No properties are accepting applications yet. The owner needs to add their property first.</p>}</div>}
+          : <form key={account?.id || 'new-account'} className="auth-form" noValidate onChange={e => { if (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement) feedback.clear(e.target.name) }} onSubmit={submit} aria-label={signup ? 'Create your account' : 'Sign in to your account'}>
+            {feedback.summary}
+            {signup && <div className="ux-form-header"><h2>Choose a property and room</h2><p>See availability, fees and house rules before you apply.</p></div>}
+            {signup && <div className="form-field"><label htmlFor="live-property">Dormitory / property</label><div className="input-wrap"><img className="field-icon" src={artwork.register.IconBuilding} alt="" /><select id="live-property" name="propertyId" {...feedback.fieldProps('propertyId')} required disabled={propertyLoad !== 'ready'} defaultValue="" onChange={e=>{setPropertyChoice(e.target.value);setChosenRoom(null)}}><option value="" disabled>Choose your boarding house</option>{properties.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select></div>{feedback.fieldError('propertyId')}{propertyLoad === 'loading' && <p role="status" className="onboarding-hint">Loading properties...</p>}
+              {propertyLoad === 'error' && <p className="ux-status" data-tone="error" role="alert">Properties could not be loaded. <button className="admin-secondary" type="button" onClick={() => { setPropertyLoad('loading'); setPropertyRetry(n => n + 1) }}>Try again</button></p>}
+              {propertyLoad === 'ready' && !properties.length && <p className="onboarding-hint">No properties are accepting applications yet. Check back later or contact the property owner.</p>}</div>}
             {signup && propertyChoice && <RoomPicker key={propertyChoice} property={propertyChoice} onChoose={chooseRoom}/>}
-            {signup && chosenRoom && <section className="room-review-summary"><h3>Your application summary</h3><p>{chosenRoom.property_name} / {chosenRoom.label}</p><details><summary>Review costs, inclusions and rules</summary><Terms room={chosenRoom}/></details><label className="room-check"><input type="checkbox" name="acceptedTerms" required key={chosenRoom.id+chosenRoom.terms_version}/>I agree to the room details and pricing shown above.</label></section>}
+            {signup && chosenRoom && <section className="room-review-summary"><h3>Your application summary</h3><p>{chosenRoom.property_name} / {chosenRoom.label}</p><details><summary>Review costs, inclusions and rules</summary><Terms room={chosenRoom}/></details><label className="room-check"><input type="checkbox" name="acceptedTerms" {...feedback.fieldProps('acceptedTerms')} required key={chosenRoom.id+chosenRoom.terms_version}/>I agree to the room details and pricing shown above.</label>{feedback.fieldError('acceptedTerms')}</section>}
+            {signup && <div className="ux-form-header"><h2>Your details</h2><p>Use an email you can access to verify your account.</p></div>}
+            {signup && <><AuthField id="live-full-name" name="fullName" {...feedback.fieldProps('fullName')} error={feedback.fieldError('fullName')} label="Full name" icon={artwork.register.IconUser} placeholder="Your full name" defaultValue={account?.full_name} autoComplete="name" maxLength={100} /><AuthField id="live-contact" name="contact" {...feedback.fieldProps('contact')} error={feedback.fieldError('contact')} label="Contact number" icon={artwork.register.IconUser} placeholder="Your contact number" defaultValue={account?.contact} type="tel" autoComplete="tel" maxLength={100} /></>}
+            <AuthField id="live-email" name="email" {...feedback.fieldProps('email')} error={feedback.fieldError('email')} label="Email address" icon={artwork.login.IconMail} placeholder="you@example.com" type="email" autoComplete="email" defaultValue={account?.email} readOnly={Boolean(account)} maxLength={254} />
+            {!(signup && account) && <AuthField id="live-password" name="password" {...feedback.fieldProps('password')} error={feedback.fieldError('password')} label={signup ? 'Password (at least 12 characters)' : 'Password'} icon={artwork.login.IconLock} type="password" placeholder={signup ? 'Create a secure password' : 'Enter your password'} autoComplete={signup ? 'new-password' : 'current-password'} minLength={signup ? 12 : undefined} maxLength={72} />}
             {!signup && <p className="onboarding-login-help">Need help signing in? Contact your property owner.</p>}
             <button className="primary-button" disabled={busy || (signup && (properties.length === 0 || !chosenRoom))}>{busy ? 'Please wait…' : signup ? account ? 'Submit my application' : 'Create an account' : 'Sign in to Haruhay'}</button>
           </form>}
@@ -119,11 +127,11 @@ export default function RegistrationFlow() {
   </main>
   return <Workspace account={account} message={notice} dismiss={()=>setNotice('')}><div className="onboarding-content">
     {error && <p role="alert" className="form-error">{error}</p>}{notice && account.role!=='OWNER' && <p role="status" className="form-notice">{notice}</p>}
-    {account.role === 'OWNER' ? <Owner key={version + route} {...tools} error={error} setup={route === '#/account/property' || route === '#/admin/property'} /> : <Applicant key={version} {...tools} account={account} error={error} />}
+    {account.role === 'OWNER' ? <Owner key={route} revision={version} {...tools} error={error} setup={route === '#/account/property' || route === '#/admin/property'} /> : <Applicant key={version} {...tools} account={account} error={error} />}
   </div></Workspace>
 }
 
-function Owner({ run, busy, notice, refresh, error, setup }: Tools & { error: string; setup: boolean }) {
+function Owner({ run, busy, notice, refresh, error, setup, revision }: Tools & { error: string; setup: boolean; revision: number }) {
   const [rooms, setRooms] = useState<Room[]>([])
   const [properties, setProperties] = useState<Property[]>([])
   const [apps, setApps] = useState<Admission[]>([])
@@ -135,10 +143,10 @@ function Owner({ run, busy, notice, refresh, error, setup }: Tools & { error: st
   const [review, setReview] = useState<Review | null>(null)
   useEffect(() => {
     let active = true
-    Promise.all([api<Room[]>('/owner/rooms'), api<Property[]>('/owner/properties'), api<Admission[]>('/owner/admissions')]).then(([r, p, a]) => { if (active) { setRooms(r); setProperties(p); setApps(a) } }).catch(e => { if (active) setLoadError(errorText(e)) }).finally(() => { if (active) setLoading(false) })
+    Promise.all([api<Room[]>('/owner/rooms'), api<Property[]>('/owner/properties'), api<Admission[]>('/owner/admissions')]).then(([r, p, a]) => { if (active) { setRooms(r); setProperties(p); setApps(a); setLoadError('') } }).catch(e => { if (active) setLoadError(errorText(e)) }).finally(() => { if (active) setLoading(false) })
     return () => { active = false }
-  }, [])
-  if (loading) return <p role="status">Loading your property records…</p>
+  }, [revision])
+  if (loading) return <p className="ux-status" role="status">Loading your property records…</p>
   if (loadError) return <p className="form-error" role="alert">{loadError} <button className="admin-secondary" onClick={refresh}>Retry</button></p>
   if (setup) return <>
     <AdminHeading eyebrow="YOUR PROPERTY" title="Property & rooms" description="Start with your own property and room capacity. No sample records are added." />
@@ -152,18 +160,25 @@ function Owner({ run, busy, notice, refresh, error, setup }: Tools & { error: st
     <AdminHeading eyebrow="COMMUNITY DIRECTORY" title="Resident applications" description="Review each application and confirm the accepted room and terms. Approval opens the resident portal." action={<button className="admin-secondary" onClick={refresh}>Refresh records</button>} />
     <AdminMetrics node={node} items={[{ label: 'Awaiting owner approval', value: pending.length, icon: 'imgIconUsers1' }, { label: 'Awaiting email verification', value: apps.filter(a => a.status === 'AWAITING_EMAIL').length, icon: 'imgIconClock' }, { label: 'Held places', value: rooms.reduce((n, r) => n + r.held, 0), icon: 'imgIconBuilding' }, { label: 'Active tenancies', value: rooms.reduce((n, r) => n + r.active, 0), icon: 'imgIconCheck', tone: 'mint' }]} />
     {!properties.length && <section className="admin-panel onboarding-section"><h2>Welcome to your empty workspace</h2><p>Add your property and rooms before residents apply. Your account has no sample residents or activity.</p><a className="admin-primary" href="#/account/property">Set up my property</a></section>}
+    <ul className="ux-queue-links" aria-label="Application queues">{[
+      { value: '', label: 'All', count: apps.length },
+      { value: 'PENDING_APPROVAL', label: 'Needs review', count: pending.length },
+      { value: 'AWAITING_EMAIL', label: 'Awaiting email', count: apps.filter(a => a.status === 'AWAITING_EMAIL').length },
+      { value: 'APPROVED', label: 'Active', count: apps.filter(a => a.status === 'APPROVED').length },
+    ].map(queue => <li key={queue.value}><button type="button" aria-pressed={filter === queue.value} onClick={() => setFilter(queue.value)}>{queue.label} <strong>{queue.count}</strong></button></li>)}</ul>
     <div className="onboarding-toolbar"><label className="admin-search"><AdminIcon node={node} name="imgIconSearch1" /><input aria-label="Search applications" type="search" placeholder="Search by name, email or property…" value={query} onChange={e => setQuery(e.target.value)} /></label><label>Show<select aria-label="Filter applications" value={filter} onChange={e => setFilter(e.target.value)}><option value="">All applications</option>{['PENDING_APPROVAL', 'AWAITING_EMAIL', 'CORRECTIONS_REQUESTED', 'REJECTED', 'APPROVED', 'CANCELLED'].map(s => <option key={s} value={s}>{label(s)}</option>)}</select></label></div>
+    <p className="ux-results-count" role="status">{shown.length} of {apps.length} applications {(query || filter) && <button type="button" className="admin-link-button" onClick={() => { setQuery(''); setFilter('') }}>Clear filters</button>}</p>
     <AdminTable columns={['Applicant', 'Property / room', 'Status', 'Actions']} empty={apps.length ? 'No applications match your search.' : 'No applications yet. Residents can apply through Create an account.'} rows={shown.map(a => ({ key: a.id, cells: [<div><strong>{a.full_name}</strong><small>{a.email}</small><small>{a.contact}</small></div>, <div>{a.property_name}<small>{a.room_label || a.offers?.[0]?.terms.label || 'Room terms not selected'}</small></div>, <div><AdminStatus>{label(a.status)}</AdminStatus>{a.reservation_status === 'HELD' && <small className="onboarding-held">Reservation still held</small>}{a.review_reason && <small>{a.review_reason}</small>}</div>, <div className="onboarding-row-actions">
       {a.status === 'PENDING_APPROVAL' && <button className="admin-primary" disabled={busy} onClick={() => setReview({ app: a, action: 'approve' })}>Review & approve</button>}
       {['PENDING_APPROVAL','CORRECTIONS_REQUESTED'].includes(a.status) && <button className="admin-secondary" onClick={()=>setReview({app:a,action:'offer'})}>Propose room / revised terms</button>}{['PENDING_APPROVAL'].includes(a.status) && <><button className="admin-secondary" disabled={busy} onClick={() => setReview({ app: a, action: 'corrections' })}>Request corrections</button><button className="admin-secondary" disabled={busy} onClick={() => setReview({ app: a, action: 'reject' })}>Reject</button></>}
       {a.reservation_status === 'HELD' && <button className="admin-secondary" disabled={busy} onClick={() => setReview({ app: a, action: 'release' })}>Cancel & release place</button>}
     </div>] }))} />
-    {review && <Dialog title={review.action === 'offer' ? 'Propose revised room terms' : review.action === 'approve' ? 'Approve room assignment' : review.action === 'release' ? 'Cancel and release reserved place' : review.action === 'reject' ? 'Reject application' : 'Request corrections'} error={error} close={() => setReview(null)}>
+    {review && <Dialog busy={busy} title={review.action === 'offer' ? 'Propose revised room terms' : review.action === 'approve' ? 'Approve room assignment' : review.action === 'release' ? 'Cancel and release reserved place' : review.action === 'reject' ? 'Reject application' : 'Request corrections'} error={error} close={() => setReview(null)}>
       <p>{review.app.full_name} · {review.app.email}</p><p>{review.action === 'approve' ? 'Confirm the selected room and accepted agreement. Approval starts their tenancy and opens resident services.' : review.action === 'release' ? 'This explicitly frees the held place and cancels the application.' : 'Any existing reservation stays held until you explicitly release it.'}</p>
       <form className="registration-form" onSubmit={e => { e.preventDefault(); const d = new FormData(e.currentTarget); run(async () => { const result = await api<Delivery & { message: string }>('/owner/admissions/' + review.app.id + '/' + review.action, { reason: String(d.get('reason')), ...(review.action === 'offer' ? {roomId:String(d.get('roomId')),roomVersion:Number(d.get('roomVersion')),quote:d.get('quote')===''?null:Number(d.get('quote'))} : {}), ...(review.action === 'approve' ? { roomId: String(d.get('roomId')) } : {}) }); setReview(null); notice((review.action==='approve'?review.app.full_name+' approved. '+(review.app.offers?.[0]?.terms.label||'The room')+' tenancy is active.':result.message) + (result.delivery ? ' ' + (review.action==='approve'?approvalDelivery(result):result.delivery==='FAILED'?'Update saved, but notification email delivery failed.':result.delivery==='LOCAL_FILE'?'No email sent: the update is in the local development mail folder.':'The mail server accepted the update notification.') : '')); refresh() }) }}>
         {review.app.offers?.[0] && (rooms as unknown as RoomTerms[]).find(r=>r.id===review.app.offers?.[0].room_id)?.terms_version!==review.app.offers?.[0]?.room_version && <p className="room-note">The listing has changed since this offer. Send a revised offer and obtain acceptance before approval.</p>}{review.app.offers?.[0] && <details className="room-agreement"><summary>Accepted room terms / Offer {review.app.offers[0].version} / {review.app.offers[0].accepted_at?'Accepted':'Awaiting acceptance'}</summary><Terms compact room={review.app.offers[0].terms}/></details>}
         {review.action === 'offer' && <><label>Room<select name="roomId" required onChange={e=>{const input=e.currentTarget.form?.elements.namedItem('roomVersion') as HTMLInputElement;const room=(rooms as unknown as RoomTerms[]).find(r=>r.id===e.target.value);setProposal(room||null);if(input)input.value=String(room?.terms_version)}} defaultValue=""><option value="" disabled>Choose proposed room</option>{(rooms as unknown as RoomTerms[]).filter(r=>r.property_id===review.app.property_id).map(r=><option value={r.id} key={r.id}>{r.label} / Listing version {r.terms_version}</option>)}</select></label><input name="roomVersion" type="hidden"/>{proposal&&<Terms room={proposal}/>}<label>Applicant monthly quote (PHP; leave blank to use listing)<input name="quote" type="number" min="0" step="0.01"/></label><p>Changes require the applicant to accept the exact new offer before final approval. No place is reserved.</p></>}
-        {review.action === 'approve' && <><input type="hidden" name="roomId" value={review.app.offers?.[0]?.room_id||''}/><section className="approval-room"><span>CONFIRMED ROOM</span><strong>{review.app.offers?.[0]?.terms.label||'No room selected'}</strong><p>Approval uses only the latest room and terms accepted by the applicant. To change them, send a revised offer first.</p>{!review.app.offers?.[0]?.accepted_at&&<p role="alert">The applicant must accept the latest offer before approval.</p>}</section></>}
+        {review.action === 'approve' && <><input type="hidden" name="roomId" value={review.app.offers?.[0]?.room_id||''}/><section className="approval-room"><span>CONFIRMED ROOM</span><strong>{review.app.offers?.[0]?.terms.label||'No room selected'}</strong>{review.app.offers?.[0] && <p>Monthly rent: {(review.app.offers[0].terms.applicant_monthly_rent == null ? 'To be confirmed' : new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(review.app.offers[0].terms.applicant_monthly_rent))}</p>}<p>Approval uses only the latest room and terms accepted by the applicant. To change them, send a revised offer first.</p>{!review.app.offers?.[0]?.accepted_at&&<p role="alert">The applicant must accept the latest offer before approval.</p>}</section></>}
         <label>Reason / review notes<textarea name="reason" required rows={4} maxLength={1000} /></label><button className="admin-primary" disabled={busy||(review.action==='approve'&&!review.app.offers?.[0]?.accepted_at)}>{review.action === 'approve' ? 'Approve & start tenancy' : review.action === 'release' ? 'Confirm cancel & release' : 'Save review'}</button>
       </form>
     </Dialog>}
@@ -200,8 +215,13 @@ function Applicant({ account, run, busy, notice, refresh, error }: Tools & { acc
     return () => { active = false; window.clearInterval(interval); window.removeEventListener('focus', checkVisible); document.removeEventListener('visibilitychange', checkVisible) }
   }, [])
   const verified = account.email_verified || Boolean(apps?.some(a => a.email_verified))
+  const resend = () => run(async () => {
+    const result = await api<Delivery>('/account/verification', {})
+    notice(deliveryText(result))
+    refresh()
+  })
   return <div className="application-page resident-content">
-    <header className="application-heading resident-page-heading"><span>YOUR NEXT CHAPTER</span><h1>Application status</h1><p>Hi {account.full_name.trim().split(/\s+/u)[0]}, follow your next steps toward a place to call home.</p></header>
+    <header className="application-heading resident-page-heading"><span>YOUR NEXT CHAPTER</span><h1>Application status</h1><p>Check what’s complete and whether you need to take action.</p></header>
     {loadError && <div className="application-error" role="alert"><p>{loadError}</p><button className="admin-secondary" onClick={refresh}>Try again</button></div>}
     {!apps && !loadError && <p role="status">Loading your application...</p>}
     <div className="application-columns"><div className="application-main">
@@ -210,11 +230,16 @@ function Applicant({ account, run, busy, notice, refresh, error }: Tools & { acc
         const correction = a.status === 'CORRECTIONS_REQUESTED'
         const closed = ['REJECTED', 'CANCELLED'].includes(a.status)
         const currentStep = a.email_verified ? 2 : 1
-        const title = a.status === 'AWAITING_EMAIL' ? 'Check your inbox' : correction ? 'A few details to update' : a.status === 'REJECTED' ? 'An update from your owner' : a.status === 'CANCELLED' ? 'Application closed' : 'Your application is in good hands'
+        const title = a.status === 'AWAITING_EMAIL' ? 'Check your inbox' : correction ? 'A few details to update' : a.status === 'REJECTED' ? 'An update from your owner' : a.status === 'CANCELLED' ? 'Application closed' : 'Waiting for owner review'
         const description = a.status === 'AWAITING_EMAIL' ? 'Verify your email address so your property owner can review your application.' : correction ? 'Your owner needs a few corrections before continuing the review. Update your details below.' : a.status === 'REJECTED' ? 'Your owner could not approve this application. Please review their feedback below.' : a.status === 'CANCELLED' ? 'Your owner has cancelled this application. Any reserved place has been released.' : 'Your email is verified. Your property owner will review your details and confirm the room and terms you selected.'
         return <section className={'application-card application-status-card' + (closed || correction ? ' application-needs-attention' : '')} key={a.id} aria-label={label(a.status)}>
           <div className="application-card-top"><img className="application-status-icon" src={'./assets/dashboard/' + (correction || closed ? 'icon-book-nav.svg' : 'icon-shield.svg')} alt="" /><span className="application-status-pill">{label(a.status)}</span></div>
-          <h2>{title}</h2><p>{description}</p><ApplicantOffers app={a} run={run} refresh={refresh} busy={busy}/>
+          <h2>{title}</h2><p>{description}</p>
+          {a.status === 'AWAITING_EMAIL' && <div className="application-verify-action">
+            <p>We sent a verification link when you created your account. Check your inbox and spam folder. If it has not arrived, request a new link.</p>
+            <button className="admin-primary" disabled={busy} onClick={resend}>{busy ? 'Sending...' : 'Resend verification email'}</button>
+          </div>}
+          <ApplicantOffers app={a} run={run} refresh={refresh} busy={busy}/>
           <ol className="application-steps" aria-label="Application progress">{['Account created', 'Email verified', 'Owner approval'].map((step, i) => <li key={step} className={i < currentStep ? 'is-complete' : i === currentStep && !closed ? 'is-current' : ''} aria-current={!closed && i === currentStep ? 'step' : undefined}><span aria-hidden="true">{i < currentStep ? '\u2713' : i + 1}</span><strong>{step}</strong><small>{i < currentStep ? 'Complete' : closed ? 'Not completed' : correction ? 'Changes needed' : i === currentStep ? currentStep === 1 ? 'Action needed' : 'In review' : 'Up next'}</small></li>)}</ol>
           {a.review_reason && <div className="application-feedback"><h3>A note from your owner</h3><p>{a.review_reason}</p></div>}
           {a.reservation_status === 'HELD' && <p className="application-reservation">Your place is still reserved. Only your owner can release it.</p>}
@@ -225,10 +250,10 @@ function Applicant({ account, run, busy, notice, refresh, error }: Tools & { acc
       })}
       <div className="application-refresh"><span><span className="application-live-dot" aria-hidden="true" />Status updates automatically</span><button className="admin-secondary" disabled={busy} onClick={refresh}>Refresh status</button></div>
     </div><aside className="application-side">
-      <section className="application-card application-account"><h2>Your account</h2><span className={'application-email-state' + (verified ? ' is-verified' : '')}>{verified ? 'Email verified' : 'Verification needed'}</span><dl><dt>Full name</dt><dd>{account.full_name}</dd><dt>Email address</dt><dd>{account.email}</dd><dt>Contact number</dt><dd>{account.contact || 'Not provided'}</dd></dl>{!verified && <><p>We sent a verification link when you created your account. Check your inbox and spam folder. If it has not arrived, you can request another below.</p><button className="admin-secondary" disabled={busy} onClick={() => run(async () => { const result = await api<Delivery>('/account/verification', {}); notice(deliveryText(result)); refresh() })}>Resend verification email</button></>}</section>
+      <section className="application-card application-account"><h2>Your account</h2><span className={'application-email-state' + (verified ? ' is-verified' : '')}>{verified ? 'Email verified' : 'Verification needed'}</span><dl><dt>Full name</dt><dd>{account.full_name}</dd><dt>Email address</dt><dd>{account.email}</dd><dt>Contact number</dt><dd>{account.contact || 'Not provided'}</dd></dl>{!verified && !apps?.some(a => a.status === 'AWAITING_EMAIL') && <button className="admin-secondary" disabled={busy} onClick={resend}>Resend verification email</button>}</section>
       <section className="application-reassurance"><img src="./assets/dashboard/icon-heart-nav.svg" width="28" height="28" alt="" /><h2>A little closer to home.</h2><p>Your application details are private and shared with your property owner for review.</p></section>
     </aside></div>
-    {editing && <Dialog title="Correct application details" close={() => setEditing(null)} error={error}><form className="registration-form" onSubmit={e => { e.preventDefault(); const d = new FormData(e.currentTarget); run(async () => { await api('/account/admissions/' + editing.id + '/corrections', { fullName: String(d.get('fullName')), contact: String(d.get('contact')) }); setEditing(null); notice('Corrections submitted for owner review.'); refresh() }) }}><label>Full name<input name="fullName" required maxLength={100} defaultValue={editing.full_name} /></label><label>Contact number<input name="contact" type="tel" required maxLength={100} defaultValue={editing.contact} /></label><button className="admin-primary" disabled={busy}>Submit corrections</button></form></Dialog>}
+    {editing && <Dialog busy={busy} title="Correct application details" close={() => setEditing(null)} error={error}><form className="registration-form" onSubmit={e => { e.preventDefault(); const d = new FormData(e.currentTarget); run(async () => { await api('/account/admissions/' + editing.id + '/corrections', { fullName: String(d.get('fullName')), contact: String(d.get('contact')) }); setEditing(null); notice('Corrections submitted for owner review.'); refresh() }) }}><label>Full name<input name="fullName" required maxLength={100} defaultValue={editing.full_name} /></label><label>Contact number<input name="contact" type="tel" required maxLength={100} defaultValue={editing.contact} /></label><button className="admin-primary" disabled={busy}>Submit corrections</button></form></Dialog>}
   </div>
 }
 

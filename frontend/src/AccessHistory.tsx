@@ -95,7 +95,7 @@ export default function AccessHistory() {
       </aside>
       <p className="resident-preview-label">{isLiveWorkspace() ? 'No sample records are loaded. Module test changes stay in this browser.' : <>Sample access records · October 2026</>}</p>
     </div>
-    {exportOpen && <ResidentDialog title="Export access log" eyebrow="ACCESS HISTORY" onClose={() => setExportOpen(false)}>
+    {exportOpen && <ResidentDialog title="Export access log" eyebrow="ACCESS HISTORY" protectEdits={false} onClose={() => setExportOpen(false)}>
       <form onSubmit={event => { event.preventDefault(); downloadLog() }}>
         <div className="dialog-body">
           <p>Choose a date range, then download a CSV copy of your records. Current filter: {filter}.</p>

@@ -1,4 +1,4 @@
-﻿import { useEffect, useRef, useState } from 'react'
+﻿import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import HoldingWorkspace from './HoldingWorkspace'
 import ResidentDialog from './ResidentDialog'
@@ -39,7 +39,6 @@ export default function HoldingStation({ desk = false, admin = false }: { desk?:
   const [modal, setModal] = useState<Modal | null>(null)
   const [matches, setMatches] = useState<number[] | null>(null)
   const [visitor, setVisitor] = useState<Visitor | null>(null)
-  const dialog = useRef<HTMLDialogElement>(null)
   const selected = modal && 'id' in modal ? state.items.find(item => item.id === modal.id) : undefined
   const mine = live ? state.items : state.items.filter(item => item.residentId === CURRENT_RESIDENT)
   const ready = mine.filter(item => item.status === 'Ready')
@@ -55,10 +54,6 @@ export default function HoldingStation({ desk = false, admin = false }: { desk?:
   const matchItems = state.items.filter(item => matches?.includes(item.id) && item.status === 'Ready')
 
   useEffect(() => { document.title = (desk ? 'Front desk holding station' : 'Holding station') + ' | Haruhay' }, [desk])
-  useEffect(() => {
-    if (modal) dialog.current?.showModal()
-    else dialog.current?.close()
-  }, [modal])
 
   function open(next: Modal) { setError(''); setModal(next) }
   function commit(next: HoldingState, message: string) {
@@ -291,8 +286,8 @@ export default function HoldingStation({ desk = false, admin = false }: { desk?:
         {error && !modal && <p className="hs-error" role="alert">{error}</p>}
         {tab === 'records' && <>
           <div className="hs-toolbar"><label><span className="hs-sr-only">Search holding records</span><input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Search code, item, resident or tracking number" /></label><label><span className="hs-sr-only">Filter by status</span><select value={filter} onChange={event => setFilter(event.target.value)}><option value="all">All statuses</option><option value="Ready">Ready for pickup</option><option value="Claimed">Collected</option></select></label><button type="button" className="hs-button hs-primary" onClick={() => { if (admin) { setRegistrationResidentId(''); setRegisterOpen(true) } else setTab('record'); setError('') }}>Record held item</button></div>
-          <div className="hs-table-wrap"><table className="hs-table"><caption className="hs-sr-only">Holding station records</caption><thead><tr><th>Item</th><th>Held for</th><th>Shelf</th><th>Received</th><th>Status</th><th>Actions</th></tr></thead><tbody>
-            {visible.map(item => <tr key={item.id}><th scope="row">{item.description}<small>{item.code}{item.tracking && ' • ' + item.tracking}</small></th><td>{residentName(item.residentId)}<small>Room {residents[item.residentId].room}</small></td><td>{item.slot}</td><td>{item.received}</td><td><Status item={item} /></td><td><div className="hs-actions">{item.status === 'Ready' && <button className="hs-button hs-primary" type="button" onClick={() => { setVisitor(null); open({ mode: 'release', id: item.id }) }}>Release</button>}<button className="hs-button" type="button" onClick={() => open({ mode: 'details', id: item.id })}>Details</button><button className="hs-button" type="button" onClick={() => open({ mode: 'edit', id: item.id })}>Edit</button><button className="hs-button hs-danger" type="button" onClick={() => open({ mode: 'delete', id: item.id })}>Delete</button></div></td></tr>)}
+          <p className="ux-results-count hs-status-summary" role="status">{visible.length} of {state.items.length} holding records</p><div className="hs-table-wrap"><table className="hs-table" role="table"><caption className="hs-sr-only">Holding station records</caption><thead role="rowgroup"><tr role="row"><th role="columnheader" scope="col">Item</th><th role="columnheader" scope="col">Held for</th><th role="columnheader" scope="col">Shelf</th><th role="columnheader" scope="col">Received</th><th role="columnheader" scope="col">Status</th><th role="columnheader" scope="col">Actions</th></tr></thead><tbody role="rowgroup">
+            {visible.map(item => <tr role="row" key={item.id}><th scope="row" role="rowheader" data-label="Item">{item.description}<small>{item.code}{item.tracking && ' • ' + item.tracking}</small></th><td role="cell" data-label="Recipient">{residentName(item.residentId)}<small>Room {residents[item.residentId].room}</small></td><td role="cell" data-label="Storage slot">{item.slot}</td><td role="cell" data-label="Received">{item.received}</td><td role="cell" data-label="Status"><Status item={item} /></td><td role="cell" data-label="Actions"><div className="hs-actions">{item.status === 'Ready' && <button className="hs-button hs-primary" type="button" onClick={() => { setVisitor(null); open({ mode: 'release', id: item.id }) }}>Release</button>}<button className="hs-button" type="button" onClick={() => open({ mode: 'details', id: item.id })}>Details</button><button className="hs-button" type="button" onClick={() => open({ mode: 'edit', id: item.id })}>Edit</button><button className="hs-button hs-danger" type="button" onClick={() => open({ mode: 'delete', id: item.id })}>Delete</button></div></td></tr>)}
             {!visible.length && <tr><td colSpan={6} className="hs-empty">No records match your search and status filter.</td></tr>}
           </tbody></table></div>
         </>}
@@ -310,8 +305,7 @@ export default function HoldingStation({ desk = false, admin = false }: { desk?:
         </>}
       </>}
       {admin && registerOpen && <ResidentDialog title="Register a package" eyebrow="HOLDING STATION" onClose={() => { setRegisterOpen(false); setRegistrationResidentId('') }}>{error && <p className="hs-error" role="alert">{error}</p>}{recordForm}</ResidentDialog>}
-      <dialog ref={dialog} className="hs-dialog" aria-labelledby="hs-dialog-title" onClose={() => setModal(null)} onClick={event => { if (event.target === event.currentTarget) setModal(null) }}>
-        {modal && <><div className="hs-dialog-heading"><h2 id="hs-dialog-title">{modal.mode === 'all' ? 'All items ready for pickup' : modal.mode === 'history' ? 'Collection history' : modal.mode === 'delete' ? 'Delete this record?' : modal.mode === 'release' ? 'Release held item' : modal.mode === 'edit' ? 'Edit holding record' : modal.mode === 'pickup' ? 'Pickup details' : 'Holding record details'}</h2><button type="button" aria-label="Close dialog" onClick={() => setModal(null)}>×</button></div>
+      {modal && <ResidentDialog className="hs-dialog" onClose={() => setModal(null)} footerNote="" title={modal.mode === 'all' ? 'All items ready for pickup' : modal.mode === 'history' ? 'Collection history' : modal.mode === 'delete' ? 'Delete this record?' : modal.mode === 'release' ? 'Release held item' : modal.mode === 'edit' ? 'Edit holding record' : modal.mode === 'pickup' ? 'Pickup details' : 'Holding record details'}>
           {error && <p className="hs-error" role="alert">{error}</p>}
           {(modal.mode === 'all' || modal.mode === 'history') && <div className="hs-dialog-list">{(modal.mode === 'all' ? ready : collected).map(item => <article key={item.id} className="hs-list-item"><h3>{item.description}</h3><p>{item.code} • Shelf {item.slot}</p><p>{modal.mode === 'all' ? 'Received ' + item.received : 'Collected ' + item.claimed}</p><button className="hs-button" type="button" onClick={() => open({ mode: modal.mode === 'all' ? 'pickup' : 'details', id: item.id })}>View details</button></article>)}{!(modal.mode === 'all' ? ready : collected).length && <p className="hs-empty">No items to show.</p>}</div>}
           {selected && <>
@@ -322,12 +316,11 @@ export default function HoldingStation({ desk = false, admin = false }: { desk?:
               {modal.mode === 'edit' && <><label>Item description<input name="description" defaultValue={selected.description} maxLength={150} required /></label><label>Storage slot<select name="slot" defaultValue={selected.slot} required>{HOLDING_SLOTS.map(slot => <option value={slot} key={slot} disabled={selected.status === 'Ready' && slot !== selected.slot && selectedPropertyOccupied.includes(slot)}>{slot}{selected.status === 'Ready' && slot !== selected.slot && selectedPropertyOccupied.includes(slot) ? ' (occupied)' : ''}</option>)}</select></label></>}
               {modal.mode === 'release' && <>{live && <label>ID type presented<select name="idType" required defaultValue=""><option value="" disabled>Select ID type</option><option>Student ID</option><option>Driver's license</option><option>UMID</option><option>National ID</option><option>Passport</option><option>Other government ID</option></select></label>}<label>{live ? 'Last four characters of ID presented' : 'ID number presented'}<input name={live ? 'idLastFour' : 'idNumber'} defaultValue={visitor?.idNumber ?? ''} placeholder={live ? 'e.g. 1234' : 'e.g. ' + selected.residentId} maxLength={live ? 4 : 60} pattern={live ? '[A-Za-z0-9]{4}' : undefined} required /></label><label>Claimed by<input name="claimedBy" defaultValue={visitor?.name ?? residentName(selected.residentId)} maxLength={100} required /></label><label>Relationship to owner<select name="relationship"><option>Owner</option><option>Authorized representative</option></select></label>{live && <label className="hs-checkbox"><input name="verifiedId" type="checkbox" required />I checked the presented ID and confirmed it matches the claimant</label>}<label className="hs-checkbox"><input name="authorized" type="checkbox" />Owner’s authorization checked (required for a representative)</label><label className="hs-checkbox"><input name="signed" type="checkbox" required />Claimant signed / confirmed receipt</label>{!live && <p className="hs-warning">Sample resident ID: {selected.residentId}. Verify identity before confirming release.</p>}</>}
                 {modal.mode === 'delete' && <p>{live ? 'This archives the holding record and keeps its transaction history for accountability.' : 'This removes the holding record and its history from this browser session. This action cannot be undone.'}</p>}
-              <div className="hs-actions hs-form-actions"><button type="button" className="hs-button" onClick={() => setModal(null)}>Cancel</button><button type="submit" className={'hs-button ' + (modal.mode === 'delete' ? 'hs-delete' : 'hs-primary')}>{modal.mode === 'edit' ? 'Save changes' : modal.mode === 'release' ? 'Confirm release' : 'Delete record'}</button></div>
+              <div className="hs-actions hs-form-actions"><button type="button" className="hs-button" onClick={event => event.currentTarget.closest('dialog')?.requestClose()}>Cancel</button><button type="submit" className={'hs-button ' + (modal.mode === 'delete' ? 'hs-delete' : 'hs-primary')}>{modal.mode === 'edit' ? 'Save changes' : modal.mode === 'release' ? 'Confirm release' : 'Delete record'}</button></div>
             </form>}
           </>}
           {(modal.mode === 'all' || modal.mode === 'history' || modal.mode === 'pickup' || modal.mode === 'details') && <div className="hs-actions hs-form-actions"><button className="hs-button hs-primary" type="button" onClick={() => setModal(null)}>Done</button></div>}
-        </>}
-      </dialog>
+      </ResidentDialog>}
     </div>
   </HoldingWorkspace>
 }

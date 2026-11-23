@@ -95,7 +95,7 @@ export default function PaymentHistory() {
       </section>
       <p className="resident-preview-label">Sample payment history · exports contain CSV records, not official receipt documents.</p>
     </div>
-    {exportOpen && <ResidentDialog title="Export receipts" eyebrow="PAYMENT HISTORY" onClose={() => setExportOpen(false)}>
+    {exportOpen && <ResidentDialog title="Export receipts" eyebrow="PAYMENT HISTORY" protectEdits={false} onClose={() => setExportOpen(false)}>
       <div className="dialog-body">
         <p>Select the payment records you want to export. Format: CSV spreadsheet.</p>
         <label className="dialog-choice"><input type="checkbox" checked={selected.length === visiblePayments.length} onChange={event => setSelected(event.target.checked ? visiblePayments.map(payment => payment.id) : [])} />Select all records</label>

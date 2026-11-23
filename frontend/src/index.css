@@ -13,12 +13,23 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   --ink: #183c5a;
-  --blue: #3678a7;
+  --blue: #286793;
   --powder: #e2f1fa;
   --cream: #fffcf8;
-  --muted: #688096;
-  --line: #e3ebf2;
+  --muted: #48637b;
+  --line: #d8e5ee;
   --mist: #f3f9fd;
+  --surface: #fff;
+  --control-border: #9aafbf;
+  --radius-control: 10px;
+  --radius-panel: 16px;
+  --focus: #1a557f;
+  --success-ink: #205e4e;
+  --success-bg: #e3f3ed;
+  --warning-ink: #764616;
+  --warning-bg: #fff2df;
+  --error-ink: #8d303a;
+  --error-bg: #fff0f1;
 }
 * { box-sizing: border-box; }
 body { margin: 0; min-width: 320px; }
@@ -26,7 +37,7 @@ button, input, select, textarea { font: inherit; }
 button { border: 0; cursor: pointer; }
 a { color: var(--blue); text-decoration: none; }
 a:hover { text-decoration: underline; }
-button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible {
-  outline: 3px solid #3678a7;
+:where(button, a, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 3px solid var(--focus);
   outline-offset: 3px;
 }
