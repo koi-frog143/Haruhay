@@ -11,7 +11,7 @@ import './RegistrationFlow.css'
 import './Onboarding.css'
 import AdminLayout from './AdminLayout'
 import ResidentLayout from './ResidentLayout'
-import { loadWorkspaceSession, setWorkspaceMode } from './workspaceSession'
+import { loadWorkspaceSession, clearWorkspaceSession } from './workspaceSession'
 
 const node = '18:1809'
 const label = (status: string) => ({ AWAITING_EMAIL: 'Verify email', PENDING_APPROVAL: 'Pending owner approval', APPROVED: 'Active tenancy', CORRECTIONS_REQUESTED: 'Corrections requested', REJECTED: 'Rejected', CANCELLED: 'Cancelled' }[status] || status)
@@ -99,7 +99,7 @@ export default function RegistrationFlow() {
     <WelcomePanel screen={signup ? 'register' : 'login'} />
     <section className={'form-panel ' + (signup ? 'register onboarding-signup' : 'login')} aria-labelledby="live-auth-title"><div className="auth-content">
       <header className="auth-header"><span className="badge">{verify ? 'YOUR EMAIL, VERIFIED' : signup ? 'JOIN OUR COMMUNITY' : 'WELCOME HOME'}</span><h1 ref={heading} id="live-auth-title" tabIndex={-1}>{verify ? 'Verify your email' : signup ? 'Create your account' : 'Welcome back'}</h1><p>{verify ? 'One small step before your property owner reviews your application.' : signup ? 'Create your account, choose your property, and apply for your place.' : 'Sign in to manage your stay and stay in touch.'}</p></header>
-      {signup && account && <div className="form-notice"><p>You are signed in as <strong>{account.email}</strong>. Apply with this account, or sign out to register someone else.</p><button className="admin-secondary" type="button" disabled={busy} onClick={() => run(async () => { await api('/auth/logout', {}); setWorkspaceMode('live'); setAccount(null); setSubmitted(false); setNotice('You can now create a new account with a different email address.'); })}>Create account with another email</button></div>}
+      {signup && account && <div className="form-notice"><p>You are signed in as <strong>{account.email}</strong>. Apply with this account, or sign out to register someone else.</p><button className="admin-secondary" type="button" disabled={busy} onClick={() => run(async () => { await api('/auth/logout', {}); clearWorkspaceSession(); setAccount(null); setSubmitted(false); setNotice('You can now create a new account with a different email address.'); })}>Create account with another email</button></div>}
       {error && <p role="alert" className="form-error">{error}</p>}{notice && <p role="status" className="form-notice">{notice}</p>}
       {verify ? <div className="onboarding-auth-status">{verified ? <><h2>Email verified</h2><p>Your application is now pending owner approval. Owner approval will automatically activate your tenancy.</p></> : token ? <button className="primary-button" disabled={busy} onClick={() => run(async () => { await api('/public/email/verify', { token }); setVerified(true); setNotice('Your email has been verified.') })}>Verify my email</button> : <p>The verification link is missing. Sign in to request a new one.</p>}<a href="#/account/status">Continue to my account</a></div>
         : submitted ? <div className="onboarding-auth-status"><h2>Your application is on its way</h2><p>Verify your email, then sign in to follow your application. Your owner will review the room assignment and approval.</p><a className="admin-primary" href="#/login">Continue to sign in</a></div>

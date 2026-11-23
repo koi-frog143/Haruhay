@@ -119,6 +119,8 @@ Sample mode keeps its Resident / Front desk workspaces separate in browser sessi
 - Front desk can search/filter records, register items, edit descriptions/shelves, view history, and confirm deletions.
 - Shelf occupancy prevents two ready items from using the same slot. Full shelves disable registration.
 - Live release requires the owner to confirm an in-person ID check, record the claimant, and confirm receipt. Only the ID type and last four characters are stored; representatives require explicit authorization.
+- The live release form requires an explicit ID type. Backend inserts request only the generated item ID so PostgreSQL and H2 behave consistently.
+- Live parcel caches are scoped by account and role, cleared on sign-out/account changes, and reject responses from earlier sessions, including signing back into the same account. Sample fixtures remain separate.
 - Walk-in inquiries search by resident and/or tracking number. Live inquiry logs retain visitor details and only the ID type and last four characters.
 - Dashboard pickup counts use the same records. Sample changes persist within the browser tab; live records and transaction history persist in the backend database.
 - Light/dark controls affect Holding Station content without changing other screens.
@@ -127,3 +129,5 @@ HoldingStation.tsx and HoldingStation.css contain the UI. holdingData.ts contain
 Sample resident IDs are RES-0204 (current resident), RES-0101 (Marco), and RES-0312 (Lea).
 The sample front desk view is not an authenticated staff area. Live Holding Station APIs are owner-only; separate staff accounts and notifications are not implemented.
 No standalone folder or separate server is required.
+
+Holding Station fix regressions: start Vite and an isolated Chrome remote-debugging instance, then run `node scripts/check-holding-fixes-ui.mjs` from frontend. Set `UI_ORIGIN` and `UI_DEBUG` if using different ports. This suite mocks API responses and covers account switching, late responses, logout/login, and the live release form without modifying real records. Run the backend test suite against both the isolated H2 profile and a dedicated `haruhay_registration_test` PostgreSQL database to verify generated-key compatibility.
