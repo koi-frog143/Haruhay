@@ -1,5 +1,7 @@
 # Haruhay frontend
 
+Database-backed visitor requests, QR passes, property guard accounts and explicit check-in/out are documented in [VISITOR-QR.md](../VISITOR-QR.md), including local setup, permissions, scanner fallback and tests.
+
 React + TypeScript + Vite implementation of the Haruhay website, authentication previews, resident portal and administrator workspace from Figma.
 
 Canonical #/login and #/register now use the backend: signup, one email verification, and owner approval that immediately starts the tenancy. See [registration setup and API guide](../REGISTRATION.md) for blank owner setup, SMTP/local delivery, state transitions and tests. Owner and approved-resident sign-in open the full existing UI, starting with empty activity and the actual account identity. Sample previews are explicitly separate.

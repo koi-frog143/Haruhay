@@ -1,3 +1,4 @@
+import LiveLogbook from './LiveLogbook'
 import { isLiveWorkspace } from './workspaceSession'
 import { useEffect, useMemo, useState } from 'react'
 import ResidentLayout from './ResidentLayout'
@@ -11,7 +12,8 @@ const asset = (name: string) => `./assets/dashboard/${name}`
 
 type ActivityFilter = 'All activity' | 'Visitors' | 'Residents'
 
-export default function VisitorLogbook() {
+export default function VisitorLogbook() { return isLiveWorkspace() ? <LiveLogbook /> : <SampleVisitorLogbook /> }
+function SampleVisitorLogbook() {
   const [filter, setFilter] = useState<ActivityFilter>('All activity')
   const [notice, setNotice] = useState('')
   const profile = usePreviewData(getResidentProfile)

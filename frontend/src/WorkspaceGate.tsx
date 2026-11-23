@@ -3,8 +3,8 @@ import type { ReactNode } from 'react'
 import { ApiError } from './registrationApi'
 import { isSampleWorkspace, loadWorkspaceSession } from './workspaceSession'
 
-export default function WorkspaceGate({ kind, children }: { kind: 'account' | 'admin' | 'resident'; children: ReactNode }) {
-  const sample = isSampleWorkspace() && kind !== 'account'
+export default function WorkspaceGate({ kind, children }: { kind: 'account' | 'admin' | 'resident' | 'guard'; children: ReactNode }) {
+  const sample = isSampleWorkspace() && kind !== 'account' && kind !== 'guard'
   const [state, setState] = useState(sample ? 'ready' : 'loading')
   const [error, setError] = useState('')
   useEffect(() => {
@@ -12,6 +12,8 @@ export default function WorkspaceGate({ kind, children }: { kind: 'account' | 'a
     let active = true
     loadWorkspaceSession().then(s => {
       if (!active) return
+      if (s.account.role === 'GUARD' && kind !== 'guard') { window.location.replace('#/guard/logbook'); return }
+      if (kind === 'guard' && s.account.role !== 'GUARD') { window.location.replace(s.account.role === 'OWNER' ? '#/admin/logbook' : '#/account/status'); return }
       if (kind === 'account' && s.account.role !== 'OWNER' && s.applications.some(a => a.status === 'APPROVED') && window.location.hash.split('?')[0] === '#/account/status') {
         window.location.replace('#/resident/dashboard'); return
       }

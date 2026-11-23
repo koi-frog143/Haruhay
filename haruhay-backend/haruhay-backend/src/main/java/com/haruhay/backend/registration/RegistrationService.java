@@ -57,7 +57,9 @@ public class RegistrationService {
             UUID.randomUUID(),entity,event,actor,now(),reason);
     }
     public Map<String,Object> account(String email) {
-        return one("SELECT id,email,full_name,contact,role,email_verified FROM accounts WHERE email=?",email);
+        var account=one("SELECT id,email,full_name,contact,role,email_verified FROM accounts WHERE email=?",email);
+        if (!account.get("role").equals("OWNER") && db.queryForObject("SELECT count(*) FROM property_guard_assignments WHERE account_id=? AND enabled=TRUE",Integer.class,account.get("id"))>0) account.put("role","GUARD");
+        return account;
     }
     private UUID owner(String email) {
         Map<String,Object> account=account(email);
