@@ -40,7 +40,7 @@ public class SecurityConfig {
             .requestMatchers("/api/resident/**").access((authentication, context) -> new AuthorizationDecision(
                 db.queryForObject("SELECT count(*) FROM tenancies t JOIN accounts a ON a.id=t.account_id WHERE a.email=? AND t.status='ACTIVE'",
                     Integer.class, authentication.get().getName()) > 0))
-            .requestMatchers("/api/account", "/api/account/**", "/api/auth/logout", "/api/logbook/**").authenticated()
+            .requestMatchers("/api/account", "/api/account/**", "/api/auth/logout", "/api/logbook/**", "/api/maintenance/**").authenticated()
             .anyRequest().denyAll())
             .requestCache(c -> c.disable())
             .formLogin(f -> f.loginProcessingUrl("/api/auth/login")

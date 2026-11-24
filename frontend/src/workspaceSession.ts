@@ -1,6 +1,7 @@
 export type MonthlyBill={id:string;application_id:string;period:string;due_date:string;rent:number;fixed_charges:number}
 import { api } from './registrationApi'
 import { clearVisitorRecords, loadVisitorRecords } from './visitorApi'
+import { refreshMaintenance } from './maintenanceApi'
 import type { Account, Admission, Property, Room } from './registrationApi'
 
 export type WorkspaceSession = { account: Account; applications: Admission[]; properties: Property[]; rooms: Room[]; bills:MonthlyBill[] }
@@ -24,8 +25,9 @@ export async function loadWorkspaceSession(account?: Account) {
   const version = ++sessionGeneration
   const identity = account || await api<Account>('/account')
   const owner = identity.role === 'OWNER'
+  const staff = identity.role === 'GUARD' || identity.role === 'TECHNICIAN'
   const [applications, properties, rooms] = await Promise.all([
-    identity.role === 'GUARD' ? Promise.resolve([]) : api<Admission[]>(owner ? '/owner/admissions' : '/account/admissions'),
+    staff ? Promise.resolve([]) : api<Admission[]>(owner ? '/owner/admissions' : '/account/admissions'),
     owner ? api<Property[]>('/owner/properties') : Promise.resolve([]),
     owner ? api<Room[]>('/owner/rooms') : Promise.resolve([]),
   ])
@@ -35,7 +37,10 @@ export async function loadWorkspaceSession(account?: Account) {
   if (session?.account.id !== identity.id) clearVisitorRecords()
   session = next
   setWorkspaceMode('live')
-  if (identity.role !== 'GUARD') await loadVisitorRecords().catch(() => null)
+  await Promise.all([
+    staff ? Promise.resolve() : loadVisitorRecords().catch(() => null),
+    owner || identity.role === 'TECHNICIAN' || applications.some(a => a.status === 'APPROVED') ? refreshMaintenance() : Promise.resolve(),
+  ])
   return session
 }
 export async function signOutWorkspace() {

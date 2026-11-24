@@ -1,5 +1,5 @@
 import type { RoomOffer } from './RoomFlow'
-export type Account = { id: string; email: string; full_name: string; contact: string; role: 'OWNER' | 'APPLICANT' | 'GUARD'; email_verified: boolean }
+export type Account = { id: string; email: string; full_name: string; contact: string; role: 'OWNER' | 'APPLICANT' | 'GUARD' | 'TECHNICIAN'; email_verified: boolean }
 export type Room = { id: string; property_id: string; property_name: string; label: string; capacity: number; held: number; active: number; sample: boolean }
 export type Application = { id: string; invitation_id: string; email: string; full_name: string; contact: string; status: string; review_reason: string | null; reservation_status: string; property_name: string; room_label: string; email_verified: boolean; sample: boolean }
 export type Invitation = { id: string; email: string; status: string; token_expires_at: string; reservation_status: string; property_name: string; room_label: string; application_status: string | null; sample: boolean }
@@ -25,16 +25,16 @@ function csrf() {
     }).finally(() => { csrfRequest = null })
   return csrfRequest
 }
-export async function api<T>(path: string, body?: object | URLSearchParams): Promise<T> {
+export async function api<T>(path: string, body?: object | URLSearchParams | FormData): Promise<T> {
   const headers: Record<string, string> = {}
   if (body !== undefined) {
     const security = await csrf()
     headers[security.headerName] = security.token
-    headers['Content-Type'] = body instanceof URLSearchParams ? 'application/x-www-form-urlencoded' : 'application/json'
+    if (!(body instanceof FormData)) headers['Content-Type'] = body instanceof URLSearchParams ? 'application/x-www-form-urlencoded' : 'application/json'
   }
   const response = await fetch('/api' + path, {
     method: body === undefined ? 'GET' : 'POST', credentials: 'same-origin', headers, cache: 'no-store',
-    body: body === undefined ? undefined : body instanceof URLSearchParams ? body : JSON.stringify(body),
+    body: body === undefined ? undefined : body instanceof URLSearchParams || body instanceof FormData ? body : JSON.stringify(body),
   })
   if (response.status === 204) return undefined as T
   const data = await response.json().catch(() => ({ message: 'The backend is unavailable. Start Spring Boot and try again.' })) as { message?: string; fields?: { field: string; message: string }[] }

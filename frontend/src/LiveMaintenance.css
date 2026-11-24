@@ -1,0 +1,63 @@
+.maintenance-live { color: var(--ink); }
+.maintenance-live .admin-heading { margin-block: 12px 24px; }
+.maintenance-live .admin-tabs, .maintenance-inline-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.maintenance-live .maintenance-list { margin-top: 32px; }
+.maintenance-live .maintenance-summary { margin-top: 24px; }
+.maintenance-live .maintenance-metric-card { display: grid; align-content: start; justify-items: start; gap: 3px; padding: 16px; height: auto; min-height: 132px; }
+.maintenance-live .maintenance-metric-card > * { position: static; }
+.maintenance-live .maintenance-metric-card > span:last-child { line-height: 1.35; }
+.maintenance-live .maintenance-metric-card > strong { line-height: 1.25; }
+.maintenance-live .maintenance-live-toolbar { margin-top: 12px; align-items: end; }
+.maintenance-live .maintenance-live-toolbar label { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; }
+.maintenance-live .maintenance-live-toolbar input { border: 1px solid var(--line); border-radius: 10px; min-height: 44px; padding: 8px 12px; }
+.maintenance-live-toolbar select, .maintenance-staff-property select { min-height: 44px; border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; color: var(--ink); background: white; font: inherit; }
+.maintenance-issue-cell { display: grid; gap: 4px; overflow-wrap: anywhere; }
+.maintenance-issue-cell small { color: var(--muted); }
+.maintenance-ticket-status, .maintenance-detail-badges { display: flex; flex-wrap: wrap; gap: 6px; }
+.maintenance-live .status-ready-for-confirmation, .maintenance-live .status-high { background: var(--warning-bg); color: var(--warning-ink); }
+.maintenance-live .status-critical { background: var(--error-bg); color: var(--error-ink); }
+.maintenance-live .status-closed { background: var(--success-bg); color: var(--success-ink); }
+.maintenance-live .admin-status { max-width: 100%; white-space: normal; line-height: 1.35; }
+.maintenance-live .maintenance-create-layout { width: 100%; grid-template-columns: minmax(0, 3fr) minmax(0, 1fr); align-items: start; margin-top: 28px; }
+.maintenance-live .maintenance-form-panel, .maintenance-live .maintenance-useful-details,
+.maintenance-live .maintenance-caring-response { height: auto; min-height: 0; }
+.maintenance-live-result { padding: clamp(16px, 4vw, 30px); margin-top: 28px; }
+.maintenance-live-form { margin-top: 16px; }
+.maintenance-live-form textarea { white-space: pre-wrap; }
+.maintenance-live-form input[type=file], .maintenance-live-detail input[type=file] { max-width: 100%; }
+.maintenance-live-form .maintenance-checkbox { display: flex; align-items: center; gap: 9px; }
+.maintenance-live-form .maintenance-checkbox input { padding: 0; width: 18px; min-height: 0; height: 18px; margin: 0; }
+.maintenance-fields { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; }
+.maintenance-location { display: grid; gap: 6px; align-content: start; }
+.maintenance-location > span { font-size: .85rem; font-weight: 700; }
+.maintenance-location > strong { font-size: .95rem; background: var(--mist); padding: 10px; border: 1px solid var(--line); border-radius: 10px; overflow-wrap: anywhere; }
+.maintenance-help { display: grid; gap: 16px; }
+.maintenance-help ul { list-style: none; padding: 0; margin: 16px 0 0; display: grid; gap: 12px; }
+.maintenance-help li { display: flex; gap: 10px; align-items: center; font-size: .875rem; }
+.maintenance-help li span { display: grid; width: 36px; height: 36px; flex-shrink: 0; border-radius: 10px; place-items: center; background: var(--powder); }
+.maintenance-live .maintenance-caring-response { margin: 0; }
+.maintenance-back { display: inline-block; margin-bottom: 8px; }
+.maintenance-live-detail { grid-template-areas: "content next"; }
+.maintenance-live-detail .admin-maintenance-main { grid-area: content; min-width: 0; }
+.maintenance-live-detail .admin-manage-ticket { grid-area: next; min-width: 0; }
+.maintenance-live-detail .admin-reported p, .maintenance-live-timeline p { overflow-wrap: anywhere; white-space: pre-wrap; }
+.maintenance-live-timeline { padding: 0; }
+.maintenance-live-timeline p { margin: 6px 0 0; }
+.maintenance-next-actions { display: grid; gap: 10px; }
+.maintenance-photos { display: flex; flex-wrap: wrap; padding: 0; gap: 10px; list-style: none; }
+.maintenance-photos img { display: block; width: 116px; height: 98px; object-fit: cover; border-radius: 10px; border: 1px solid var(--line); }
+.maintenance-staff-property { display: grid; gap: 6px; }
+.maintenance-brand-link { display: flex; align-items: center; gap: 6px; }
+.guard-shell.maintenance-technician .guard-header img.maintenance-brand-mark { width: 38px; height: auto; }
+.guard-shell.maintenance-technician .guard-header img.maintenance-brand-wordmark { width: 116px; height: auto; }
+.maintenance-technician .guard-header > div { flex-wrap: wrap; }
+.maintenance-notifications h3 { margin: 0 0 8px; }
+
+@media (max-width: 980px) {
+  .maintenance-live-detail { grid-template-areas: "next" "content"; }
+}
+@media (max-width: 760px) {
+  .maintenance-live .maintenance-create-layout, .maintenance-fields { grid-template-columns: minmax(0, 1fr); }
+  .maintenance-live .maintenance-summary { grid-template-columns: repeat(auto-fit, minmax(min(100%, 135px), 1fr)); }
+  .maintenance-technician .guard-header { align-items: start; }
+}

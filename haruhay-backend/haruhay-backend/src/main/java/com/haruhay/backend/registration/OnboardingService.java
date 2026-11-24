@@ -70,6 +70,7 @@ public class OnboardingService {
         String normalized=email.trim().toLowerCase(Locale.ROOT); UUID account;
         if(authenticatedEmail!=null) {
             var a=identities.account(authenticatedEmail);
+            if ("TECHNICIAN".equals(a.get("role"))) throw new FlowException(403,"STAFF_ACCOUNT","Use a separate resident account to apply.");
             if(!normalized.equals(a.get("email"))) throw new FlowException(403,"EMAIL_MISMATCH","Use your signed-in email.");
             account=id(a,"id");
         } else {

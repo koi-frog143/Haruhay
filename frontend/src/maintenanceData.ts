@@ -1,6 +1,7 @@
-import { isLiveWorkspace, workspaceStorageKey } from './workspaceSession'
+import { getWorkspaceSession, isLiveWorkspace, workspaceStorageKey } from './workspaceSession'
 import { readPreview, savePreview, manilaInputDate } from './previewStore'
 import { CURRENT_RESIDENT_ID, getCurrentResident, getResident } from './residentsData'
+import { isArchived, maintenancePriority, maintenanceSnapshot, maintenanceStatus, ticketTitle } from './maintenanceApi'
 
 export type MaintenanceStatus = 'Submitted' | 'Assigned' | 'In progress' | 'Resolved'
 
@@ -15,6 +16,9 @@ export type MaintenanceTicket = {
   description: string
   assignedTo: string
   comment: string
+  workflowStatus?: string
+  workflowPriority?: string
+  ticketNumber?: string
   residentId?: string
   priority?: 'Normal' | 'High'
   activity?: Array<{ text: string; created: string }>
@@ -86,7 +90,15 @@ function readStoredTickets(): MaintenanceTicket[] {
 }
 
 export function getAllMaintenanceTickets(): MaintenanceTicket[] {
-  if (isLiveWorkspace()) return readStoredTickets()
+  if (isLiveWorkspace()) return maintenanceSnapshot().tickets.map(ticket => ({
+    id: ticket.id, title: ticketTitle(ticket), submitted: ticket.submitted_at, ticketNumber: ticket.ticket_number,
+    category: ticket.category_label, categoryLabel: ticket.category_label, location: ticket.location,
+    status: isArchived(ticket) ? 'Resolved' : ticket.status === 'SUBMITTED' ? 'Submitted' : ticket.status === 'ASSIGNED' ? 'Assigned' : 'In progress',
+    workflowStatus: maintenanceStatus[ticket.status], workflowPriority: maintenancePriority[ticket.priority],
+    priority: ticket.priority === 'ROUTINE' ? 'Normal' : 'High', description: ticket.description,
+    assignedTo: ticket.technician_name ?? 'Awaiting assignment', comment: '',
+    residentId: getWorkspaceSession()?.account.role === 'OWNER' ? ticket.resident_id : CURRENT_RESIDENT_ID,
+  }))
   const extra: MaintenanceTicket[] = [
     { id: 'TCK-1043', residentId: 'RES-0045', priority: 'High', title: 'Broken hallway light', category: 'Electrical', categoryLabel: 'Electrical concern', location: 'Second floor, near Room 206', status: 'In progress', description: 'The shared hallway light flickers repeatedly and occasionally shuts off at night.', submitted: 'Oct 12, 2026', assignedTo: 'Marco Reyes', comment: 'Assigned to maintenance.', activity: [{ text: 'Assigned to maintenance', created: '2026-10-12T09:05' }] },
     { id: 'TCK-1040', residentId: 'RES-0045', priority: 'Normal', title: 'AC unit inspection', category: 'Air conditioning', categoryLabel: 'Air conditioning', location: 'Room 302', status: 'Assigned', description: 'Please inspect the air-conditioning unit.', submitted: 'Oct 10, 2026', assignedTo: 'Marco Reyes', comment: 'Inspection scheduled.' },

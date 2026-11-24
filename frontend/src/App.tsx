@@ -20,7 +20,8 @@ import AdminApp from './AdminApp'
 import RegistrationFlow from './RegistrationFlow'
 import WorkspaceGate from './WorkspaceGate'
 import LiveLogbook from './LiveLogbook'
-import { setWorkspaceMode } from './workspaceSession'
+import LiveMaintenance from './LiveMaintenance'
+import { isLiveWorkspace, setWorkspaceMode } from './workspaceSession'
 
 import GuestVisitorPass from './GuestVisitorPass'
 
@@ -142,7 +143,13 @@ export default function App() {
   useEffect(() => {
     if (screen !== 'home' || !['#haruhay-way', '#features', '#community'].includes(window.location.hash)) window.scrollTo(0, 0)
   }, [screen])
-  const guard = (page: ReactNode, kind: 'account' | 'admin' | 'resident' | 'guard') => <WorkspaceGate key={routeHash} kind={kind}>{page}</WorkspaceGate>
+  const guard = (page: ReactNode, kind: 'account' | 'admin' | 'resident' | 'guard' | 'technician') => <WorkspaceGate key={routeHash} kind={kind}>{page}</WorkspaceGate>
+  const idAfter = (prefix: string) => {
+    try { return decodeURIComponent(routeHash.slice(prefix.length)) } catch { return '' }
+  }
+  if (routeHash === '#/technician/jobs' || routeHash.startsWith('#/technician/jobs/')) {
+    return guard(<LiveMaintenance role="technician" id={routeHash === '#/technician/jobs' ? undefined : idAfter('#/technician/jobs/')} />, 'technician')
+  }
   if (routeHash === '#/visitor-pass' || routeHash.startsWith('#/visitor-pass/')) {
     return <GuestVisitorPass key={routeHash} shareToken={routeHash.slice('#/visitor-pass/'.length)} />
   }
@@ -158,9 +165,9 @@ export default function App() {
   if (screen === 'resident-register-visitor') return guard(<RegisterVisitor />, 'resident')
   if (screen === 'resident-access-history') return guard(<AccessHistory />, 'resident')
   if (screen === 'resident-community') return guard(<CommunityBoard />, 'resident')
-  if (screen === 'resident-maintenance') return guard(<MaintenanceTickets />, 'resident')
-  if (screen === 'resident-maintenance-new') return guard(<CreateMaintenanceTicket />, 'resident')
-  if (screen === 'resident-maintenance-detail') return guard(<MaintenanceTicketDetails key={routeHash} />, 'resident')
+  if (screen === 'resident-maintenance') return guard(isLiveWorkspace() ? <LiveMaintenance role="resident" /> : <MaintenanceTickets />, 'resident')
+  if (screen === 'resident-maintenance-new') return guard(isLiveWorkspace() ? <LiveMaintenance role="resident" report /> : <CreateMaintenanceTicket />, 'resident')
+  if (screen === 'resident-maintenance-detail') return guard(isLiveWorkspace() ? <LiveMaintenance role="resident" id={idAfter('#/resident/maintenance/')} /> : <MaintenanceTicketDetails key={routeHash} />, 'resident')
   if (screen === 'resident-payments') return guard(<BillingPayments />, 'resident')
   if (screen === 'resident-payment-history') return guard(<PaymentHistory />, 'resident')
   return <main className="auth-shell">

@@ -5,6 +5,7 @@ import './ResidentDashboard.css'
 import { getResidentProfile, profileInitials } from './profileData'
 import ResidentTools from './ResidentTools'
 import { getNotifications } from './residentToolsData'
+import { maintenanceSnapshot } from './maintenanceApi'
 import { getReadNotifications } from './residentData'
 import { usePreviewData } from './previewStore'
 
@@ -57,7 +58,8 @@ export default function ResidentLayout({ activeSection, breadcrumb, notice, onNo
   const [tool, setTool] = useState<'search' | 'support' | 'services' | 'notifications' | null>(null)
   const notifications = usePreviewData(getNotifications)
   const readNotifications = usePreviewData(getReadNotifications)
-  const unread = notifications.filter(item => !readNotifications.includes(item.id)).length
+  const maintenanceUnread = usePreviewData(maintenanceSnapshot).notices.filter(notice => !notice.read_at).length
+  const unread = notifications.filter(item => !readNotifications.includes(item.id)).length + maintenanceUnread
   useEffect(() => {
     const media = window.matchMedia('(max-width: 980px)')
     const update = () => setNarrow(media.matches)

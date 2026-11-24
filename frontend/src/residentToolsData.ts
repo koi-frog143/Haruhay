@@ -1,4 +1,5 @@
 import { getSettings } from './settingsData'
+import { isLiveWorkspace } from './workspaceSession'
 import { getResidentProfile } from './profileData'
 import { getHoldingState, CURRENT_RESIDENT } from './holdingData'
 import { getMaintenanceTickets, getTicketComments } from './maintenanceData'
@@ -21,7 +22,7 @@ export function getSearchEntries() {
   const announcements = getAnnouncements()
   const payments = getResidentPayments()
   return [...residentServices,
-    ...getMaintenanceTickets().map(ticket => ({ title: `${ticket.id} · ${ticket.title}`, description: `${ticket.category} · ${ticket.status} · ${ticket.description}`, href: `#/resident/maintenance/${ticket.id}` })),
+    ...getMaintenanceTickets().map(ticket => ({ title: `${ticket.ticketNumber ?? ticket.id} · ${ticket.title}`, description: `${ticket.category} · ${ticket.workflowStatus ?? ticket.status} · ${ticket.description}`, href: `#/resident/maintenance/${ticket.id}` })),
     ...announcements.map(item => ({ title: item.title, description: item.description, href: '#/resident/community' })),
     ...getHoldingState().items.filter(item => item.residentId === CURRENT_RESIDENT).map(item => ({ title: `${item.code} · ${item.description}`, description: `Package ${item.status} · Shelf ${item.slot}`, href: '#/resident/holding-station' })),
     ...getVisitorRequests().map(item => ({ title: item.fullName, description: `Visitor request · ${item.status} · ${item.purpose}`, href: '#/resident/logbook' })),
@@ -36,7 +37,7 @@ export function getNotifications() {
   return [
     ...(preferences.paymentReminders && policy.payments && bill.balance > 0 ? [{ id: `bill-${bill.periodKey}-${bill.balance}`, title: `Sample rent due ${bill.dueLabel}`, description: `${money(bill.balance)} · ${bill.period} sample bill`, href: '#/resident/payments' }] : []),
     ...getHoldingState().items.filter(item => item.residentId === CURRENT_RESIDENT && item.status === 'Ready').map(item => ({ id: `holding-${item.id}`, title: `${item.description} ready for pickup`, description: `${item.code} · Shelf ${item.slot}`, href: '#/resident/holding-station' })),
-    ...(preferences.maintenanceUpdates && policy.maintenance ? getMaintenanceTickets().filter(ticket => ticket.status !== 'Resolved').map(ticket => ({ id: `ticket-${ticket.id}-${ticket.status}-${getTicketComments(ticket.id).length}`, title: ticket.title, description: `${ticket.id} · ${ticket.status}`, href: `#/resident/maintenance/${ticket.id}` })) : []),
+    ...(!isLiveWorkspace() && preferences.maintenanceUpdates && policy.maintenance ? getMaintenanceTickets().filter(ticket => ticket.status !== 'Resolved').map(ticket => ({ id: `ticket-${ticket.id}-${ticket.status}-${getTicketComments(ticket.id).length}`, title: ticket.title, description: `${ticket.id} · ${ticket.status}`, href: `#/resident/maintenance/${ticket.id}` })) : []),
     ...(preferences.communityAnnouncements && policy.announcements ? announcements.map(item => ({ id: `announcement-${item.id}`, title: item.title, description: `${item.date} · Community notice`, href: '#/resident/community' })) : []),
     ...getVisitorRequests().filter(item => item.status === 'Pending review').map(item => ({ id: `request-${item.id}`, title: `${item.fullName}: pending review`, description: 'Saved locally; this is not a check-in.', href: '#/resident/logbook' })),
   ]
