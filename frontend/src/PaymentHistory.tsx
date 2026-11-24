@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import ResidentLayout from './ResidentLayout'
 import './Billing.css'
 import ResidentDialog from './ResidentDialog'
+import LivePaymentHistory from './LivePaymentHistory'
+import { isLiveWorkspace } from './workspaceSession'
 import { getResidentPayments } from './residentData'
 import { downloadCsv, usePreviewData } from './previewStore'
 
@@ -15,6 +17,10 @@ const filters: PaymentFilter[] = ['All transactions', 'Paid', 'Pending', 'Reject
 
 
 export default function PaymentHistory() {
+  return isLiveWorkspace() ? <LivePaymentHistory /> : <SamplePaymentHistory />
+}
+
+function SamplePaymentHistory() {
   const [filter, setFilter] = useState<PaymentFilter>('All transactions')
   const payments = usePreviewData(getResidentPayments)
   const [notice, setNotice] = useState('')
