@@ -6,6 +6,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 @RestControllerAdvice
 public class FlowErrors {
     @ExceptionHandler(FlowException.class) ResponseEntity<?> flow(FlowException e) {
@@ -17,6 +18,9 @@ public class FlowErrors {
     }
     @ExceptionHandler(HttpMessageNotReadableException.class) ResponseEntity<?> malformed() {
         return ResponseEntity.badRequest().body(Map.of("message","Invalid request. Check identifiers and required fields."));
+    }
+    @ExceptionHandler(MaxUploadSizeExceededException.class) ResponseEntity<?> uploadSize() {
+        return ResponseEntity.status(413).body(Map.of("message","Choose a photo up to 5 MB."));
     }
     @ExceptionHandler(DataIntegrityViolationException.class) ResponseEntity<?> conflict() {
         return ResponseEntity.status(409).body(Map.of("message","This record already exists or changed. Refresh and try again."));

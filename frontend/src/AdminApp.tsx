@@ -5,6 +5,7 @@ import { AdminAnnouncements, AdminBilling, AdminDashboard, AdminLogbook, AdminMa
 import AdminSettings from './AdminSettings'
 import HoldingStation from './HoldingStation'
 import LiveLogbook from './LiveLogbook'
+import LiveMaintenance from './LiveMaintenance'
 import { isLiveWorkspace } from './workspaceSession'
 
 export default function AdminApp() {
@@ -18,8 +19,10 @@ export default function AdminApp() {
   if (path === '/admin/residents') return <AdminResidents />
   if (path.startsWith('/admin/residents/')) return <AdminResidentDetails id={recordId('/admin/residents/')} />
   if (path === '/admin/logbook') return isLiveWorkspace() ? <LiveLogbook staff residentId={residentId} /> : <AdminLogbook residentId={residentId} />
-  if (path === '/admin/maintenance') return <AdminMaintenance />
-  if (path.startsWith('/admin/maintenance/')) return <AdminMaintenanceDetails id={recordId('/admin/maintenance/')} />
+  if (path === '/admin/maintenance') return isLiveWorkspace() ? <LiveMaintenance role="owner" /> : <AdminMaintenance />
+  if (path.startsWith('/admin/maintenance/')) return isLiveWorkspace()
+    ? <LiveMaintenance role="owner" id={recordId('/admin/maintenance/')} />
+    : <AdminMaintenanceDetails id={recordId('/admin/maintenance/')} />
   if (path === '/admin/holding-station') return <HoldingStation admin desk />
   if (path === '/admin/billing') return <AdminBilling />
   if (path === '/admin/payments/approvals') return <AdminPayments residentId={residentId} />
