@@ -9,6 +9,7 @@ import CreateMaintenanceTicket from './CreateMaintenanceTicket'
 import MaintenanceTicketDetails from './MaintenanceTicketDetails'
 import MaintenanceTickets from './MaintenanceTickets'
 import PaymentHistory from './PaymentHistory'
+import PaymentReceipt from './PaymentReceipt'
 import ResidentDashboard from './ResidentDashboard'
 import VisitorLogbook from './VisitorLogbook'
 import ResidentProfile from './ResidentProfile'
@@ -146,6 +147,9 @@ export default function App() {
   const guard = (page: ReactNode, kind: 'account' | 'admin' | 'resident' | 'guard' | 'technician') => <WorkspaceGate key={routeHash} kind={kind}>{page}</WorkspaceGate>
   const idAfter = (prefix: string) => {
     try { return decodeURIComponent(routeHash.slice(prefix.length)) } catch { return '' }
+  }
+  if (routeHash.startsWith('#/resident/payments/receipt/') && isLiveWorkspace()) {
+    return guard(<PaymentReceipt role="resident" id={idAfter('#/resident/payments/receipt/')} />, 'resident')
   }
   if (routeHash === '#/technician/jobs' || routeHash.startsWith('#/technician/jobs/')) {
     return guard(<LiveMaintenance role="technician" id={routeHash === '#/technician/jobs' ? undefined : idAfter('#/technician/jobs/')} />, 'technician')

@@ -18,7 +18,17 @@ public class MonthlyBillController {
     private final Clock clock;
     public MonthlyBillController(JdbcTemplate db,RoomAgreementService agreements,Clock clock){this.db=db;this.agreements=agreements;this.clock=clock;}
     public record PostBill(@NotNull UUID applicationId,@NotNull @Pattern(regexp="\\d{4}-(0[1-9]|1[0-2])") String period,@NotNull LocalDate dueDate){}
-    private static final String VIEW="SELECT b.*,u.full_name,u.email,r.label AS room_label FROM monthly_bills b JOIN tenancies t ON t.id=b.tenancy_id JOIN accounts u ON u.id=t.account_id JOIN rooms r ON r.id=t.room_id JOIN properties p ON p.id=b.property_id";
+    private static final String VIEW="""
+        SELECT b.*,u.full_name,u.email,r.label AS room_label,p.name AS property_name,
+            SUM(b.balance) OVER(PARTITION BY b.application_id) AS application_balance,
+            SUM(b.total) OVER(PARTITION BY b.application_id) AS application_total,
+            SUM(b.paid) OVER(PARTITION BY b.application_id) AS application_paid,
+            SUM(b.balance) OVER(PARTITION BY t.account_id) AS account_balance,
+            SUM(b.total) OVER(PARTITION BY t.account_id) AS account_total,
+            SUM(b.paid) OVER(PARTITION BY t.account_id) AS account_paid
+        FROM billing_balances b JOIN tenancies t ON t.id=b.tenancy_id JOIN accounts u ON u.id=t.account_id
+        JOIN rooms r ON r.id=t.room_id JOIN properties p ON p.id=b.property_id
+        """;
     private List<Map<String,Object>> rows(String sql,Object...args){
         var result=db.queryForList(sql,args);
         result.forEach(row->row.replaceAll((k,v)->v instanceof java.sql.Date d?d.toLocalDate():v instanceof java.sql.Timestamp t?t.toInstant().atOffset(ZoneOffset.UTC):v));return result;

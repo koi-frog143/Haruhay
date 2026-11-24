@@ -1,13 +1,25 @@
-export type MonthlyBill={id:string;application_id:string;period:string;due_date:string;rent:number;fixed_charges:number}
+export type MonthlyBill = {
+  id: string; application_id: string; period: string; due_date: string; rent: number; fixed_charges: number
+  total: number; paid: number; balance: number; bill_status: keyof typeof billStatus
+  property_name: string; room_label: string
+  application_balance: number; application_total: number; application_paid: number
+  account_balance: number; account_total: number; account_paid: number
+}
 import { api } from './registrationApi'
 import { clearVisitorRecords, loadVisitorRecords } from './visitorApi'
 import { refreshMaintenance } from './maintenanceApi'
 import type { Account, Admission, Property, Room } from './registrationApi'
+import { paymentPath } from './paymentApi'
+import type { billStatus, Collections, Payment } from './paymentApi'
 
-export type WorkspaceSession = { account: Account; applications: Admission[]; properties: Property[]; rooms: Room[]; bills:MonthlyBill[] }
+export type WorkspaceSession = {
+  account: Account; applications: Admission[]; properties: Property[]; rooms: Room[]; bills: MonthlyBill[]
+  payments: Payment[]; collections: Collections | null; paymentError: string
+}
 let session: WorkspaceSession | null = null
 let sampleMode = false
 let sessionGeneration = 0
+let billingGeneration = 0
 export function isSampleWorkspace() {
   try { sampleMode = sessionStorage.getItem('haruhay-ui-mode') === 'sample' } catch { /* Keep the current mode if storage is unavailable. */ }
   return sampleMode
@@ -31,8 +43,21 @@ export async function loadWorkspaceSession(account?: Account) {
     owner ? api<Property[]>('/owner/properties') : Promise.resolve([]),
     owner ? api<Room[]>('/owner/rooms') : Promise.resolve([]),
   ])
-  const bills=owner?await api<MonthlyBill[]>('/owner/bills'):applications.some(a=>a.status==='APPROVED')?await api<MonthlyBill[]>('/resident/bills'):[]
-  const next = { account: identity, applications, properties, rooms, bills }
+  const hasBilling = owner || (!staff && applications.some(a => a.status === 'APPROVED'))
+  const role = owner ? 'owner' : 'resident'
+  const [billsResult, paymentsResult, collectionsResult] = await Promise.allSettled([
+    hasBilling ? api<MonthlyBill[]>('/' + role + '/bills') : Promise.resolve([]),
+    hasBilling ? api<Payment[]>(paymentPath(role)) : Promise.resolve([]),
+    owner ? api<Collections>('/owner/payment-collections') : Promise.resolve(null),
+  ])
+  const next: WorkspaceSession = {
+    account: identity, applications, properties, rooms,
+    bills: billsResult.status === 'fulfilled' ? billsResult.value : [],
+    payments: paymentsResult.status === 'fulfilled' ? paymentsResult.value : [],
+    collections: collectionsResult.status === 'fulfilled' ? collectionsResult.value : null,
+    paymentError: [billsResult, paymentsResult, collectionsResult].some(result => result.status === 'rejected')
+      ? 'Some billing records could not be loaded. Refresh billing and try again.' : '',
+  }
   if (version !== sessionGeneration) return next
   if (session?.account.id !== identity.id) clearVisitorRecords()
   session = next
@@ -42,6 +67,30 @@ export async function loadWorkspaceSession(account?: Account) {
     owner || identity.role === 'TECHNICIAN' || applications.some(a => a.status === 'APPROVED') ? refreshMaintenance() : Promise.resolve(),
   ])
   return session
+}
+export async function refreshPaymentRecords() {
+  const workspace = getWorkspaceSession()
+  if (!workspace) return
+  const version = sessionGeneration
+  const request = ++billingGeneration
+  const role = workspace.account.role === 'OWNER' ? 'owner' : 'resident'
+  try {
+    const [bills, payments, collections] = await Promise.all([
+      api<MonthlyBill[]>('/' + role + '/bills'),
+      api<Payment[]>(paymentPath(role)),
+      role === 'owner' ? api<Collections>('/owner/payment-collections') : Promise.resolve(null),
+    ])
+    if (version === sessionGeneration && request === billingGeneration && session?.account.id === workspace.account.id) {
+      session = { ...session, bills, payments, collections, paymentError: '' }
+      window.dispatchEvent(new Event('haruhay-preview-updated'))
+    }
+  } catch (error) {
+    if (version === sessionGeneration && request === billingGeneration && session?.account.id === workspace.account.id) {
+      session = { ...session, paymentError: 'Some billing records could not be refreshed. Try again.' }
+      window.dispatchEvent(new Event('haruhay-preview-updated'))
+    }
+    throw error
+  }
 }
 export async function signOutWorkspace() {
   await api('/auth/logout', {})

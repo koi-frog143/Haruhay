@@ -1,8 +1,10 @@
-import { isLiveWorkspace, loadWorkspaceSession } from './workspaceSession'
+import { isLiveWorkspace, refreshPaymentRecords } from './workspaceSession'
 import { useEffect, useState } from 'react'
 import ResidentLayout from './ResidentLayout'
 import './Billing.css'
+import './LivePayments.css'
 import ResidentDialog from './ResidentDialog'
+import PostedBills from './PostedBills'
 import { getBillingSummary, getPaymentChannel, money, paymentChannels, savePaymentChannel } from './residentData'
 import type { PaymentChannel } from './residentData'
 import { usePreviewData } from './previewStore'
@@ -61,17 +63,17 @@ export default function BillingPayments() {
     <div className="resident-content billing-content">
       <header className="resident-page-heading">
         <span>MONTHLY DUES</span>
-        <div className="billing-heading-actions"><h1>Payments &amp; billing</h1>{isLiveWorkspace()&&<button className="admin-secondary" onClick={async()=>{try{await loadWorkspaceSession();setNotice('Billing records refreshed.')}catch(error){setNotice(error instanceof Error?error.message:'Could not refresh billing.')}}}>Refresh billing</button>}</div>
+        <div className="billing-heading-actions"><h1>Payments &amp; billing</h1>{isLiveWorkspace()&&<button className="admin-secondary" onClick={async()=>{try{await refreshPaymentRecords();setNotice('Billing records refreshed.')}catch(error){setNotice(error instanceof Error?error.message:'Could not refresh billing.')}}}>Refresh billing</button>}</div>
         <p>Your rent, utilities, and receipts — in one organized place.</p>
       </header>
 
       <section className="billing-overview" aria-label={`${upcomingBill.period} billing overview`}>
         <article className="billing-balance">
           <img className="billing-balance-circle" src={asset('billing-balance-circle.svg')} width="233" height="233" alt="" />
-          <span>{isLiveWorkspace()&&!upcomingBill.posted?'AGREED MONTHLY CHARGES':'TOTAL UPCOMING'}</span>
+          <span>{isLiveWorkspace() ? upcomingBill.posted ? 'REMAINING BALANCE' : 'AGREED MONTHLY CHARGES' : 'TOTAL UPCOMING'}</span>
           <strong>{money(isLiveWorkspace()&&!upcomingBill.posted?upcomingBill.agreedMonthly:upcomingTotal)}</strong>
-          <p>{isLiveWorkspace()&&!upcomingBill.posted?'Your accepted room rate. No bill posted yet.':upcomingBill.period+' rent and fixed charges'}</p>
-          <time dateTime={upcomingBill.due||undefined}>{isLiveWorkspace()&&!upcomingBill.posted?'NOT YET BILLED':'DUE '+billDueLabel.toUpperCase()}</time>
+          <p>{isLiveWorkspace() ? upcomingBill.posted ? 'Across your posted bills' : 'Your accepted room rate. No bill posted yet.' : upcomingBill.period+' rent and fixed charges'}</p>
+          <time dateTime={upcomingBill.due||undefined}>{isLiveWorkspace()&&!upcomingBill.posted?'NOT YET BILLED':isLiveWorkspace()&&upcomingTotal===0?'ALL POSTED BILLS PAID':'DUE '+billDueLabel.toUpperCase()}</time>
         </article>
 
         <article className="billing-breakdown">
@@ -85,6 +87,7 @@ export default function BillingPayments() {
         </article>
       </section>
 
+      {isLiveWorkspace() && <PostedBills onNotice={setNotice} />}
       <section className="billing-center" aria-labelledby="billing-center-title">
         <div className="billing-section-heading">
           <h2 id="billing-center-title">Your billing center</h2>
@@ -105,7 +108,7 @@ export default function BillingPayments() {
           })}
         </div>
       </section>
-      <p className="resident-preview-label">{isLiveWorkspace()?'Billing period:':'Sample billing period:'} {upcomingBill.period} · Preferred channel: {channel}. {upcomingBill.paid > 0 ? `Approved locally: ${money(upcomingBill.paid)}. Remaining: ${money(upcomingBill.balance)}.` : ''} No payments are processed.</p>
+      <p className="resident-preview-label">{isLiveWorkspace()?'Billing period:':'Sample billing period:'} {upcomingBill.period} · Preferred channel: {channel}. {upcomingBill.paid > 0 ? `Approved: ${money(upcomingBill.paid)}. Remaining: ${money(upcomingBill.balance)}.` : ''} Payments are made outside Haruhay.</p>
     </div>
     {isLiveWorkspace()&&<p className="room-note">Agreed monthly charges: {money(upcomingBill.agreedMonthly)}. {upcomingBill.variableCharges?'Metered and unconfirmed charges are not included. ':''}{upcomingBill.posted?'Only posted bills count toward your balance.':'No amount is due until the owner posts a bill.'}</p>}
     {panel && <ResidentDialog footerNote={isLiveWorkspace()?'Posted bills are saved property records. This app does not process payments.':undefined} title={panel === 'upcoming' ? 'Upcoming payments' : 'Payment methods'} eyebrow="MONTHLY DUES" onClose={() => setPanel(null)}>

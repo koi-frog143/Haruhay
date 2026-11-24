@@ -1,0 +1,47 @@
+.payment-live-section { margin-top: 28px; }
+.payment-live-section h2 { color: var(--ink); font-size: 1.15rem; }
+.payment-context { background: var(--mist); border: 1px solid var(--line); border-radius: 12px; padding: 14px; }
+.payment-form-grid, .payment-facts { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 14px; }
+.payment-facts { margin: 0; }
+.payment-facts dt { color: var(--muted); font-size: .85rem; margin-bottom: 5px; }
+.payment-facts dd { margin: 0; overflow-wrap: anywhere; }
+.payment-live-form label { min-width: 0; }
+.payment-live-form input[type=file] { max-width: 100%; }
+.payment-live-form .payment-verification { display: flex; gap: 10px; align-items: flex-start; }
+.payment-live-form .payment-verification input { flex: 0 0 18px; width: 18px; height: 18px; min-height: 0; padding: 0; margin: 2px 0 0; }
+.payment-live-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-block: 12px; }
+.payment-state-stack { display: grid; justify-items: start; gap: 6px; overflow-wrap: anywhere; }
+.payment-state-stack .admin-status { max-width: 100%; white-space: normal; text-align: center; }
+.payment-state-stack .status-waiting-for-verification, .payment-state-stack .status-partially-paid { background: var(--warning-bg); color: var(--warning-ink); }
+.payment-state-stack .status-declined, .payment-state-stack .status-reversed { background: var(--error-bg); color: var(--error-ink); }
+.payment-state-stack .status-paid, .payment-state-stack .status-approved { background: var(--success-bg); color: var(--success-ink); }
+.payment-queue-tabs, .payment-live-section .payment-filters { flex-wrap: wrap; }
+.admin-bar-column span[data-negative=true] { background: var(--error-ink); }
+.admin-toolbar.payment-queue-toolbar label { display: grid; gap: 6px; min-width: min(100%, 260px); }
+.admin-toolbar.payment-queue-toolbar input { border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; min-height: 44px; }
+.payment-receipt-page { width: min(100%, 720px); margin: 24px auto; }
+.payment-receipt-controls { justify-content: space-between; }
+.payment-receipt { padding: clamp(16px, 5vw, 38px); }
+.payment-receipt-brand { display: flex; align-items: center; gap: 8px; }
+.payment-receipt .payment-facts { margin-top: 24px; }
+@media (max-width: 540px) {
+  .payment-form-grid, .payment-facts { grid-template-columns: minmax(0,1fr); }
+  .payment-review-dialog .payment-facts { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; }
+  .payment-review-dialog .payment-live-form textarea { min-height: 72px; }
+  .payment-review-dialog .payment-live-actions:not(:empty) {
+    position: sticky;
+    bottom: 0;
+    z-index: 1;
+    margin: 14px 0 0;
+    padding: 12px 0;
+    border-top: 1px solid var(--line);
+    background: var(--surface);
+  }
+}
+@media print {
+  body:has(.payment-receipt) { overflow: visible; background: white; }
+  body:has(.payment-receipt) * { visibility: hidden; }
+  body:has(.payment-receipt) .payment-receipt, body:has(.payment-receipt) .payment-receipt * { visibility: visible; }
+  body:has(.payment-receipt) .payment-receipt { position: absolute; inset: 0 0 auto; width: 100%; margin: 0; border: 0; box-shadow: none; color: black; }
+  body:has(.payment-receipt) .payment-receipt-controls { display: none; }
+}
