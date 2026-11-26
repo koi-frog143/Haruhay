@@ -41,3 +41,5 @@ textarea:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
   .resident-search { display: none; }
   .resident-search-launch { display: grid; }
 }
+.resident-inbox li { overflow-wrap: anywhere; }
+.resident-inbox li > button { justify-self: start; }
