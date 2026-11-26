@@ -6,6 +6,7 @@ import { AdminEmpty, AdminHeading, AdminIcon, AdminMetrics, AdminStatus, AdminTa
 import { ContactResidentDialog, ResidentEditor, ResidentFilterDialog } from './AdminResidentDialogs'
 import type { ResidentFilters } from './AdminResidentDialogs'
 import { AnnouncementEditor, RegisterVisitDialog, ReviewPaymentDialog } from './AdminOperationsDialogs'
+import LiveAnnouncements from './LiveAnnouncements'
 import { SettingsDialog } from './AdminSettings'
 import { getResidents, getResident } from './residentsData'
 import { getSettings } from './settingsData'
@@ -159,6 +160,10 @@ export function AdminPayments({ residentId = '' }: { residentId?: string }) {
 }
 
 export function AdminAnnouncements() {
+  return isLiveWorkspace() ? <LiveAnnouncements /> : <PreviewAnnouncements />
+}
+
+function PreviewAnnouncements() {
   const announcements = usePreviewData(getAllAnnouncements)
   const residents = usePreviewData(getResidents)
   const [selected, setSelected] = useState<Announcement | 'new' | null>(null)

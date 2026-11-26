@@ -22,7 +22,36 @@ export function ReviewPaymentDialog({ payment, onClose, onSaved }: { payment: Le
   const pending = payment.status === 'Needs review'
   return <ResidentDialog title="Review payment" eyebrow="FINANCIAL MANAGEMENT" onClose={onClose}><form className="admin-form" onSubmit={event => { event.preventDefault(); const data = new FormData(event.currentTarget); try { reviewPayment(payment.id, decision, String(data.get('note') ?? ''), data.has('verified')); onSaved() } catch (error) { setError(error instanceof Error ? error.message : 'Could not review this payment.') } }}><div className="dialog-body"><p><strong>{resident?.fullName ?? 'Unknown resident'} · Room {resident?.room ?? '—'}</strong></p><p>{periodLabel(payment.period)} · {money(payment.amount)} · {payment.method}</p><p>Payment date: {payment.date}<br />Reference: {payment.reference}</p><p>{payment.evidence}</p>{payment.period === currentBill.periodKey && <p>Current bill total: {money(currentBill.total)}. Remaining before this review: {money(currentBill.balance)}.</p>}<p>Review changes local records only. No real payment is processed or verified by this application.</p>{pending ? <><label>Decision<select value={decision} onChange={event => setDecision(event.target.value as typeof decision)}><option value="Approved">Approve</option><option value="Rejected">Reject</option></select></label><label>Review note{decision === 'Rejected' ? ' (required for rejection)' : ''}<textarea name="note" maxLength={1000} required={decision === 'Rejected'} /></label><label className="admin-check"><input name="verified" type="checkbox" required />I checked the resident, amount, reference, date and sample evidence.</label></> : <><p>Status: {payment.status}</p><p>{payment.reviewNote || 'No review note.'}</p><small>Reviewed: {payment.reviewedAt || 'Historical sample approval'}</small></>}</div>{error && <p className="admin-error" role="alert">{error}</p>}{pending ? <button className="dialog-primary">{decision === 'Approved' ? 'Approve payment (preview)' : 'Reject payment (preview)'}</button> : <button type="button" className="dialog-primary" onClick={onClose}>Close</button>}</form></ResidentDialog>
 }
+export function AnnouncementFields({ announcement, live = false }: {
+  announcement?: Pick<Announcement, 'title' | 'description' | 'detail' | 'category'>; live?: boolean
+}) {
+  return <>
+    <label>Title<input name="title" defaultValue={announcement?.title} required maxLength={150} /></label>
+    <label>Category<select name="category" defaultValue={announcement?.category ?? 'General notice'}>
+      <option>General notice</option><option>Maintenance</option><option>Community</option>
+    </select></label>
+    <label>{live ? 'Summary' : 'Notice'}<textarea name="description" defaultValue={announcement?.description} required maxLength={1000} /></label>
+    <label>{live ? 'Full message' : 'Additional details'}<textarea name="detail" defaultValue={announcement?.detail} required={live} maxLength={2000} /></label>
+  </>
+}
+
 export function AnnouncementEditor({ announcement, onClose, onSaved }: { announcement?: Announcement; onClose: () => void; onSaved: () => void }) {
   const [error, setError] = useState('')
-  return <ResidentDialog title={announcement ? 'Edit announcement' : 'Create announcement'} eyebrow="COMMUNITY MANAGEMENT" onClose={onClose}><form className="admin-form" onSubmit={event => { event.preventDefault(); const data = new FormData(event.currentTarget); try { saveAnnouncement({ title: String(data.get('title') ?? ''), description: String(data.get('description') ?? ''), detail: String(data.get('detail') ?? ''), category: data.get('category') as Announcement['category'], published: data.has('published') }, announcement?.id); onSaved() } catch (error) { setError(error instanceof Error ? error.message : 'Could not save the announcement.') } }}><div className="dialog-body"><p>{announcement ? 'Review and update the selected announcement.' : 'Write a title and notice for your residents.'} Published previews appear on the resident board; no message is sent.</p><label>Title<input name="title" defaultValue={announcement?.title} required maxLength={150} /></label><label>Notice<textarea name="description" defaultValue={announcement?.description} required maxLength={1000} /></label><label>Additional details<textarea name="detail" defaultValue={announcement?.detail} maxLength={2000} /></label><label>Category<select name="category" defaultValue={announcement?.category ?? 'General notice'}><option>General notice</option><option>Maintenance</option><option>Community</option></select></label><label className="admin-check"><input type="checkbox" name="published" defaultChecked={announcement?.published ?? true} />Publish to the resident preview board</label></div>{error && <p className="admin-error" role="alert">{error}</p>}<button className="dialog-primary">{announcement ? 'Save update (preview)' : 'Publish (preview)'}</button></form></ResidentDialog>
+  return <ResidentDialog title={announcement ? 'Edit announcement' : 'Create announcement'} eyebrow="COMMUNITY MANAGEMENT" onClose={onClose}>
+    <form className="admin-form" onSubmit={event => {
+      event.preventDefault()
+      const data = new FormData(event.currentTarget)
+      try {
+        saveAnnouncement({ title: String(data.get('title') ?? ''), description: String(data.get('description') ?? ''), detail: String(data.get('detail') ?? ''), category: data.get('category') as Announcement['category'], published: data.has('published') }, announcement?.id)
+        onSaved()
+      } catch (error) {
+        setError(error instanceof Error ? error.message : 'Could not save the announcement.')
+      }
+    }}><div className="dialog-body">
+      <p>Published previews appear on the sample resident board.</p>
+      <AnnouncementFields announcement={announcement} />
+      <label className="admin-check"><input type="checkbox" name="published" defaultChecked={announcement?.published ?? true} />Publish to the resident preview board</label>
+    </div>{error && <p className="admin-error" role="alert">{error}</p>}
+    <button className="dialog-primary">{announcement ? 'Save update (preview)' : 'Publish (preview)'}</button></form>
+  </ResidentDialog>
 }

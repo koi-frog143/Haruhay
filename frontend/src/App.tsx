@@ -43,7 +43,7 @@ function currentScreen(): Route {
   if (route === '/resident/profile') return 'resident-profile'
   if (route === '/resident/logbook/register') return 'resident-register-visitor'
   if (route === '/resident/logbook/access-history') return 'resident-access-history'
-  if (route === '/resident/community') return 'resident-community'
+  if (route === '/resident/community' || route.startsWith('/resident/community/')) return 'resident-community'
   return route === '/register' ? 'register'
     : route === '/forgot-password' ? 'reset'
       : route === '/login' ? 'login'
@@ -171,7 +171,7 @@ export default function App() {
   if (screen === 'resident-logbook') return guard(<VisitorLogbook />, 'resident')
   if (screen === 'resident-register-visitor') return guard(<RegisterVisitor />, 'resident')
   if (screen === 'resident-access-history') return guard(<AccessHistory />, 'resident')
-  if (screen === 'resident-community') return guard(<CommunityBoard />, 'resident')
+  if (screen === 'resident-community') return guard(<CommunityBoard announcementId={routeHash.startsWith('#/resident/community/') ? idAfter('#/resident/community/') : undefined} />, 'resident')
   if (screen === 'resident-maintenance') return guard(isLiveWorkspace() ? <LiveMaintenance role="resident" /> : <MaintenanceTickets />, 'resident')
   if (screen === 'resident-maintenance-new') return guard(isLiveWorkspace() ? <LiveMaintenance role="resident" report /> : <CreateMaintenanceTicket />, 'resident')
   if (screen === 'resident-maintenance-detail') return guard(isLiveWorkspace() ? <LiveMaintenance role="resident" id={idAfter('#/resident/maintenance/')} /> : <MaintenanceTicketDetails key={routeHash} />, 'resident')

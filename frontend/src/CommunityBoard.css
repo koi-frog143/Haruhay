@@ -77,6 +77,21 @@
 }
 .community-card h3 { margin: 13px 0 0; color: var(--ink); font-size: 16px; line-height: 23px; }
 .community-card p { margin: 7px 0 0; color: var(--muted); font-size: 12px; line-height: 18px; }
+.live-featured h2, .live-featured p, .live-featured small, .live-community-card,
+.live-announcement-card h2, .live-announcement-card small, .announcement-message { overflow-wrap: anywhere; }
+.live-featured small { display: block; position: static; margin-top: 16px; }
+.live-featured a { margin-top: 10px; }
+.live-community-card { color: inherit; text-decoration: none; }
+.live-community-card small { padding-top: 12px; margin-top: auto; color: var(--muted); }
+.announcement-message { white-space: pre-wrap; }
+.announcement-toolbar { margin-bottom: 20px; }
+.announcement-toolbar label { gap: 8px; }
+.announcement-tags { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0; }
+.live-announcement-card .announcement-tags .admin-status { margin: 0; }
+.live-announcement-card .status-draft { color: var(--ink); background: var(--powder); }
+.live-announcement-card .status-archived { color: var(--ink); background: #e8edf1; }
+.announcement-totals { margin-top: 32px; }
+.announcement-form-actions { margin-top: 16px; }
 
 @media (max-width: 900px) {
   .community-featured { padding-right: 105px; }
