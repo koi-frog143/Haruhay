@@ -1,4 +1,4 @@
-import { getWorkspaceSession, signOutWorkspace } from './workspaceSession'
+import { getWorkspaceSession, hasActiveStay, hasEndedStay, hasPendingApplication, signOutWorkspace } from './workspaceSession'
 import { useEffect, useRef, useState } from 'react'
 import type { FormEvent, MouseEvent, ReactNode } from 'react'
 import './ResidentDashboard.css'
@@ -36,7 +36,9 @@ type ResidentLayoutProps = {
 
 export default function ResidentLayout({ activeSection, breadcrumb, notice, onNotice, onDismissNotice, children }: ResidentLayoutProps) {
   const live = getWorkspaceSession()
-  const applicationOnly = Boolean(live && !live.applications.some(a => a.status === 'APPROVED'))
+  const limited = Boolean(live && !hasActiveStay(live.applications))
+  const billingOnly = Boolean(limited && live && hasEndedStay(live.applications))
+  const showApplication = limited && (!billingOnly || Boolean(live && hasPendingApplication(live.applications)))
   async function signout(event: MouseEvent<HTMLAnchorElement>) {
     if (!live) return
     event.preventDefault()
@@ -120,15 +122,15 @@ export default function ResidentLayout({ activeSection, breadcrumb, notice, onNo
     />
 
     <aside ref={sidebar} inert={narrow && !navigationOpen} id="resident-navigation" className={'resident-sidebar ' + (navigationOpen ? 'is-open' : '')} aria-label="Resident portal navigation">
-      <a className="resident-brand" href={applicationOnly ? '#/account/status' : '#/resident/dashboard'} aria-label="Haruhay home">
+      <a className="resident-brand" href={billingOnly ? '#/resident/payments' : limited ? '#/account/status' : '#/resident/dashboard'} aria-label="Haruhay home">
         <img src={asset('haruhay-mark.png')} width="56" height="56" alt="" />
         <img src={asset('haruhay-wordmark.png')} width="172" height="46" alt="Haruhay" />
       </a>
 
       <nav className="resident-nav" aria-label="Resident portal">
-        <p>{applicationOnly ? 'YOUR APPLICATION' : 'RESIDENT PORTAL'}</p>
-        {applicationOnly && <a className="active" aria-current="page" href="#/account/status" onClick={() => setNavigationOpen(false)}><img src={asset('icon-book-nav.svg')} width="21" height="21" alt="" /><span>Application status</span></a>}
-        {!applicationOnly && navigation.map(item => {
+        <p>{billingOnly ? 'FORMER RESIDENT' : limited ? 'YOUR APPLICATION' : 'RESIDENT PORTAL'}</p>
+        {showApplication && <a className={activeSection === 'Application status' ? 'active' : ''} aria-current={activeSection === 'Application status' ? 'page' : undefined} href="#/account/status" onClick={() => setNavigationOpen(false)}><img src={asset('icon-book-nav.svg')} width="21" height="21" alt="" /><span>Application status</span></a>}
+        {navigation.filter(item => !limited || (billingOnly && item.label === 'Payments')).map(item => {
           const className = item.label === activeSection ? 'active' : ''
           const content = <>
             <img src={asset(item.icon)} width="21" height="21" alt="" />
@@ -149,7 +151,7 @@ export default function ResidentLayout({ activeSection, breadcrumb, notice, onNo
 
       <div className="resident-sidebar-footer">
         <a className="resident-signout" href="#/login" onClick={signout}>Sign out</a>
-        {applicationOnly ? <div className="resident-support application-sidebar-note"><span className="resident-support-title"><img src={asset('icon-shield.svg')} width="24" height="24" alt="" /><strong>A place to belong.</strong></span><span>Your resident services will be ready once your owner approves your stay.</span></div> : <button className="resident-support" type="button" onClick={() => { setTool('support'); setNavigationOpen(false) }}>
+        {limited ? <div className="resident-support application-sidebar-note"><span className="resident-support-title"><img src={asset('icon-shield.svg')} width="24" height="24" alt="" /><strong>{billingOnly ? 'Your billing records' : 'A place to belong.'}</strong></span><span>{billingOnly ? 'View past bills and receipts, or report a payment on an outstanding bill.' : 'Resident services open once your owner approves your stay.'}</span></div> : <button className="resident-support" type="button" onClick={() => { setTool('support'); setNavigationOpen(false) }}>
           <span className="resident-support-title">
             <img src={asset('icon-shield.svg')} width="24" height="24" alt="" />
             <strong>Here for you, always.</strong>
@@ -173,7 +175,7 @@ export default function ResidentLayout({ activeSection, breadcrumb, notice, onNo
         <p className="resident-breadcrumb">My home / {breadcrumb}</p>
 
         <div className="resident-topbar-actions">
-          {!applicationOnly && <><form className="resident-search" role="search" onSubmit={submitSearch}>
+          {!limited && <><form className="resident-search" role="search" onSubmit={submitSearch}>
             <img src={asset('icon-search.svg')} width="19" height="19" alt="" />
             <input value={search} onChange={event => setSearch(event.target.value)} aria-label="Search Haruhay" placeholder="Search Haruhay..." />
           </form>
@@ -203,7 +205,7 @@ export default function ResidentLayout({ activeSection, breadcrumb, notice, onNo
               <span>{profileInitials(profile.fullName)}</span><strong>{profile.fullName.trim().split(/\s+/u)[0]} {profile.fullName.trim().split(/\s+/u).length > 1 ? Array.from(profile.fullName.trim().split(/\s+/u).at(-1) ?? '')[0] + '.' : ''}</strong>
             </button>
             {openPanel === 'account' && <div className="resident-popover resident-account-menu">
-              {!applicationOnly && <a href="#/resident/profile" onClick={() => setOpenPanel(null)}>My profile</a>}
+              {!limited && <a href="#/resident/profile" onClick={() => setOpenPanel(null)}>My profile</a>}
               <a href="#/login" onClick={signout}>Sign out</a>
             </div>}
           </div>
@@ -211,7 +213,7 @@ export default function ResidentLayout({ activeSection, breadcrumb, notice, onNo
       </header>
 
       <div className="ux-workspace-content" id="resident-main" tabIndex={-1}>{children}</div>
-      {!applicationOnly && tool && <ResidentTools mode={tool} initialQuery={search} onClose={() => setTool(null)} />}
+      {!limited && tool && <ResidentTools mode={tool} initialQuery={search} onClose={() => setTool(null)} />}
 
       <div className={'resident-status ux-toast ' + (notice ? 'is-visible' : '')} role="status" aria-live="polite">
         {notice}

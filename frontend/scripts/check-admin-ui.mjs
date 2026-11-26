@@ -5,7 +5,7 @@ const b = await browserChecks()
 const { check, viewport, navigate, route, evaluate, click, fill, submit, contains, escape, tab, screenshot, send, pause, download } = b
 const geometry = []
 try {
-  await navigate('/admin/dashboard')
+  await navigate('/preview/login')
   await evaluate('sessionStorage.clear(); sessionStorage.setItem("haruhay-ui-mode","sample")')
   const routes = ['dashboard', 'residents', 'residents/RES-0204', 'logbook', 'maintenance', 'maintenance/TCK-1043', 'holding-station', 'billing', 'payments/approvals', 'announcements', 'settings']
   if (!process.env.UI_SKIP_BASELINE) for (const width of [1440, 390]) {

@@ -26,8 +26,11 @@ public class MaintenanceService {
                t.shared_area,t.version,t.submitted_at,t.updated_at,t.archived_at,p.name AS property_name,
                r.label AS room_label,c.label AS category_label,a.full_name AS resident_name,
                x.id AS assignment_id,x.technician_id,s.full_name AS technician_name,
-               COALESCE(m.enabled,FALSE) AS technician_enabled,p.owner_id
+               COALESCE(m.enabled,FALSE) AS technician_enabled,p.owner_id,
+               EXISTS(SELECT 1 FROM tenancies active_stay WHERE active_stay.application_id=original.application_id
+                   AND active_stay.status='ACTIVE') AS resident_can_update
         FROM maintenance_tickets t
+        JOIN tenancies original ON original.id=t.tenancy_id
         JOIN properties p ON p.id=t.property_id JOIN rooms r ON r.id=t.room_id
         JOIN maintenance_categories c ON c.code=t.category JOIN accounts a ON a.id=t.resident_id
         LEFT JOIN maintenance_assignments x ON x.active_ticket=t.id
@@ -173,7 +176,9 @@ public class MaintenanceService {
         String text=required(request.description(),2000,"a description");
         String category=required(request.category(),32,"a category");
         String area=request.sharedArea()?required(request.location(),200,"a shared-area location"):null;
-        // The account lock serializes retries even if they arrive through different sessions.
+        // Lock the stay first so moving to another room and reporting against this stay serialize.
+        one("SELECT id FROM tenancies WHERE id=? AND account_id=? FOR UPDATE",request.tenancyId(),actor.id());
+        // The account lock serializes retries across stays and sessions.
         one("SELECT id FROM accounts WHERE id=? FOR UPDATE",actor.id());
         var previous=rows("""
             SELECT id,tenancy_id,category,description,shared_area,location FROM maintenance_tickets
@@ -225,7 +230,13 @@ public class MaintenanceService {
         // Check visibility before acquiring the lock, then check it again after a concurrent reassignment.
         ticket(actor,id);
         one("SELECT id FROM maintenance_tickets WHERE id=? FOR UPDATE",id);
-        return ticket(actor,id);
+        var ticket=ticket(actor,id);
+        requireOpenStay(actor,ticket);
+        return ticket;
+    }
+    private void requireOpenStay(Actor actor,Map<String,Object> ticket) {
+        if (actor.role()==Role.RESIDENT && !Boolean.TRUE.equals(ticket.get("resident_can_update")))
+            throw error(403,"MAINTENANCE_STAY_ENDED","The property team can continue working on this request after the stay ends.");
     }
     @Transactional
     public void change(String email, UUID id, Change change) {
@@ -410,7 +421,10 @@ public class MaintenanceService {
     }
 
     public void checkUpload(String email, UUID ticketId) {
-        if (terminal((String)ticket(actor(email),ticketId).get("status"))) throw stateError();
+        Actor actor=actor(email);
+        var ticket=ticket(actor,ticketId);
+        requireOpenStay(actor,ticket);
+        if (terminal((String)ticket.get("status"))) throw stateError();
     }
     @Transactional
     public UUID addPhoto(String email, UUID ticketId, Photo photo) {

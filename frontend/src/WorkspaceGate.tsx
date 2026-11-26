@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { ApiError } from './registrationApi'
-import { isSampleWorkspace, loadWorkspaceSession } from './workspaceSession'
+import { hasActiveStay, hasEndedStay, hasPendingApplication, isSampleWorkspace, loadWorkspaceSession } from './workspaceSession'
 
-export default function WorkspaceGate({ kind, children }: { kind: 'account' | 'admin' | 'resident' | 'guard' | 'technician'; children: ReactNode }) {
+export type WorkspaceKind = 'account' | 'admin' | 'resident' | 'resident-billing' | 'guard' | 'technician'
+
+export default function WorkspaceGate({ kind, children }: { kind: WorkspaceKind; children: ReactNode }) {
   const sample = isSampleWorkspace() && kind !== 'account' && kind !== 'guard' && kind !== 'technician'
   const [state, setState] = useState(sample ? 'ready' : 'loading')
   const [error, setError] = useState('')
@@ -16,12 +18,18 @@ export default function WorkspaceGate({ kind, children }: { kind: 'account' | 'a
       if (s.account.role === 'TECHNICIAN' && kind !== 'technician') { window.location.replace('#/technician/jobs'); return }
       if (kind === 'technician' && s.account.role !== 'TECHNICIAN') { window.location.replace(s.account.role === 'OWNER' ? '#/admin/maintenance' : '#/account/status'); return }
       if (kind === 'guard' && s.account.role !== 'GUARD') { window.location.replace(s.account.role === 'OWNER' ? '#/admin/logbook' : '#/account/status'); return }
-      if (kind === 'account' && s.account.role !== 'OWNER' && s.applications.some(a => a.status === 'APPROVED') && window.location.hash.split('?')[0] === '#/account/status') {
-        window.location.replace('#/resident/dashboard'); return
+      const activeStay = hasActiveStay(s.applications)
+      const endedStay = hasEndedStay(s.applications)
+      if (kind === 'account' && s.account.role !== 'OWNER' && window.location.hash.split('?')[0] === '#/account/status') {
+        if (activeStay) { window.location.replace('#/resident/dashboard'); return }
+        if (endedStay && !hasPendingApplication(s.applications)) { window.location.replace('#/resident/payments'); return }
       }
       if (kind === 'admin' && s.account.role !== 'OWNER') { window.location.hash = '/account/status'; return }
-      if (kind === 'resident' && (s.account.role === 'OWNER' || !s.applications.some(a => a.status === 'APPROVED'))) {
-        window.location.hash = s.account.role === 'OWNER' ? '/admin/dashboard' : '/account/status'; return
+      if (kind === 'resident' || kind === 'resident-billing') {
+        if (s.account.role === 'OWNER') { window.location.replace('#/admin/dashboard'); return }
+        if (!activeStay && !(kind === 'resident-billing' && endedStay)) {
+          window.location.replace(endedStay ? '#/resident/payments' : '#/account/status'); return
+        }
       }
       setState('ready')
     }).catch(e => {

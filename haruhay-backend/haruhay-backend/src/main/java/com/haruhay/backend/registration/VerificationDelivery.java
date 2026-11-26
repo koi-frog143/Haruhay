@@ -24,6 +24,11 @@ public class VerificationDelivery {
         String text="Verify your Haruhay email: " + frontend + "/#/account/verify?token=" + token;
         return send(account,email,"Verify your Haruhay account",text,".txt");
     }
+    public String deliverEmailChange(UUID account,String email,String token) {
+        String text="Confirm your new Haruhay sign-in email: "+frontend+"/#/account/verify-email-change?token="+token+
+            "\nIf you did not request this change, you can ignore this message.";
+        return send(account,email,"Confirm your new Haruhay sign-in email",text,".email-change.txt");
+    }
     public String deliverApproval(UUID account,String email,String property,String room) {
         String text="Your Haruhay application has been approved.\nProperty: "+property+"\nRoom: "+room+
             "\nYour tenancy is now active. No additional verification or activation code is needed.\nView your account: "+frontend+"/#/account/status";

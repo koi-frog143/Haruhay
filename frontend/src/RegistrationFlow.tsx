@@ -13,7 +13,7 @@ import AdminLayout from './AdminLayout'
 import ResidentLayout from './ResidentLayout'
 import ResidentDialog from './ResidentDialog'
 import { useFormFeedback } from './FormFeedback'
-import { loadWorkspaceSession, clearWorkspaceSession } from './workspaceSession'
+import { loadWorkspaceSession, clearWorkspaceSession, hasActiveStay, hasEndedStay, hasPendingApplication } from './workspaceSession'
 
 const node = '18:1809'
 const label = (status: string) => ({ AWAITING_EMAIL: 'Verify email', PENDING_APPROVAL: 'Pending owner approval', APPROVED: 'Active tenancy', CORRECTIONS_REQUESTED: 'Corrections requested', REJECTED: 'Rejected', CANCELLED: 'Cancelled' }[status] || status)
@@ -93,7 +93,7 @@ export default function RegistrationFlow() {
         setNotice(deliveryText(result)); setSubmitted(true); form.reset()
       } else {
         await api('/auth/login', new URLSearchParams({ username: String(d.get('email')), password: String(d.get('password')) }))
-        const identity = await api<Account>('/account'); const workspace = await loadWorkspaceSession(identity); setAccount(identity); window.location.hash = identity.role === 'GUARD' ? '/guard/logbook' : identity.role === 'TECHNICIAN' ? '/technician/jobs' : identity.role === 'OWNER' ? '/admin/dashboard' : workspace.applications.some(a => a.status === 'APPROVED') ? '/resident/dashboard' : '/account/status'
+        const identity = await api<Account>('/account'); const workspace = await loadWorkspaceSession(identity); setAccount(identity); window.location.hash = identity.role === 'GUARD' ? '/guard/logbook' : identity.role === 'TECHNICIAN' ? '/technician/jobs' : identity.role === 'OWNER' ? '/admin/dashboard' : hasActiveStay(workspace.applications) ? '/resident/dashboard' : hasEndedStay(workspace.applications) && !hasPendingApplication(workspace.applications) ? '/resident/payments' : '/account/status'
       }
     })
   }
@@ -155,7 +155,7 @@ function Owner({ run, busy, notice, refresh, error, setup, revision }: Tools & {
     <RoomManager rooms={rooms as unknown as RoomTerms[]} onSaved={refresh}/><section className="onboarding-section"><h2>Your rooms</h2><AdminTable columns={['Property', 'Room', 'Capacity', 'Held', 'Active']} empty="No rooms yet. Add your first room above." rows={rooms.map(r => ({ key: r.id, cells: [r.property_name, r.label, r.capacity, r.held, r.active] }))} /></section>
   </>
   const pending = apps.filter(a => a.status === 'PENDING_APPROVAL')
-  const shown = apps.filter(a => (!filter || a.status === filter) && (a.full_name + ' ' + a.email + ' ' + a.property_name).toLowerCase().includes(query.toLowerCase().trim()))
+  const shown = apps.filter(a => (!filter || (filter === 'APPROVED' ? a.tenancy_status === 'ACTIVE' : a.status === filter)) && (a.full_name + ' ' + a.email + ' ' + a.property_name).toLowerCase().includes(query.toLowerCase().trim()))
   return <>
     <AdminHeading eyebrow="COMMUNITY DIRECTORY" title="Resident applications" description="Review each application and confirm the accepted room and terms. Approval opens the resident portal." action={<button className="admin-secondary" onClick={refresh}>Refresh records</button>} />
     <AdminMetrics node={node} items={[{ label: 'Awaiting owner approval', value: pending.length, icon: 'imgIconUsers1' }, { label: 'Awaiting email verification', value: apps.filter(a => a.status === 'AWAITING_EMAIL').length, icon: 'imgIconClock' }, { label: 'Held places', value: rooms.reduce((n, r) => n + r.held, 0), icon: 'imgIconBuilding' }, { label: 'Active tenancies', value: rooms.reduce((n, r) => n + r.active, 0), icon: 'imgIconCheck', tone: 'mint' }]} />
@@ -164,7 +164,7 @@ function Owner({ run, busy, notice, refresh, error, setup, revision }: Tools & {
       { value: '', label: 'All', count: apps.length },
       { value: 'PENDING_APPROVAL', label: 'Needs review', count: pending.length },
       { value: 'AWAITING_EMAIL', label: 'Awaiting email', count: apps.filter(a => a.status === 'AWAITING_EMAIL').length },
-      { value: 'APPROVED', label: 'Active', count: apps.filter(a => a.status === 'APPROVED').length },
+      { value: 'APPROVED', label: 'Active', count: apps.filter(a => a.tenancy_status === 'ACTIVE').length },
     ].map(queue => <li key={queue.value}><button type="button" aria-pressed={filter === queue.value} onClick={() => setFilter(queue.value)}>{queue.label} <strong>{queue.count}</strong></button></li>)}</ul>
     <div className="onboarding-toolbar"><label className="admin-search"><AdminIcon node={node} name="imgIconSearch1" /><input aria-label="Search applications" type="search" placeholder="Search by name, email or property…" value={query} onChange={e => setQuery(e.target.value)} /></label><label>Show<select aria-label="Filter applications" value={filter} onChange={e => setFilter(e.target.value)}><option value="">All applications</option>{['PENDING_APPROVAL', 'AWAITING_EMAIL', 'CORRECTIONS_REQUESTED', 'REJECTED', 'APPROVED', 'CANCELLED'].map(s => <option key={s} value={s}>{label(s)}</option>)}</select></label></div>
     <p className="ux-results-count" role="status">{shown.length} of {apps.length} applications {(query || filter) && <button type="button" className="admin-link-button" onClick={() => { setQuery(''); setFilter('') }}>Clear filters</button>}</p>
@@ -198,12 +198,12 @@ function Applicant({ account, run, busy, notice, refresh, error }: Tools & { acc
       try {
         const applications = await api<Admission[]>('/account/admissions')
         if (!active) return
-        if (applications.some(a => a.status === 'APPROVED')) {
+        if (hasActiveStay(applications)) {
           await loadWorkspaceSession()
           if (active) window.location.replace('#/resident/dashboard')
           return
         }
-        setApps(applications); setLoadError('')
+        setApps(applications.filter(a => a.status !== 'APPROVED')); setLoadError('')
       } catch (e) { if (active) setLoadError(errorText(e)) }
       finally { checking = false }
     }

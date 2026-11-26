@@ -14,7 +14,7 @@ try{
     window.fetch=async(url,init={})=>{
       const id=window.testIdentity,owner=id==='owner';
       const account={id,email:id+'@example.test',full_name:owner?'Test Owner':'Resident '+id,contact:'09171234567',role:owner?'OWNER':'APPLICANT',email_verified:true};
-      const app={id:'app-a',email:account.email,full_name:account.full_name,contact:account.contact,status:'APPROVED',property_id:'property',property_name:'Test property',room_label:'Test room',email_verified:true};
+      const app={id:'app-a',email:account.email,full_name:account.full_name,contact:account.contact,status:'APPROVED',tenancy_id:'stay-a',tenancy_status:'ACTIVE',property_id:'property',property_name:'Test property',room_label:'Test room',email_verified:true};
       const row={id:1,code:'HS-0001',residentId:owner?'app-a':'resident-'+id,propertyId:'property',residentName:'Resident '+id,room:'Test room',category:'Parcel',description:'Private parcel '+id+' '+window.testRevision,sender:'Courier',depositor:'Courier / sender',tracking:'TRACK',slot:'A-1',received:'Nov 23, 2026',pin:owner||window.itemClaimed?null:id==='a'?'123456':'987654',status:window.itemClaimed?'Claimed':'Ready',history:[]};
       if(url==='/api/account')return id?json(account):json({message:'Sign in'},401);
       if(url==='/api/auth/logout'){window.testIdentity=null;return new Response(null,{status:204})}

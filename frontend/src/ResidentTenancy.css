@@ -1,0 +1,32 @@
+.tenancy-panel { margin-block: 1.25rem; }
+.tenancy-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
+  margin-block: .75rem;
+  padding: 1rem;
+  border-radius: .75rem;
+  background: #eff7fb;
+}
+.tenancy-summary p { margin: .25rem 0; }
+.tenancy-history { margin-top: 1rem; }
+.tenancy-history summary { cursor: pointer; font-weight: 600; }
+.tenancy-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .5rem;
+  margin: 0;
+}
+.tenancy-facts div { padding: .75rem; background: #eff7fb; border-radius: .625rem; }
+.tenancy-facts dt { font-size: .875rem; line-height: 1.3; }
+.tenancy-facts dd { margin: .25rem 0 0; font-weight: 650; }
+.admin-secondary.tenancy-destructive { color: #9a2938; border-color: #e9c9cf; }
+.tenancy-destructive-primary.dialog-primary { background: #9a2938; }
+.tenancy-destructive-primary.dialog-primary:hover { background: #7d2130; }
+.tenancy-verification { max-width: 37rem; margin-inline: auto; overflow-wrap: anywhere; }
+.tenancy-verification a { display: inline-block; margin: .75rem 0 .75rem 1rem; }
+@media (max-width: 330px) {
+  .tenancy-facts { grid-template-columns: 1fr; }
+}

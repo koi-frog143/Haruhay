@@ -37,8 +37,8 @@ public class HoldingStationService {
                i.slot,i.pickup_pin,i.status,i.received_at,i.claimed_at,i.claimed_by,
                a.full_name AS resident_name,r.label AS room
         FROM holding_items i
-        JOIN registration_applications a ON a.id=i.application_id
         JOIN tenancies t ON t.id=i.tenancy_id
+        JOIN accounts a ON a.id=t.account_id
         JOIN rooms r ON r.id=t.room_id
         """;
     private static final ZoneId DISPLAY_ZONE = ZoneId.of("Asia/Manila");
@@ -66,7 +66,10 @@ public class HoldingStationService {
     public List<Item> residentItems(String email) {
         return items(ITEM_QUERY + """
             WHERE t.account_id=(SELECT id FROM accounts WHERE email=?)
-              AND t.status='ACTIVE' AND i.status IN ('READY','CLAIMED')
+              AND i.status IN ('READY','CLAIMED')
+              AND (t.status='ACTIVE' OR (t.end_kind='TRANSFER' AND EXISTS (
+                SELECT 1 FROM tenancies current_stay WHERE current_stay.application_id=t.application_id AND current_stay.status='ACTIVE'
+              )))
             ORDER BY i.received_at DESC,i.id DESC
             """, email, true);
     }
@@ -168,8 +171,6 @@ public class HoldingStationService {
     public InquiryResult search(String email, HoldingStationController.SearchInquiry request) {
         UUID ownerId = ownerId(email);
         UUID applicationId = request.applicationId();
-        Map<String, Object> tenancy = null;
-        if (applicationId != null) tenancy = activeTenancy(ownerId, applicationId);
         String tracking = clean(request.tracking());
         if (applicationId == null && tracking.isEmpty()) throw new FlowException(400, "SEARCH_REQUIRED", "Enter a resident or tracking number.");
         StringBuilder sql = new StringBuilder(ITEM_QUERY)
@@ -186,8 +187,13 @@ public class HoldingStationService {
         }
         sql.append("ORDER BY i.received_at DESC,i.id DESC");
         List<Item> matches = items(sql.toString(), args.toArray(), false);
-        String lookingFor = tenancy == null ? tracking : tenancy.get("full_name").toString();
-        if (!tracking.isEmpty() && tenancy != null) lookingFor += " • " + tracking;
+        String lookingFor = applicationId == null ? tracking : db.query("""
+            SELECT DISTINCT a.full_name FROM tenancies t JOIN accounts a ON a.id=t.account_id
+            JOIN rooms r ON r.id=t.room_id JOIN properties p ON p.id=r.property_id
+            WHERE t.application_id=? AND p.owner_id=?
+            """, (rs,row)->rs.getString(1), applicationId, ownerId).stream().findFirst().orElseThrow(
+                ()->new FlowException(404,"RESIDENT_NOT_FOUND","Choose a resident record in a property you own."));
+        if (!tracking.isEmpty() && applicationId != null) lookingFor += " • " + tracking;
         String result = matches.size() + " match" + (matches.size() == 1 ? "" : "es");
         OffsetDateTime now = OffsetDateTime.now(clock);
         UUID inquiryId = UUID.randomUUID();
@@ -256,9 +262,10 @@ public class HoldingStationService {
 
     private Map<String, Object> activeTenancy(UUID ownerId, UUID applicationId) {
         return db.query("""
-            SELECT t.id AS tenancy_id,t.account_id,r.property_id,a.id AS application_id,a.full_name
+            SELECT t.id AS tenancy_id,t.account_id,r.property_id,a.id AS application_id,u.full_name
             FROM registration_applications a
             JOIN tenancies t ON t.application_id=a.id AND t.status='ACTIVE'
+            JOIN accounts u ON u.id=t.account_id
             JOIN rooms r ON r.id=t.room_id
             JOIN properties p ON p.id=r.property_id
             WHERE a.id=? AND p.owner_id=? AND a.status='APPROVED'

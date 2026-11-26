@@ -56,10 +56,12 @@ function TicketContent({ ticket, role, reload, setNotice }: { ticket: TicketDeta
   const [photoError, setPhotoError] = useState('')
   const archived = isArchived(ticket)
   const owner = role === 'owner'
+  const canUpdate = role !== 'resident' || ticket.resident_can_update !== false
   const ready = ticket.status === 'READY'
   const assignmentAllowed = owner && ['SUBMITTED', 'ASSIGNED', 'IN_PROGRESS'].includes(ticket.status)
   const next = archived ? 'This ticket is in the maintenance history.'
-    : ready ? 'The technician has reported the repair complete. The resident can now confirm the fix.'
+    : !canUpdate ? 'The property team will handle this request after your stay ends.'
+    : ready ? (ticket.resident_can_update === false ? 'The property team can verify the completed repair.' : 'The technician has reported the repair complete. The resident can now confirm the fix.')
       : ticket.needs_assignment ? 'The property team will assign a technician.'
         : ticket.status === 'ASSIGNED' ? 'The assigned technician will start the work.'
           : 'The technician will post progress here.'
@@ -71,12 +73,12 @@ function TicketContent({ ticket, role, reload, setNotice }: { ticket: TicketDeta
       <button className="admin-primary" onClick={() => setAction('READY')}>Ready for confirmation</button>
       <button className="admin-secondary" onClick={() => setAction('PROGRESS')}>Post progress update</button>
     </>}
-    {ready && role === 'resident' && <>
+    {ready && role === 'resident' && canUpdate && <>
       <button className="admin-primary" onClick={() => setAction('CLOSE')}>It’s fixed</button>
       <button className="admin-secondary" onClick={() => setAction('REOPEN')}>Still having the issue</button>
     </>}
     {ready && owner && <button className="admin-primary" onClick={() => setAction('CLOSE')}>Close as verified</button>}
-    {!archived && (owner || (role === 'resident' && ['SUBMITTED', 'ASSIGNED'].includes(ticket.status))) && <button className="admin-secondary" onClick={() => setAction('CANCEL')}>Cancel request</button>}
+    {!archived && (owner || (role === 'resident' && canUpdate && ['SUBMITTED', 'ASSIGNED'].includes(ticket.status))) && <button className="admin-secondary" onClick={() => setAction('CANCEL')}>Cancel request</button>}
   </>
   async function addPhoto(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -112,12 +114,12 @@ function TicketContent({ ticket, role, reload, setNotice }: { ticket: TicketDeta
           <div className="admin-reported"><AdminIcon node="18:2308" name="imgIconZap" /><p>{ticket.description}</p></div>
           <div className="admin-meta">{role !== 'resident' && <span>Reported by {ticket.resident_name}</span>}<span>Reported {philippineTime(ticket.submitted_at)}</span></div>
         </section>
-        {(ticket.photos.length > 0 || !archived) && <section className="admin-panel">
+        {(ticket.photos.length > 0 || (!archived && canUpdate)) && <section className="admin-panel">
           <h2>Photos</h2>
           {ticket.photos.length > 0 && <ul className="maintenance-photos">{ticket.photos.map((photo, index) => <li key={photo.id}>
             <a href={photoPath(ticket.id, photo.id)} target="_blank" rel="noreferrer"><img src={photoPath(ticket.id, photo.id)} alt={'Open issue photo ' + (index + 1)} loading="lazy" /></a>
           </li>)}</ul>}
-          {!archived && ticket.photos.length < 4 && <form className="admin-form" onSubmit={addPhoto}>
+          {!archived && canUpdate && ticket.photos.length < 4 && <form className="admin-form" onSubmit={addPhoto}>
             <label>Add a photo<input type="file" accept="image/jpeg,image/png" onChange={event => setFile(event.target.files?.[0])} /></label>
             {photoError && <p role="alert" className="admin-error">{photoError}</p>}
             <button className="admin-secondary" disabled={!file || busy}>{busy ? 'Uploading…' : photoError ? 'Retry photo upload' : 'Upload photo'}</button>
@@ -132,7 +134,7 @@ function TicketContent({ ticket, role, reload, setNotice }: { ticket: TicketDeta
               {event.materials && <p>Materials used · {event.materials}</p>}
             </div>
           </li>)}</ol>
-          {!archived && <button className="admin-secondary" onClick={() => setAction('COMMENT')}>Add a comment</button>}
+          {!archived && canUpdate && <button className="admin-secondary" onClick={() => setAction('COMMENT')}>Add a comment</button>}
         </section>
       </div>
     </div>

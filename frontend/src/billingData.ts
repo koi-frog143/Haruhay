@@ -50,8 +50,8 @@ export function getBillingSummary(residentId = CURRENT_RESIDENT_ID) {
 function liveBill(residentId:string){
   const session=getWorkspaceSession()
   const owner=session?.account.role==='OWNER'
-  const app=session?.applications.find(a=>a.status==='APPROVED'&&(owner?a.id===residentId:a.email===session.account.email))
-  const terms=app?.offers?.[0]?.terms
+  const app=session?.applications.find(a=>owner?a.id===residentId:a.tenancy_status==='ACTIVE')
+  const terms=app?.tenancy_offer?.terms
   const rent=terms?.applicant_monthly_rent==null?0:Number(terms.applicant_monthly_rent)
   const fixed=(terms?.charges||[]).filter(c=>c.basis==='FIXED_MONTHLY').reduce((sum,c)=>sum+Number(c.amount||0),0)
   const bills=(session?.bills||[]).filter(b=>!owner||b.application_id===app?.id).sort((a,b)=>a.due_date.localeCompare(b.due_date))
@@ -73,7 +73,7 @@ export function getPropertyBilling() {
   const collections = live ? getWorkspaceSession()?.collections : null
   const period = live ? collections?.period ?? manilaInputDate().slice(0,7) : getSettings().billing.period
   const ledger = getLedgerPayments()
-  const balances = getResidents().filter(resident => resident.status === 'Active').map(resident => ({ resident, ...getBillingSummary(resident.id) }))
+  const balances = getResidents().filter(resident => resident.status === 'Active' || (live && getWorkspaceSession()?.bills.some(bill => bill.application_id === resident.id))).map(resident => ({ resident, ...getBillingSummary(resident.id) }))
   const collected = (month: string) => live ? Number(collections?.months[month] ?? 0)
     : ledger.filter(payment => payment.period === month && payment.status === 'Approved').reduce((sum, payment) => sum + payment.amount, 0)
   return {

@@ -8,7 +8,7 @@ export type InvitationInfo = { propertyName: string; roomLabel: string; capacity
 export type Delivery = { delivery: 'LOCAL_FILE' | 'SMTP_ACCEPTED' | 'NOT_REQUIRED' | 'FAILED' }
 export type AuditEvent = { event: string; occurred_at: string; actor_email: string | null; reason: string | null }
 export type Property = { id: string; name: string; sample?: boolean }
-export type Admission = Application & { offers?:RoomOffer[]; reviewed_at: string | null; property_id: string; room_id: string | null; activation_pending: boolean; code_expires_at: string | null; failed_attempts: number | null }
+export type Admission = Application & { offers?:RoomOffer[]; reviewed_at: string | null; property_id: string; room_id: string | null; activation_pending: boolean; code_expires_at: string | null; failed_attempts: number | null; tenancy_id: string | null; tenancy_status: 'ACTIVE' | 'ENDED' | null; tenancy_started_at: string | null; tenancy_ended_at: string | null; tenancy_offer?: RoomOffer | null }
 export class ApiError extends Error {
   status: number
   constructor(status: number, message: string) { super(message); this.status = status }
@@ -25,7 +25,7 @@ function csrf() {
     }).finally(() => { csrfRequest = null })
   return csrfRequest
 }
-export async function api<T>(path: string, body?: object | URLSearchParams | FormData): Promise<T> {
+export async function api<T>(path: string, body?: object | URLSearchParams | FormData, method = body === undefined ? 'GET' : 'POST'): Promise<T> {
   const headers: Record<string, string> = {}
   if (body !== undefined) {
     const security = await csrf()
@@ -33,7 +33,7 @@ export async function api<T>(path: string, body?: object | URLSearchParams | For
     if (!(body instanceof FormData)) headers['Content-Type'] = body instanceof URLSearchParams ? 'application/x-www-form-urlencoded' : 'application/json'
   }
   const response = await fetch('/api' + path, {
-    method: body === undefined ? 'GET' : 'POST', credentials: 'same-origin', headers, cache: 'no-store',
+    method, credentials: 'same-origin', headers, cache: 'no-store',
     body: body === undefined ? undefined : body instanceof URLSearchParams || body instanceof FormData ? body : JSON.stringify(body),
   })
   if (response.status === 204) return undefined as T

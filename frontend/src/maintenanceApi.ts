@@ -13,7 +13,7 @@ export type LiveTicket = {
   id: string; ticket_number: string; property_id: string; property_name: string; room_label: string
   resident_id: string; resident_name: string; category_label: string; description: string; location: string
   shared_area: boolean; priority: TicketPriority; status: TicketStatus; version: number
-  technician_id: string | null; technician_name: string | null; needs_assignment: boolean
+  technician_id: string | null; technician_name: string | null; needs_assignment: boolean; resident_can_update: boolean
   submitted_at: string; updated_at: string
 }
 export type TicketDetail = LiveTicket & {

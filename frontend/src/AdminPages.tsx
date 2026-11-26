@@ -21,6 +21,7 @@ import { useHoldingState } from './holdingData'
 import { downloadCsv, manilaInputDate, usePreviewData } from './previewStore'
 import { profileInitials } from './profileData'
 import ResidentDialog from './ResidentDialog'
+import { OwnerTenancyActions } from './ResidentTenancy'
 
 function CollectionChart({ node }: { node: string }) {
   const billing = usePreviewData(getPropertyBilling)
@@ -51,8 +52,12 @@ export function AdminResidents() {
   const [dialog, setDialog] = useState<'add' | 'filter' | null>(null)
   const [notice, setNotice] = useState('')
   const active = residents.filter(resident => resident.status === 'Active')
+  const inventory = getWorkspaceSession()?.rooms
+  const occupancy = inventory
+    ? Math.round(inventory.reduce((total, room) => total + room.active, 0) / Math.max(1, inventory.reduce((total, room) => total + room.capacity, 0)) * 100)
+    : Math.round(new Set(active.map(resident => resident.room)).size / Math.max(1, settings.property.rooms.length) * 100)
   const visible = residents.filter(resident => `${resident.fullName} ${resident.id} ${resident.room}`.toLowerCase().includes(query.trim().toLowerCase()) && resident.fullName.toLowerCase().includes(filters.name.toLowerCase()) && (!filters.room || resident.room === filters.room) && (!filters.status || resident.status === filters.status))
-  return <AdminLayout active="Residents" node="18:1809" notice={notice} onDismissNotice={() => setNotice('')}><AdminHeading eyebrow="COMMUNITY DIRECTORY" title="Resident management" description="Keep resident profiles and room assignments organized." action={<button className="admin-primary" onClick={() => { if (isLiveWorkspace()) window.location.hash = '/admin/applications'; else setDialog('add') }}>Add resident</button>} /><AdminMetrics node="18:1809" items={[{ value: residents.length, label: 'Registered residents', icon: 'imgIconUsers1' }, { value: active.length, label: 'Active residents', icon: 'imgIconCheck', tone: 'mint' }, { value: residents.length - active.length, label: 'Inactive accounts', icon: 'imgIconClock' }, { value: `${Math.round(new Set(active.map(resident => resident.room)).size / Math.max(1, settings.property.rooms.length) * 100)}%`, label: 'Room occupancy', icon: 'imgIconBuilding' }]} /><div className="admin-toolbar"><label><AdminIcon node="18:1809" name="imgIconSearch1" /><input type="search" aria-label="Search residents" placeholder="Search residents by name, ID, room..." value={query} onChange={event => setQuery(event.target.value)} /></label><button className="admin-secondary" onClick={() => setDialog('filter')}>Filter</button></div>{(filters.name || filters.room || filters.status) && <p className="admin-preview-note">Filters: {[filters.name, filters.room && `Room ${filters.room}`, filters.status].filter(Boolean).join(' · ')} <button className="admin-link-button" onClick={() => setFilters({ name: '', room: '', status: '' })}>Clear filters</button></p>}<p className="admin-preview-note" role="status">{visible.length} of {residents.length} residents</p><AdminTable columns={['Resident', 'Resident ID', 'Room', 'Move-in date', 'Status']} rows={visible.map(resident => ({ key: resident.id, cells: [<a href={`#/admin/residents/${resident.id}`}>{resident.fullName}</a>, resident.id, resident.room, resident.moveIn, <AdminStatus>{resident.status}</AdminStatus>] }))} />{dialog === 'add' && <ResidentEditor onClose={() => setDialog(null)} onSaved={id => { setDialog(null); setNotice('Resident record saved locally.'); window.location.hash = `/admin/residents/${id}` }} />}{dialog === 'filter' && <ResidentFilterDialog initial={filters} onClose={() => setDialog(null)} onApply={next => { setFilters(next); setDialog(null) }} />}</AdminLayout>
+  return <AdminLayout active="Residents" node="18:1809" notice={notice} onDismissNotice={() => setNotice('')}><AdminHeading eyebrow="COMMUNITY DIRECTORY" title="Resident management" description="Keep resident profiles and room assignments organized." action={<button className="admin-primary" onClick={() => { if (isLiveWorkspace()) window.location.hash = '/admin/applications'; else setDialog('add') }}>Add resident</button>} /><AdminMetrics node="18:1809" items={[{ value: residents.length, label: 'Registered residents', icon: 'imgIconUsers1' }, { value: active.length, label: 'Active residents', icon: 'imgIconCheck', tone: 'mint' }, { value: residents.length - active.length, label: isLiveWorkspace() ? 'Ended tenancies' : 'Inactive accounts', icon: 'imgIconClock' }, { value: `${occupancy}%`, label: 'Room occupancy', icon: 'imgIconBuilding' }]} /><div className="admin-toolbar"><label><AdminIcon node="18:1809" name="imgIconSearch1" /><input type="search" aria-label="Search residents" placeholder="Search residents by name, ID, room..." value={query} onChange={event => setQuery(event.target.value)} /></label><button className="admin-secondary" onClick={() => setDialog('filter')}>Filter</button></div>{(filters.name || filters.room || filters.status) && <p className="admin-preview-note">Filters: {[filters.name, filters.room && `Room ${filters.room}`, filters.status].filter(Boolean).join(' · ')} <button className="admin-link-button" onClick={() => setFilters({ name: '', room: '', status: '' })}>Clear filters</button></p>}<p className="admin-preview-note" role="status">{visible.length} of {residents.length} residents</p><AdminTable columns={['Resident', 'Resident ID', 'Room', 'Move-in date', 'Status']} rows={visible.map(resident => ({ key: resident.id, cells: [<a href={`#/admin/residents/${resident.id}`}>{resident.fullName}</a>, resident.id, resident.room, resident.moveIn, <AdminStatus>{isLiveWorkspace() && resident.status === 'Inactive' ? 'Tenancy ended' : resident.status}</AdminStatus>] }))} />{dialog === 'add' && <ResidentEditor onClose={() => setDialog(null)} onSaved={id => { setDialog(null); setNotice('Resident record saved locally.'); window.location.hash = `/admin/residents/${id}` }} />}{dialog === 'filter' && <ResidentFilterDialog initial={filters} onClose={() => setDialog(null)} onApply={next => { setFilters(next); setDialog(null) }} />}</AdminLayout>
 }
 
 export function AdminResidentDetails({ id }: { id: string }) {
@@ -61,8 +66,33 @@ export function AdminResidentDetails({ id }: { id: string }) {
   const resident = residents.find(row => row.id === id)
   const [dialog, setDialog] = useState<'edit' | 'contact' | null>(null)
   const [notice, setNotice] = useState('')
+  const live = isLiveWorkspace()
+  const admission = getWorkspaceSession()?.applications.find(application => application.id === id)
   if (!resident) return <AdminLayout active="Residents" node="18:1947"><AdminEmpty title="Resident not found"><a href="#/admin/residents">Return to the resident directory.</a></AdminEmpty></AdminLayout>
-  return <AdminLayout active="Residents" node="18:1947" notice={notice} onDismissNotice={() => setNotice('')}><AdminHeading eyebrow={`RESIDENTS / ${resident.id}`} title="Resident profile" description="View verification, contact details and room assignment." action={<button className="admin-primary" onClick={() => setDialog('edit')}>Edit record</button>} /><div className="admin-record-grid"><section className="admin-panel admin-record-account"><h2>Account profile</h2><div className="admin-record-avatar"><AdminIcon node="18:1947" name="imgDecorativeCircle1" /><strong>{profileInitials(resident.fullName)}</strong></div><h3>{resident.fullName}</h3><p>Room {resident.room}</p><AdminStatus>{resident.status === 'Active' && resident.verified ? 'Active & verified' : resident.status}</AdminStatus></section><section className="admin-panel admin-record-details"><h2>Resident record</h2><dl>{[['Resident ID', resident.id], ['Email', resident.email], ['Contact', resident.mobile], ['Property', settings.property.name], ['Move-in date', resident.moveIn]].map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl></section></div><section className="admin-panel admin-quick"><h2>Quick management</h2><div className="admin-actions"><a className="admin-secondary" href={`#/admin/logbook?resident=${resident.id}`}>View visitor history</a><a className="admin-secondary" href={`#/admin/payments/approvals?resident=${resident.id}`}>View payments</a><button className="admin-primary" onClick={() => setDialog('contact')}>Message resident</button></div></section>{dialog === 'edit' && <ResidentEditor resident={resident} onClose={() => setDialog(null)} onSaved={() => { setDialog(null); setNotice('Resident record updated locally.') }} />}{dialog === 'contact' && <ContactResidentDialog resident={resident} onClose={() => setDialog(null)} />}</AdminLayout>
+  return <AdminLayout active="Residents" node="18:1947" notice={notice} onDismissNotice={() => setNotice('')}>
+    <AdminHeading eyebrow={`RESIDENTS / ${resident.id}`} title="Resident profile" description="View verification, contact details and room assignment."
+      action={live ? <a className="admin-secondary" href="#/admin/residents">Back to residents</a> : <button className="admin-primary" onClick={() => setDialog('edit')}>Edit record</button>} />
+    <div className="admin-record-grid">
+      <section className="admin-panel admin-record-account">
+        <h2>Account profile</h2>
+        <div className="admin-record-avatar"><AdminIcon node="18:1947" name="imgDecorativeCircle1" /><strong>{profileInitials(resident.fullName)}</strong></div>
+        <h3>{resident.fullName}</h3><p>{live ? resident.room : 'Room ' + resident.room}</p>
+        <AdminStatus>{resident.status === 'Active' && resident.verified ? 'Active & verified' : live && resident.status === 'Inactive' ? 'Tenancy ended' : resident.status}</AdminStatus>
+      </section>
+      <section className="admin-panel admin-record-details">
+        <h2>Resident record</h2>
+        <dl>{[['Resident ID', resident.id], ['Email', resident.email], ['Contact', resident.mobile], ['Property', resident.property ?? settings.property.name], ['Move-in date', resident.moveIn]].map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value || '—'}</dd></div>)}</dl>
+      </section>
+    </div>
+    {live && admission && <OwnerTenancyActions key={admission.tenancy_id} admission={admission} onSaved={setNotice} />}
+    <section className="admin-panel admin-quick"><h2>Quick management</h2><div className="admin-actions">
+      <a className="admin-secondary" href={`#/admin/logbook?resident=${resident.id}`}>View visitor history</a>
+      <a className="admin-secondary" href={`#/admin/payments/approvals?resident=${resident.id}`}>View payments</a>
+      <button className="admin-primary" onClick={() => setDialog('contact')}>Message resident</button>
+    </div></section>
+    {!live && dialog === 'edit' && <ResidentEditor resident={resident} onClose={() => setDialog(null)} onSaved={() => { setDialog(null); setNotice('Resident record updated locally.') }} />}
+    {dialog === 'contact' && <ContactResidentDialog resident={resident} onClose={() => setDialog(null)} />}
+  </AdminLayout>
 }
 
 export function AdminLogbook({ residentId = '' }: { residentId?: string }) {

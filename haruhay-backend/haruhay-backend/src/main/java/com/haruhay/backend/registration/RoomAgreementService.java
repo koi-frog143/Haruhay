@@ -124,8 +124,33 @@ public class RoomAgreementService {
         offer.replaceAll((k,v)->v instanceof java.sql.Timestamp t?t.toInstant().atOffset(ZoneOffset.UTC):v);
         return offer;
     }
-    public List<Map<String,Object>> offers(UUID app){return db.queryForList("SELECT * FROM application_offers WHERE application_id=? ORDER BY version DESC",app).stream().map(this::offerView).toList();}
-    public void enrich(Map<String,Object> app){app.put("offers",offers(id(app,"id")));}
+    public List<Map<String,Object>> offers(UUID app){
+        return db.queryForList("""
+            SELECT o.* FROM application_offers o WHERE o.application_id=? AND NOT EXISTS
+            (SELECT 1 FROM room_transfers x WHERE x.offer_id=o.id) ORDER BY o.version DESC
+            """,app).stream().map(this::offerView).toList();
+    }
+    Map<String,Object> offer(UUID id){return offerView(one("SELECT * FROM application_offers WHERE id=?",id));}
+    UUID transferOffer(UUID app,UUID room,UUID actor,BigDecimal quote){
+        var details=decorate(one(ROOMS+" WHERE r.id=?",room));
+        if(snapshot(details,quote).get("applicant_monthly_rent")==null)
+            throw new FlowException(400,"QUOTE_REQUIRED","Enter the resident’s monthly rent for this room.");
+        int version=db.queryForObject("SELECT COALESCE(MAX(version),0)+1 FROM application_offers WHERE application_id=?",Integer.class,app);
+        return insertOffer(app,details,actor,"Room transfer",quote,false,version);
+    }
+    List<Map<String,Object>> tenancyOffers(Map<String,Object> tenancy){
+        return tenancy.get("offer_id")==null?offers(id(tenancy,"application_id")):List.of(offer(id(tenancy,"offer_id")));
+    }
+    public void enrich(Map<String,Object> app){
+        var admissionOffers=offers(id(app,"id"));
+        app.put("offers",admissionOffers);
+        if("ACTIVE".equals(app.get("tenancy_status"))) {
+            var accepted=app.get("tenancy_offer_id")==null
+                ?admissionOffers.stream().filter(o->o.get("accepted_at")!=null).findFirst().orElse(null)
+                :offer(id(app,"tenancy_offer_id"));
+            app.put("tenancy_offer",accepted);
+        }
+    }
     public void initial(UUID app,Map<String,Object> room,UUID account){
         db.update("UPDATE registration_applications SET preferred_room_id=? WHERE id=?",room.get("id"),app);
         insertOffer(app,room,account,"Applicant accepted listing details",null,true,1);
@@ -179,6 +204,7 @@ public class RoomAgreementService {
         catch(FlowException unavailable){audit(id(application,"id"),"APPLICATION_NOTIFICATION_FAILED",id(account,"id"),"Saved update remains valid; email delivery unavailable");return "FAILED";}
     }
     public List<Map<String,Object>> agreements(String email){
-        return db.queryForList("SELECT a.id FROM registration_applications a JOIN accounts u ON u.id=a.account_id JOIN tenancies t ON t.application_id=a.id WHERE u.email=? AND t.status='ACTIVE'",email).stream().map(a->offers(id(a,"id"))).filter(list->!list.isEmpty()).map(List::getFirst).toList();
+        return db.queryForList("SELECT t.application_id,t.offer_id FROM tenancies t JOIN accounts u ON u.id=t.account_id WHERE u.email=? AND t.status='ACTIVE' ORDER BY t.started_at DESC",email)
+            .stream().map(this::tenancyOffers).filter(list->!list.isEmpty()).map(List::getFirst).toList();
     }
 }
