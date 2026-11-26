@@ -30,6 +30,7 @@ export function getSearchEntries() {
   ]
 }
 export function getNotifications() {
+  if (isLiveWorkspace()) return []
   const preferences = getResidentProfile()
   const announcements = getAnnouncements()
   const bill = getBillingSummary()
@@ -37,7 +38,7 @@ export function getNotifications() {
   return [
     ...(preferences.paymentReminders && policy.payments && bill.balance > 0 ? [{ id: `bill-${bill.periodKey}-${bill.balance}`, title: `Sample rent due ${bill.dueLabel}`, description: `${money(bill.balance)} · ${bill.period} sample bill`, href: '#/resident/payments' }] : []),
     ...getHoldingState().items.filter(item => item.residentId === CURRENT_RESIDENT && item.status === 'Ready').map(item => ({ id: `holding-${item.id}`, title: `${item.description} ready for pickup`, description: `${item.code} · Shelf ${item.slot}`, href: '#/resident/holding-station' })),
-    ...(!isLiveWorkspace() && preferences.maintenanceUpdates && policy.maintenance ? getMaintenanceTickets().filter(ticket => ticket.status !== 'Resolved').map(ticket => ({ id: `ticket-${ticket.id}-${ticket.status}-${getTicketComments(ticket.id).length}`, title: ticket.title, description: `${ticket.id} · ${ticket.status}`, href: `#/resident/maintenance/${ticket.id}` })) : []),
+    ...(preferences.maintenanceUpdates && policy.maintenance ? getMaintenanceTickets().filter(ticket => ticket.status !== 'Resolved').map(ticket => ({ id: `ticket-${ticket.id}-${ticket.status}-${getTicketComments(ticket.id).length}`, title: ticket.title, description: `${ticket.id} · ${ticket.status}`, href: `#/resident/maintenance/${ticket.id}` })) : []),
     ...(preferences.communityAnnouncements && policy.announcements ? announcements.map(item => ({ id: `announcement-${item.id}`, title: item.title, description: `${item.date} · Community notice`, href: '#/resident/community' })) : []),
     ...getVisitorRequests().filter(item => item.status === 'Pending review').map(item => ({ id: `request-${item.id}`, title: `${item.fullName}: pending review`, description: 'Saved locally; this is not a check-in.', href: '#/resident/logbook' })),
   ]

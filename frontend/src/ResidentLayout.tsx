@@ -4,8 +4,9 @@ import type { FormEvent, MouseEvent, ReactNode } from 'react'
 import './ResidentDashboard.css'
 import { getResidentProfile, profileInitials } from './profileData'
 import ResidentTools from './ResidentTools'
+import ResidentInbox from './ResidentInbox'
 import { getNotifications } from './residentToolsData'
-import { maintenanceSnapshot } from './maintenanceApi'
+import { api } from './registrationApi'
 import { getReadNotifications } from './residentData'
 import { usePreviewData } from './previewStore'
 
@@ -60,8 +61,17 @@ export default function ResidentLayout({ activeSection, breadcrumb, notice, onNo
   const [tool, setTool] = useState<'search' | 'support' | 'services' | 'notifications' | null>(null)
   const notifications = usePreviewData(getNotifications)
   const readNotifications = usePreviewData(getReadNotifications)
-  const maintenanceUnread = usePreviewData(maintenanceSnapshot).notices.filter(notice => !notice.read_at).length
-  const unread = notifications.filter(item => !readNotifications.includes(item.id)).length + maintenanceUnread
+  const [liveUnread, setLiveUnread] = useState<number | null>(null)
+  const liveAccount = live?.account.id
+  const unread = live ? liveUnread ?? 0 : notifications.filter(item => !readNotifications.includes(item.id)).length
+  useEffect(() => {
+    if (!liveAccount || limited) return
+    let active = true
+    api<{ unread: number }>('/resident/notifications/unread-count').then(result => {
+      if (active) setLiveUnread(current => current ?? result.unread)
+    }).catch(() => { /* The inbox shows an error and retry if records are unavailable. */ })
+    return () => { active = false }
+  }, [liveAccount, limited])
   useEffect(() => {
     const media = window.matchMedia('(max-width: 980px)')
     const update = () => setNarrow(media.matches)
@@ -213,7 +223,9 @@ export default function ResidentLayout({ activeSection, breadcrumb, notice, onNo
       </header>
 
       <div className="ux-workspace-content" id="resident-main" tabIndex={-1}>{children}</div>
-      {!limited && tool && <ResidentTools mode={tool} initialQuery={search} onClose={() => setTool(null)} />}
+      {!limited && tool && (live && tool === 'notifications'
+        ? <ResidentInbox onClose={() => setTool(null)} onUnreadChange={setLiveUnread} />
+        : <ResidentTools mode={tool} initialQuery={search} onClose={() => setTool(null)} />)}
 
       <div className={'resident-status ux-toast ' + (notice ? 'is-visible' : '')} role="status" aria-live="polite">
         {notice}

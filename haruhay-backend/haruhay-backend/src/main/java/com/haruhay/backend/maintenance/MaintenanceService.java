@@ -346,6 +346,7 @@ public class MaintenanceService {
         String name=(String)one("SELECT full_name FROM accounts WHERE id=?",next).get("full_name");
         event(id,actor.id(),previous==null?"ASSIGNED":"REASSIGNED",name+" · "+priorityLabel+" priority."+(reason==null?"":" "+reason),at);
         notify(id,next,"A maintenance job was assigned to you",at);
+        notify(id,id(ticket,"resident_id"),previous==null?"A technician was assigned to your request":"Your request has a new technician",at);
     }
 
     @Transactional
@@ -394,29 +395,41 @@ public class MaintenanceService {
             throw missing();
     }
 
-    public List<Map<String,Object>> notifications(String email) {
-        Actor actor=actor(email);
-        String visibility=switch (actor.role()) {
+    private static final String NOTICES = """
+        FROM maintenance_notifications n
+        JOIN maintenance_tickets t ON t.id=n.ticket_id JOIN properties p ON p.id=t.property_id
+        JOIN tenancies original ON original.id=t.tenancy_id
+        WHERE n.recipient_id=? AND
+        """;
+
+    private String noticeVisibility(Actor actor) {
+        return switch (actor.role()) {
             case OWNER -> "p.owner_id=n.recipient_id";
-            case RESIDENT -> "t.resident_id=n.recipient_id";
+            case RESIDENT -> """
+                t.resident_id=n.recipient_id AND EXISTS(SELECT 1 FROM tenancies current_stay
+                  WHERE current_stay.application_id=original.application_id
+                    AND current_stay.account_id=n.recipient_id AND current_stay.status='ACTIVE')
+                """;
             case TECHNICIAN -> """
                 EXISTS(SELECT 1 FROM maintenance_assignments x JOIN maintenance_staff s ON s.account_id=x.technician_id
                     WHERE x.active_ticket=t.id AND x.technician_id=n.recipient_id AND s.enabled=TRUE)
                 """;
         };
-        return rows("""
-            SELECT n.id,n.ticket_id,n.message,n.created_at,n.read_at FROM maintenance_notifications n
-            JOIN maintenance_tickets t ON t.id=n.ticket_id JOIN properties p ON p.id=t.property_id
-            WHERE n.recipient_id=? AND
-            """+visibility+" ORDER BY n.created_at DESC,n.id LIMIT 100",actor.id());
+    }
+    public List<Map<String,Object>> notifications(String email) {
+        Actor actor=actor(email);
+        return rows("SELECT n.id,n.ticket_id,n.message,n.created_at,n.read_at "+NOTICES+noticeVisibility(actor)
+            +" ORDER BY n.created_at DESC,n.id LIMIT 100",actor.id());
     }
     @Transactional
     public void readNotifications(String email, UUID notice) {
         Actor actor=actor(email);
+        String update="UPDATE maintenance_notifications SET read_at=? WHERE read_at IS NULL AND id IN ("
+            +"SELECT n.id "+NOTICES+noticeVisibility(actor);
         if (notice==null) {
-            db.update("UPDATE maintenance_notifications SET read_at=? WHERE recipient_id=? AND read_at IS NULL",now(),actor.id());
+            db.update(update+")",now(),actor.id());
         } else {
-            db.update("UPDATE maintenance_notifications SET read_at=? WHERE id=? AND recipient_id=? AND read_at IS NULL",now(),notice,actor.id());
+            db.update(update+" AND n.id=?)",now(),actor.id(),notice);
         }
     }
 

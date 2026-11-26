@@ -124,7 +124,10 @@ class MaintenanceTests {
         service.change(TECH,ticket,action(2,"PROGRESS","Inspected the fitting."));
         assertThatThrownBy(()->service.change(TECH,ticket,action(3,"READY"," "))).isInstanceOf(FlowException.class);
         service.change(TECH,ticket,new MaintenanceService.Change(3,"READY",null,null,"Replaced the seal.","Seal"));
-        assertThat(service.notifications(RESIDENT)).singleElement().satisfies(n->assertThat(n).containsEntry("ticket_id",ticket));
+        assertThat(service.notifications(RESIDENT)).hasSize(2)
+            .allSatisfy(n->assertThat(n).containsEntry("ticket_id",ticket))
+            .extracting(n->n.get("message")).containsExactlyInAnyOrder(
+                "A technician was assigned to your request","Your repair is ready to confirm");
         service.change(RESIDENT,ticket,action(4,"REOPEN","It still leaks on the hot setting."));
         assertThat(service.detail(RESIDENT,ticket)).containsEntry("status","IN_PROGRESS");
         service.change(TECH,ticket,action(5,"READY","Tightened the hot-side valve."));
