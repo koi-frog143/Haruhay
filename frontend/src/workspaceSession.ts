@@ -26,6 +26,11 @@ export function isSampleWorkspace() {
 }
 export function isLiveWorkspace() { return !isSampleWorkspace() }
 export function getWorkspaceSession() { return isLiveWorkspace() ? session : null }
+export function hasActiveStay(applications: Admission[]) { return applications.some(a => a.tenancy_status === 'ACTIVE') }
+export function hasEndedStay(applications: Admission[]) { return applications.some(a => a.tenancy_status === 'ENDED') }
+export function hasPendingApplication(applications: Admission[]) {
+  return applications.some(a => ['AWAITING_EMAIL', 'PENDING_APPROVAL', 'CORRECTIONS_REQUESTED'].includes(a.status))
+}
 export function workspaceStorageKey(key: string) { return isSampleWorkspace() ? key : 'haruhay-live-ui-v1:' + (session?.account.id || 'guest') + ':' + key }
 export function setWorkspaceMode(mode: 'live' | 'sample') {
   sampleMode = mode === 'sample'
@@ -43,7 +48,8 @@ export async function loadWorkspaceSession(account?: Account) {
     owner ? api<Property[]>('/owner/properties') : Promise.resolve([]),
     owner ? api<Room[]>('/owner/rooms') : Promise.resolve([]),
   ])
-  const hasBilling = owner || (!staff && applications.some(a => a.status === 'APPROVED'))
+  const activeStay = hasActiveStay(applications)
+  const hasBilling = owner || (!staff && (activeStay || hasEndedStay(applications)))
   const role = owner ? 'owner' : 'resident'
   const [billsResult, paymentsResult, collectionsResult] = await Promise.allSettled([
     hasBilling ? api<MonthlyBill[]>('/' + role + '/bills') : Promise.resolve([]),
@@ -59,13 +65,14 @@ export async function loadWorkspaceSession(account?: Account) {
       ? 'Some billing records could not be loaded. Refresh billing and try again.' : '',
   }
   if (version !== sessionGeneration) return next
-  if (session?.account.id !== identity.id) clearVisitorRecords()
+  if (session?.account.id !== identity.id || (!activeStay && !owner && !staff)) clearVisitorRecords()
   session = next
   setWorkspaceMode('live')
   await Promise.all([
-    staff ? Promise.resolve() : loadVisitorRecords().catch(() => null),
-    owner || identity.role === 'TECHNICIAN' || applications.some(a => a.status === 'APPROVED') ? refreshMaintenance() : Promise.resolve(),
+    owner || activeStay ? loadVisitorRecords().catch(() => null) : Promise.resolve(),
+    owner || identity.role === 'TECHNICIAN' || activeStay ? refreshMaintenance() : Promise.resolve(),
   ])
+  if (version === sessionGeneration) window.dispatchEvent(new Event('haruhay-preview-updated'))
   return session
 }
 export async function refreshPaymentRecords() {
@@ -106,17 +113,17 @@ export function clearWorkspaceSession() {
 }
 export function workspaceResident() {
   const account = session?.account
-  const stay = session?.applications.find(a => a.status === 'APPROVED' && a.email === account?.email)
+  const stay = session?.applications.find(a => a.tenancy_status === 'ACTIVE') ?? session?.applications.find(a => a.tenancy_status === 'ENDED')
   return { id: 'RES-0204', fullName: account?.full_name || '', email: account?.email || '', mobile: account?.contact || '',
-    room: stay?.room_label || '', moveIn: stay?.reviewed_at?.slice(0, 10) || '', status: stay ? 'Active' as const : 'Inactive' as const,
+    property: stay?.property_name || '', room: stay?.room_label || '', moveIn: stay?.tenancy_started_at?.slice(0, 10) || '', status: stay?.tenancy_status === 'ACTIVE' ? 'Active' as const : 'Inactive' as const,
     verified: account?.email_verified || false, paymentReminders: true, maintenanceUpdates: true, communityAnnouncements: true }
 }
 export function workspaceResidents() {
   if (!session) return []
-  if (session.account.role !== 'OWNER') return session.applications.some(a => a.status === 'APPROVED') ? [workspaceResident()] : []
-  return session.applications.filter(a => a.status === 'APPROVED').map(a => ({
+  if (session.account.role !== 'OWNER') return hasActiveStay(session.applications) || hasEndedStay(session.applications) ? [workspaceResident()] : []
+  return session.applications.filter(a => a.tenancy_id).map(a => ({
     ...workspaceResident(), id: a.id, fullName: a.full_name, email: a.email, mobile: a.contact,
-    room: a.room_label || '', moveIn: a.reviewed_at?.slice(0, 10) || '', status: 'Active' as const, verified: a.email_verified,
+    property: a.property_name, room: a.room_label || '', moveIn: a.tenancy_started_at?.slice(0, 10) || '', status: a.tenancy_status === 'ACTIVE' ? 'Active' as const : 'Inactive' as const, verified: a.email_verified,
   }))
 }
 export function liveFallback<T>(key: string, fallback: T): T {

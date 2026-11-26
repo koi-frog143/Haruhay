@@ -8,6 +8,7 @@ import { getResidentProfile } from './profileData'
 import { getBillingSummary, getVisitorEntries, money } from './residentData'
 import { usePreviewData } from './previewStore'
 import ResidentTools from './ResidentTools'
+import { ResidentTransferOffers } from './ResidentTenancy'
 
 const asset = (name: string) => `./assets/dashboard/${name}`
 
@@ -68,6 +69,7 @@ export default function ResidentDashboard() {
         <p>Another day in a space that cares for you.</p>
       </header>
 
+      {isLiveWorkspace() && <ResidentTransferOffers />}
       <section className="resident-welcome resident-next-task" aria-labelledby="resident-welcome-title">
         <img className="resident-welcome-stars" src={asset('motif-stars.svg')} width="92" height="114" alt="" />
         <img className="resident-welcome-heart" src={asset('icon-heart-welcome.svg')} width="45" height="45" alt="" />

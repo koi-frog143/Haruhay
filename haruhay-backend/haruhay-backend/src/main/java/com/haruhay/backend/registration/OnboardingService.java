@@ -85,8 +85,9 @@ public class OnboardingService {
         }
         var a=one("SELECT email_verified FROM accounts WHERE id=? FOR UPDATE",account);
         if(db.queryForObject("""
-            SELECT count(*) FROM registration_applications WHERE account_id=? AND property_id=?
-            AND status NOT IN ('REJECTED','CANCELLED')
+            SELECT count(*) FROM registration_applications a WHERE a.account_id=? AND a.property_id=?
+            AND (a.status NOT IN ('REJECTED','CANCELLED','APPROVED') OR EXISTS
+              (SELECT 1 FROM tenancies t WHERE t.application_id=a.id AND t.status='ACTIVE'))
             """,Integer.class,account,property)>0)
             throw new FlowException(409,"APPLICATION_EXISTS","You already have an application or tenancy at this property.");
         UUID application=UUID.randomUUID(); boolean verified=Boolean.TRUE.equals(a.get("email_verified"));
@@ -97,14 +98,24 @@ public class OnboardingService {
         return Map.of("applicationId",application,"delivery",delivery,"status",verified ? "PENDING_APPROVAL" : "AWAITING_EMAIL");
     }
     private static final String VIEW="""
-        SELECT a.id,a.invitation_id,a.property_id,a.full_name,a.contact,
+        SELECT a.id,a.invitation_id,a.property_id,
+        CASE WHEN a.status='APPROVED' THEN u.full_name ELSE a.full_name END AS full_name,
+        CASE WHEN a.status='APPROVED' THEN u.contact ELSE a.contact END AS contact,
         a.status,
         a.review_reason,a.reviewed_at,a.submitted_at,a.activation_pending,
         u.email,u.email_verified,p.name AS property_name,p.sample,r.id AS room_id,r.label AS room_label,
-        h.status AS reservation_status,c.expires_at AS code_expires_at,c.failed_attempts
+        COALESCE(stay_reservation.status,h.status) AS reservation_status,c.expires_at AS code_expires_at,c.failed_attempts,
+        t.id AS tenancy_id,t.status AS tenancy_status,t.started_at AS tenancy_started_at,t.ended_at AS tenancy_ended_at,
+        t.offer_id AS tenancy_offer_id
         FROM registration_applications a JOIN accounts u ON u.id=a.account_id
         JOIN properties p ON p.id=a.property_id LEFT JOIN invitations i ON i.id=a.invitation_id
-        LEFT JOIN reservations h ON h.id=i.reservation_id LEFT JOIN rooms r ON r.id=h.room_id
+        LEFT JOIN reservations h ON h.id=i.reservation_id
+        LEFT JOIN tenancies t ON t.id=(
+          SELECT stay.id FROM tenancies stay WHERE stay.application_id=a.id
+          ORDER BY CASE WHEN stay.status='ACTIVE' THEN 0 ELSE 1 END,stay.started_at DESC,stay.id LIMIT 1
+        )
+        LEFT JOIN reservations stay_reservation ON stay_reservation.id=t.reservation_id
+        LEFT JOIN rooms r ON r.id=COALESCE(t.room_id,h.room_id)
         LEFT JOIN tenancy_activation_codes c ON c.application_id=a.id
         """;
     public List<Map<String,Object>> mine(String email) { var list=rows(VIEW+" WHERE a.account_id=? ORDER BY a.submitted_at DESC",user(email)); list.forEach(agreements::enrich);return list; }

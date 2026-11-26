@@ -20,6 +20,8 @@ import CommunityBoard from './CommunityBoard'
 import AdminApp from './AdminApp'
 import RegistrationFlow from './RegistrationFlow'
 import WorkspaceGate from './WorkspaceGate'
+import type { WorkspaceKind } from './WorkspaceGate'
+import { VerifySignInEmail } from './ResidentTenancy'
 import LiveLogbook from './LiveLogbook'
 import LiveMaintenance from './LiveMaintenance'
 import { isLiveWorkspace, setWorkspaceMode } from './workspaceSession'
@@ -144,12 +146,12 @@ export default function App() {
   useEffect(() => {
     if (screen !== 'home' || !['#haruhay-way', '#features', '#community'].includes(window.location.hash)) window.scrollTo(0, 0)
   }, [screen])
-  const guard = (page: ReactNode, kind: 'account' | 'admin' | 'resident' | 'guard' | 'technician') => <WorkspaceGate key={routeHash} kind={kind}>{page}</WorkspaceGate>
+  const guard = (page: ReactNode, kind: WorkspaceKind) => <WorkspaceGate key={routeHash} kind={kind}>{page}</WorkspaceGate>
   const idAfter = (prefix: string) => {
     try { return decodeURIComponent(routeHash.slice(prefix.length)) } catch { return '' }
   }
   if (routeHash.startsWith('#/resident/payments/receipt/') && isLiveWorkspace()) {
-    return guard(<PaymentReceipt role="resident" id={idAfter('#/resident/payments/receipt/')} />, 'resident')
+    return guard(<PaymentReceipt role="resident" id={idAfter('#/resident/payments/receipt/')} />, 'resident-billing')
   }
   if (routeHash === '#/technician/jobs' || routeHash.startsWith('#/technician/jobs/')) {
     return guard(<LiveMaintenance role="technician" id={routeHash === '#/technician/jobs' ? undefined : idAfter('#/technician/jobs/')} />, 'technician')
@@ -159,6 +161,7 @@ export default function App() {
   }
   if (screen === 'guard') return guard(<LiveLogbook staff />, 'guard')
   if (screen === 'admin') return guard(<AdminApp key={routeHash} />, 'admin')
+  if (routeHash.split('?')[0] === '#/account/verify-email-change') return <VerifySignInEmail key={routeHash} />
   if (screen === 'account') return ['/account/status', '/account/property', '/account/activate'].includes(window.location.hash.split('?')[0].slice(1)) ? guard(<RegistrationFlow key={routeHash} />, 'account') : <RegistrationFlow key={routeHash} />
   if (screen === 'resident-holding') return guard(<HoldingStation key='resident' />, 'resident')
   if (screen === 'desk-holding') return <HoldingStation key='desk' desk />
@@ -172,8 +175,8 @@ export default function App() {
   if (screen === 'resident-maintenance') return guard(isLiveWorkspace() ? <LiveMaintenance role="resident" /> : <MaintenanceTickets />, 'resident')
   if (screen === 'resident-maintenance-new') return guard(isLiveWorkspace() ? <LiveMaintenance role="resident" report /> : <CreateMaintenanceTicket />, 'resident')
   if (screen === 'resident-maintenance-detail') return guard(isLiveWorkspace() ? <LiveMaintenance role="resident" id={idAfter('#/resident/maintenance/')} /> : <MaintenanceTicketDetails key={routeHash} />, 'resident')
-  if (screen === 'resident-payments') return guard(<BillingPayments />, 'resident')
-  if (screen === 'resident-payment-history') return guard(<PaymentHistory />, 'resident')
+  if (screen === 'resident-payments') return guard(<BillingPayments />, 'resident-billing')
+  if (screen === 'resident-payment-history') return guard(<PaymentHistory />, 'resident-billing')
   return <main className="auth-shell">
     <WelcomePanel screen={screen} />
     <AuthForm key={screen} screen={screen} />

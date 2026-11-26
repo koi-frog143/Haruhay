@@ -78,7 +78,8 @@ public class VisitorService {
     private UUID createRequest(UUID a,Request r,boolean walkin) {
         if(r==null)throw error(400,"Enter visitor details.");
         if(r.tenancyId()==null)throw error(400,"Choose an active host.");
-        var host=one("SELECT t.*,r.property_id FROM tenancies t JOIN rooms r ON r.id=t.room_id WHERE t.id=? FOR UPDATE",r.tenancyId());
+        one("SELECT id FROM tenancies WHERE id=? FOR UPDATE",r.tenancyId());
+        var host=one("SELECT t.*,r.property_id FROM tenancies t JOIN rooms r ON r.id=t.room_id WHERE t.id=?",r.tenancyId());
         active(r.tenancyId()); if(walkin)staff(a,id(host,"property_id"),true);else if(!id(host,"account_id").equals(a))throw error(403,"Choose your own active tenancy.");
         OffsetDateTime created=now();
         boolean legacy=r.arrival()!=null||r.departure()!=null;
@@ -92,7 +93,7 @@ public class VisitorService {
         audit(id(host,"property_id"),null,a,"REQUEST_CREATED",request.toString());return request;
     }
     private static final String LIST="""
-        SELECT q.*,p.full_name,p.contact,a.full_name AS host_name,t.application_id AS host_application_id,
+        SELECT q.*,p.full_name,p.contact,a.full_name AS host_name,t.application_id AS host_application_id,t.status AS host_status,
                r.label AS room_label,v.id AS visit_id,v.status AS visit_status,v.checked_in,v.checked_out,v.voided,
                EXISTS(SELECT 1 FROM visitor_qr_credentials c
                       WHERE c.visit_id=v.id AND c.status='ACTIVE' AND c.share_hash IS NOT NULL) AS has_shareable_pass
@@ -112,6 +113,7 @@ public class VisitorService {
         Object state=record.get("visit_status");
         if(state==null)state=record.get("status");
         if(Boolean.TRUE.equals(record.get("voided")))state="VOIDED";
+        else if(!"ACTIVE".equals(record.get("host_status"))&&Set.of("EXPECTED","PENDING").contains(state))state="CANCELLED";
         else if("EXPECTED".equals(state)&&!((OffsetDateTime)record.get("departure")).isAfter(at))state="EXPIRED";
         record.put("display_status",state);
         return record;
@@ -123,8 +125,11 @@ public class VisitorService {
         if(r.reason()!=null&&r.reason().length()>1000)throw error(400,"Use at most 1000 characters for the review reason.");
         if(q.get("status").equals("APPROVED")&&r.action().equals("APPROVE"))return id(one("SELECT id FROM visitor_visits WHERE request_id=?",request),"id");
         if(!q.get("status").equals("PENDING"))throw error(409,"This request has already been reviewed.");
-        active(id(q,"tenancy_id"));
         boolean approve=r.action().equals("APPROVE");
+        if(approve){
+            one("SELECT id FROM tenancies WHERE id=? FOR UPDATE",id(q,"tenancy_id"));
+            active(id(q,"tenancy_id"));
+        }
         String reason=approve?r.reason():required(r.reason(),1000);
         OffsetDateTime reviewed=now(),arrival=(OffsetDateTime)q.get("arrival"),departure=(OffsetDateTime)q.get("departure");
         if(approve&&q.get("window_policy").equals("FLEXIBLE")){
@@ -149,11 +154,13 @@ public class VisitorService {
     private Map<String,Object> visit(UUID visit) {
         // Cancellation, credential changes and movement always lock the request before the visit.
         var reference=one("SELECT request_id FROM visitor_visits WHERE id=?",visit);lockRequest(id(reference,"request_id"));
-        return one("SELECT v.*,q.property_id,q.tenancy_id,q.arrival,q.departure,q.status AS request_status,t.account_id FROM visitor_visits v JOIN visitor_requests q ON q.id=v.request_id JOIN tenancies t ON t.id=q.tenancy_id WHERE v.id=? FOR UPDATE",visit);
+        one("SELECT id FROM visitor_visits WHERE id=? FOR UPDATE",visit);
+        return one("SELECT v.*,q.property_id,q.tenancy_id,q.arrival,q.departure,q.status AS request_status,t.account_id FROM visitor_visits v JOIN visitor_requests q ON q.id=v.request_id JOIN tenancies t ON t.id=q.tenancy_id WHERE v.id=?",visit);
     }
     private void ownsVisit(UUID actor,Map<String,Object> v) { if(!id(v,"account_id").equals(actor))staff(actor,id(v,"property_id"),false); }
     @Transactional public IssuedPass issue(String email,UUID visit,Pass pass) {
-        UUID a=actor(email);var v=visit(visit);ownsVisit(a,v);active(id(v,"tenancy_id"));
+        UUID a=actor(email);var v=visit(visit);ownsVisit(a,v);
+        one("SELECT id FROM tenancies WHERE id=? FOR UPDATE",id(v,"tenancy_id"));active(id(v,"tenancy_id"));
         boolean expected=v.get("status").equals("EXPECTED"),inside=v.get("status").equals("CHECKED_IN");
         if((!expected&&!inside)||Boolean.TRUE.equals(v.get("voided")))throw error(409,"This visit no longer has a shareable pass.");
         OffsetDateTime expiry=(OffsetDateTime)v.get("departure");
@@ -241,6 +248,7 @@ public class VisitorService {
         if(m.action()==null||m.method()==null||!Set.of("ENTRY","EXIT").contains(m.action())||!Set.of("QR","MANUAL").contains(m.method()))throw error(400,"Choose an explicit entry or exit and verification method.");
         if(m.reason()!=null&&m.reason().length()>1000||m.idType()!=null&&m.idType().length()>80)throw error(400,"Keep verification details within the displayed limits.");
         if(m.action().equals("ENTRY")&&v.get("status").equals("CHECKED_IN")||m.action().equals("EXIT")&&v.get("status").equals("CHECKED_OUT"))return Map.of("allowed",true,"message","This movement was already recorded.");
+        if(m.action().equals("ENTRY"))one("SELECT id FROM tenancies WHERE id=? FOR UPDATE",id(v,"tenancy_id"));
         String problem=m.action().equals("ENTRY")?entryProblem(v):v.get("status").equals("CHECKED_IN")?null:"Only an open visit can be checked out.";
         if(problem==null&&m.method().equals("QR"))problem=tokenProblem(property,m.token(),v,m.action().equals("ENTRY"));
         if(problem!=null){audit(property,visit,a,"MOVEMENT_DENIED",problem);return Map.of("allowed",false,"message",problem);}
