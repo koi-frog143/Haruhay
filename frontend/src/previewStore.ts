@@ -33,7 +33,11 @@ export function downloadCsv(filename: string, rows: string[][]) {
     const safe = /^[=+@\-\t\r]/u.test(value) ? `'${value}` : value
     return `"${safe.replaceAll('"', '""')}"`
   }
-  const url = URL.createObjectURL(new Blob(['\uFEFF' + rows.map(row => row.map(cell).join(',')).join('\r\n')], { type: 'text/csv;charset=utf-8' }))
+  downloadBlob(filename, new Blob(['\uFEFF' + rows.map(row => row.map(cell).join(',')).join('\r\n')], { type: 'text/csv;charset=utf-8' }))
+}
+
+export function downloadBlob(filename: string, blob: Blob) {
+  const url = URL.createObjectURL(blob)
   const link = document.createElement('a')
   link.href = url
   link.download = filename
