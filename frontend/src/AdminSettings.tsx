@@ -8,6 +8,8 @@ import { getResidents } from './residentsData'
 import { downloadCsv, manilaInputDate } from './previewStore'
 import { reportRows } from './adminReports'
 import type { ReportKind } from './adminReports'
+import LiveReportDialog from './LiveReportDialog'
+import { isLiveWorkspace } from './workspaceSession'
 
 export type SettingsKind = 'property' | 'staff' | 'billing' | 'notifications' | 'security' | 'reports'
 const sections: Array<{ kind: SettingsKind; title: string; description: string; icon: string; eyebrow: string }> = [
@@ -18,7 +20,16 @@ const sections: Array<{ kind: SettingsKind; title: string; description: string; 
   { kind: 'security', title: 'Security & records', description: 'Access logs, privacy and data retention', icon: 'imgIconShield1', eyebrow: 'SECURITY MANAGEMENT' },
   { kind: 'reports', title: 'Export & reports', description: 'Resident, payment and visitor summaries', icon: 'imgIconDownload', eyebrow: 'REPORTING TOOLS' },
 ]
-export function SettingsDialog({ kind, onClose, onSaved }: { kind: SettingsKind; onClose: () => void; onSaved: (message: string) => void }) {
+type SettingsDialogProps = { kind: SettingsKind; onClose: () => void; onSaved: (message: string) => void }
+
+export function SettingsDialog(props: SettingsDialogProps) {
+  if (props.kind === 'reports' && isLiveWorkspace()) {
+    return <LiveReportDialog onClose={props.onClose} onDownload={props.onSaved} />
+  }
+  return <LocalSettingsDialog {...props} />
+}
+
+function LocalSettingsDialog({ kind, onClose, onSaved }: SettingsDialogProps) {
   const section = sections.find(item => item.kind === kind)!
   const [draft, setDraft] = useState(() => structuredClone(getSettings()))
   const [error, setError] = useState('')

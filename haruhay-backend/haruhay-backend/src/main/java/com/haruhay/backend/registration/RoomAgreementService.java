@@ -43,8 +43,19 @@ public class RoomAgreementService {
         """;
     private Map<String,Object> decorate(Map<String,Object> room){
         room.put("charges",db.queryForList("SELECT name,basis,amount,notes FROM room_charges WHERE room_id=? ORDER BY position",room.get("id")));
-        room.put("available",Math.max(0,((Number)room.get("capacity")).intValue()-((Number)room.get("held")).intValue()-((Number)room.get("active")).intValue()));
+        room.put("available",available(((Number)room.get("capacity")).intValue(),((Number)room.get("active")).intValue(),((Number)room.get("held")).intValue()));
         return room;
+    }
+    private static int available(int capacity,int active,int held) {
+        return Math.max(0,capacity-active-held);
+    }
+    public record Occupancy(String room,int capacity,int active,int held,int available) {}
+
+    public List<Occupancy> ownerOccupancy(String email,UUID property) {
+        return db.query(ROOMS+" WHERE p.id=? AND p.owner_id=? ORDER BY r.label,r.id",(row,index)->{
+            int capacity=row.getInt("capacity"), active=row.getInt("active"), held=row.getInt("held");
+            return new Occupancy(row.getString("label"),capacity,active,held,available(capacity,active,held));
+        },property,actor(email));
     }
     public List<Map<String,Object>> ownerRooms(String email){
         return db.queryForList(ROOMS+" WHERE p.owner_id=? ORDER BY p.name,r.label",actor(email)).stream().map(this::decorate).toList();
