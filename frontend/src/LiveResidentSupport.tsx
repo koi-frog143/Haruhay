@@ -14,9 +14,10 @@ type View = 'list' | 'compose' | { id: string; initial?: SupportDetail }
 export default function LiveResidentSupport({ onClose }: { onClose: () => void }) {
   const [view, setView] = useState<View>('list')
   const [busy, setBusy] = useState(false)
+  const [replyDraft, setReplyDraft] = useState(false)
   const title = view === 'list' ? 'My support requests' : view === 'compose' ? 'New support request' : 'Support conversation'
   return <ResidentDialog key={title} title={title} eyebrow="RESIDENT SUPPORT" onClose={onClose} busy={busy}
-    dismissOnBackdrop={false} footerNote="">
+    hasUnsavedChanges={typeof view === 'object' ? replyDraft : undefined} dismissOnBackdrop={false} footerNote="">
     {view === 'list' ? <>
       <div className="support-actions">
         <button type="button" className="admin-primary" onClick={() => setView('compose')}>New support request</button>
@@ -27,8 +28,8 @@ export default function LiveResidentSupport({ onClose }: { onClose: () => void }
       <p>Send your question to your property owner. For repairs, <a href="#/resident/maintenance/new" onClick={onClose}>report a maintenance issue</a>.</p>
       <CreateSupport busy={busy} setBusy={setBusy} onCreated={detail => setView({ id: detail.request.id, initial: detail })} />
     </> : <>
-      <button type="button" className="admin-secondary" disabled={busy} onClick={() => setView('list')}>Back to my requests</button>
-      <SupportConversation role="resident" id={view.id} initialDetail={view.initial} busy={busy} setBusy={setBusy} />
+      <button type="button" className="admin-secondary" disabled={busy} onClick={() => { setReplyDraft(false); setView('list') }}>Back to my requests</button>
+      <SupportConversation role="resident" id={view.id} initialDetail={view.initial} busy={busy} setBusy={setBusy} onDraftChange={setReplyDraft} />
     </>}
   </ResidentDialog>
 }

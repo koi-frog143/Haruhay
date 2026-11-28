@@ -28,6 +28,16 @@ export async function browserChecks(folder = 'admin') {
   const pause = (ms = 180) => new Promise(resolve => setTimeout(resolve, ms))
   async function evaluate(expression) { const result = await send('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true }); if (result.exceptionDetails) throw new Error(result.exceptionDetails.exception?.description || result.exceptionDetails.text); return result.result.value }
   async function navigate(route) { await send('Page.navigate', { url: `${origin}/#${route}` }); await pause(350); await evaluate('document.fonts.ready.then(() => true)') }
+  async function reload() {
+    await evaluate('window.haruhayBeforeReload = true')
+    await send('Page.reload')
+    for (let attempt = 0; attempt < 100; attempt++) {
+      const loaded = await evaluate('!window.haruhayBeforeReload && document.readyState !== "loading"').catch(() => false)
+      if (loaded) return
+      await pause(100)
+    }
+    throw new Error('The reloaded page did not become ready.')
+  }
   async function route(route) { await evaluate(`location.hash = ${JSON.stringify(route)}`); await pause() }
   async function click(selector) { await evaluate(`(() => { const e = document.querySelector(${JSON.stringify(selector)}); if (!e) throw new Error('Missing element: ' + ${JSON.stringify(selector)}); e.focus(); e.click(); })()`); await pause() }
   async function fill(selector, value) { await evaluate(`(() => { const e = document.querySelector(${JSON.stringify(selector)}); if (!e) throw new Error('Missing field: ' + ${JSON.stringify(selector)}); const proto = e.tagName === 'TEXTAREA' ? HTMLTextAreaElement.prototype : e.tagName === 'SELECT' ? HTMLSelectElement.prototype : HTMLInputElement.prototype; Object.getOwnPropertyDescriptor(proto, 'value').set.call(e, ${JSON.stringify(value)}); e.dispatchEvent(new Event('input', { bubbles:true })); e.dispatchEvent(new Event('change', { bubbles:true })); })()`); await pause(40) }
@@ -43,5 +53,5 @@ export async function browserChecks(folder = 'admin') {
   async function finish(extra = {}) { assert.deepEqual(errors, [], 'Browser runtime errors'); await writeFile(path.join(output, 'results.json'), JSON.stringify({ passed: checks.length, checks, errors, ...extra }, null, 2)); console.log(`${checks.length} checks passed. Artifacts: ${output}`) }
   async function close() { await send('Page.close').catch(() => {}); ws.close() }
   await send('Page.enable'); await send('Runtime.enable'); await send('Browser.setDownloadBehavior', { behavior: 'allow', downloadPath: downloads })
-  return { origin, output, send, pause, evaluate, navigate, route, click, fill, submit, contains, escape, tab, screenshot, viewport, check, download, finish, close }
+  return { origin, output, send, pause, evaluate, navigate, reload, route, click, fill, submit, contains, escape, tab, screenshot, viewport, check, download, finish, close }
 }

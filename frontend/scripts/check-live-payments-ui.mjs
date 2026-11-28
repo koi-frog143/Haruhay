@@ -73,7 +73,7 @@ async function showReview(reference, filter) {
 try {
   await b.viewport(1440)
   await login(owner,password)
-  resident=(await api('/owner/admissions')).data.find(row=>row.status==='APPROVED'&&row.email.startsWith('resident-'))
+  resident=(await api('/owner/admissions')).data.find(row=>row.tenancy_status==='ACTIVE'&&row.email.startsWith('resident-'))
   assert.ok(resident)
   await b.check('Owner posts an agreement-based bill',async()=>{
     await b.navigate('/admin/billing');await button('Post monthly bill')
@@ -81,7 +81,7 @@ try {
     await b.fill('dialog input[name=period]',period)
     await b.fill('dialog input[name=dueDate]',period+'-15')
     await button('Post bill','dialog')
-    await text('Monthly bill is posted')
+    await wait('!document.querySelector("dialog[open]")')
     bill=(await api('/owner/bills')).data.find(record=>record.application_id===resident.id&&record.period===period)
     assert.ok(bill.total>1000);assert.equal(bill.total,bill.balance)
   })

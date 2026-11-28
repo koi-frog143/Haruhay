@@ -21,7 +21,7 @@ async function button(label,scope=''){
   await b.evaluate('(()=>{const e='+condition+';e.focus();e.click()})()')
   await b.pause()
 }
-async function login(email,password){await b.navigate('/login');await api('/auth/logout',{});await b.send('Page.reload');await wait('Boolean(document.querySelector("input[name=password]"))');await b.fill('input[name=email]',email);await b.fill('input[name=password]',password);await b.submit('form');await wait('Boolean(document.querySelector(".admin-heading,.resident-page-heading,.guard-shell"))')}
+async function login(email,password){await b.navigate('/login');await api('/auth/logout',{});await b.reload();await wait('Boolean(document.querySelector("input[name=password]"))');await b.fill('input[name=email]',email);await b.fill('input[name=password]',password);await b.submit('form');await wait('Boolean(document.querySelector(".admin-heading,.resident-page-heading,.guard-shell"))')}
 async function geometry(){await wait('[...document.images].every(i=>i.complete&&i.naturalWidth>0)');assert.equal(await b.evaluate('document.documentElement.scrollWidth>innerWidth+1'),false)}
 async function records(isStaff=false){return (await api('/logbook/records'+(isStaff?'?property='+property:''))).data}
 async function readQr(){
@@ -37,7 +37,7 @@ const residentPassword='Browser-resident-password42'
 try{
   await b.viewport(1440)
   await login(owner,ownerPassword)
-  resident=(await api('/owner/admissions')).data.find(a=>a.status==='APPROVED'&&a.email.startsWith('resident-'));assert.ok(resident)
+  resident=(await api('/owner/admissions')).data.find(a=>a.tenancy_status==='ACTIVE'&&a.email.startsWith('resident-'));assert.ok(resident)
   property=(await api('/logbook/properties')).data[0].id
   await b.check('Resident can invite from the old direct route with just name and purpose',async()=>{
     await login(resident.email,residentPassword);await b.navigate('/resident/logbook/register');await text('Invite a guest')
@@ -76,7 +76,7 @@ try{
     await login(resident.email,residentPassword);await b.navigate('/resident/logbook');await text('Front desk is closed on the planned date.')
     await button('Share pass');const firstQr=await readQr()
     const firstLink=await b.evaluate('document.querySelector("dialog input[readonly]").value')
-    await b.screenshot('1440-resident-share');await b.escape();await b.send('Page.reload');await text('Share pass');await button('Share pass')
+    await b.screenshot('1440-resident-share');await b.escape();await b.reload();await text('Share pass');await button('Share pass')
     assert.ok(await readQr()===firstQr,'Reopening preserves the QR')
     assert.ok(await b.evaluate('document.querySelector("dialog input[readonly]").value')===firstLink,'Reopening preserves the link')
     await button('Replace pass','dialog');await button('Confirm replacement','dialog')
@@ -97,12 +97,12 @@ try{
       await b.viewport(width);await b.navigate(sharedRoute);await text('Show this pass and your ID at the front desk.')
       assert.ok(await readQr()===token,'Guest displays the current QR');await geometry();await b.screenshot(width+'-guest-pass')
     }
-    await b.send('Page.reload');await text('Valid until');assert.ok(await readQr()===token,'Refresh preserves the guest QR')
+    await b.reload();await text('Valid until');assert.ok(await readQr()===token,'Refresh preserves the guest QR')
     assert.equal((await api('/logbook/properties/'+property+'/scan',{token})).status,401)
   })
   await b.check('Real guard account opens the property logbook and cannot access other workspaces',async()=>{
     await login(owner,ownerPassword);await b.navigate('/admin/logbook');await text('QR Browser Visitor')
-    await button('Manage guards');await b.fill('dialog input[name=fullName]','Browser Guard');await b.fill('dialog input[name=email]',guardEmail);await b.fill('dialog input[name=password]',guardPassword);await b.click('dialog input[name=canReview]');await b.submit('dialog form');await text(guardEmail);await b.escape()
+    await button('Manage guards');await wait('Boolean(document.querySelector("dialog input[name=name]"))');await b.fill('dialog input[name=name]','Browser Guard');await b.fill('dialog input[name=email]',guardEmail);await b.fill('dialog input[name=password]',guardPassword);await b.click('dialog input[name=canReview]');await b.submit('dialog form');await text(guardEmail);await b.escape();await wait('!document.querySelector("dialog[open]")')
     await login(guardEmail,guardPassword);await text('Front desk');assert.equal(await b.evaluate('location.hash'),'#/guard/logbook');assert.equal((await api('/owner/bills')).status,403);assert.equal((await api('/resident/bills')).status,403)
     await b.navigate('/admin/billing');await text('Front desk');assert.equal(await b.evaluate('location.hash'),'#/guard/logbook')
   })

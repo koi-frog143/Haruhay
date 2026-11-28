@@ -4,7 +4,7 @@ import {readFile} from 'node:fs/promises'
 import path from 'node:path'
 import {browserChecks} from './browser-check-client.mjs'
 const b=await browserChecks('approval-billing')
-const email='polish-'+Date.now()+'@example.test',password='Browser-polish-password42',name='Polished Applicant'
+const stamp=Date.now(), email='polish-'+stamp+'@example.test',password='Browser-polish-password42',name='Polished Applicant '+stamp, roomLabel='Selected private room '+stamp
 async function wait(expression){for(let n=0;n<120;n++){if(await b.evaluate(expression))return;await b.pause(100)}throw Error('Timed out '+expression+'\n'+await b.evaluate('document.body.innerText'))}
 async function text(value){await wait('document.body.innerText.includes('+JSON.stringify(value)+')')}
 async function post(endpoint,body){return b.evaluate(`(async()=>{const csrf=await(await fetch('/api/auth/csrf')).json();const r=await fetch('/api'+${JSON.stringify(endpoint)},{method:'POST',headers:{[csrf.headerName]:csrf.token,'Content-Type':'application/json'},body:JSON.stringify(${JSON.stringify(body)})});const data=r.status===204?null:await r.json();if(!r.ok)throw Error(JSON.stringify(data));return data})()`)}
@@ -16,11 +16,11 @@ try{
   await login(process.env.UI_OWNER_EMAIL||'owner@onboarding.test',process.env.DEV_OWNER_PASSWORD)
   const property=(await get('/owner/properties'))[0]
   roomId=(await post('/owner/rooms',{propertyId:property.id,label:'Polished room '+Date.now(),capacity:1})).id
-  const listing={version:1,label:'Selected private room',capacity:1,roomType:'PRIVATE',description:'A quiet room for your stay.',published:true,acceptingApplications:true,pricingBasis:'PER_ROOM',monthlyRent:2750,applicantMonthlyQuote:null,securityDeposit:2750,advanceMonths:1,inclusions:'Private bathroom, desk and bed',houseRules:'Quiet hours after 10 pm',charges:[{name:'Internet',basis:'FIXED_MONTHLY',amount:150,notes:'Monthly internet access'},{name:'Electricity',basis:'USAGE_BASED',amount:null,notes:'Metered usage billed separately'}]}
+  const listing={version:1,label:roomLabel,capacity:1,roomType:'PRIVATE',description:'A quiet room for your stay.',published:true,acceptingApplications:true,pricingBasis:'PER_ROOM',monthlyRent:2750,applicantMonthlyQuote:null,securityDeposit:2750,advanceMonths:1,inclusions:'Private bathroom, desk and bed',houseRules:'Quiet hours after 10 pm',charges:[{name:'Internet',basis:'FIXED_MONTHLY',amount:150,notes:'Monthly internet access'},{name:'Electricity',basis:'USAGE_BASED',amount:null,notes:'Metered usage billed separately'}]}
   await post('/owner/rooms/'+roomId+'/details',listing);await post('/auth/logout',{});await b.navigate('/register');await wait('Boolean(document.querySelector("select[name=propertyId]"))')
   await b.fill('input[name=fullName]',name);await b.fill('input[name=contact]','09171234567');await b.fill('input[name=email]',email);await b.fill('input[name=password]',password);await b.fill('select[name=propertyId]',property.id)
-  await wait('[...document.querySelectorAll(".room-card")].some(c=>c.textContent.includes("Selected private room"))')
-  await b.evaluate('[...document.querySelectorAll(".room-card")].find(c=>c.textContent.includes("Selected private room")).querySelector(".admin-primary").click()');await b.pause()
+  await wait('[...document.querySelectorAll(".room-card")].some(c=>c.textContent.includes('+JSON.stringify(roomLabel)+'))')
+  await b.evaluate('[...document.querySelectorAll(".room-card")].find(c=>c.textContent.includes('+JSON.stringify(roomLabel)+')).querySelector(".admin-primary").click()');await b.pause()
   await b.check('Room selection and consent summary are readable at desktop and narrow sizes',async()=>{
     for(const width of [1440,390]){await b.viewport(width);await b.evaluate('document.querySelector(".room-review-summary").scrollIntoView({block:"center"})');await geometry();await b.screenshot(width+'-signup-summary')}
     await b.click('input[name=acceptedTerms]');await b.submit('form[aria-label="Create your account"]');await text('Your application is on its way')
@@ -42,7 +42,7 @@ try{
     await b.fill('dialog textarea[name=reason]','Confirmed the selected room and accepted pricing.');await b.submit('dialog form');await wait('!document.querySelector("dialog[open]")')
   })
   await b.check('Successful approval appears as a floating owner notification',async()=>{
-    await text('Polished Applicant approved.');assert.equal(await b.evaluate('Boolean(document.querySelector(".admin-toast[role=status]"))'),true)
+    await text(name+' approved.');assert.equal(await b.evaluate('Boolean(document.querySelector(".admin-toast[role=status]"))'),true)
     assert.equal(await b.evaluate('Boolean(document.querySelector(".onboarding-content > .form-notice"))'),false)
     await b.screenshot('390-approval-toast')
   })
@@ -50,10 +50,10 @@ try{
   await b.check('Posting a bill uses the accepted amount and shows the owner balance',async()=>{
     await b.evaluate('[...document.querySelectorAll("button")].find(b=>b.textContent==="Post monthly bill").click()');await wait('Boolean(document.querySelector("dialog[open]"))')
     await b.fill('dialog select',appId);await b.fill('dialog input[name=period]','2026-11');await b.fill('dialog input[name=dueDate]','2026-11-25')
-    await b.contains('2,900.00');await b.screenshot('390-post-monthly-bill');await b.submit('dialog form');await wait('!document.querySelector("dialog[open]")');await text('Monthly bill is posted')
+    await b.contains('2,900.00');await b.screenshot('390-post-monthly-bill');await b.submit('dialog form');await wait('!document.querySelector("dialog[open]")')
     const bills=await get('/owner/bills');assert.equal(bills.filter(row=>row.application_id===appId).length,1)
     await post('/owner/bills',{applicationId:appId,period:'2026-11',dueDate:'2026-11-25'});assert.equal((await get('/owner/bills')).filter(row=>row.application_id===appId).length,1)
-    const summary=await b.evaluate('(async()=>{const m=await import("/src/billingData.ts");return m.getPropertyBilling()})()');assert.equal(summary.balances.find(row=>row.resident.id===appId).balance,2900);assert.equal(summary.collected,0)
+    const summary=await b.evaluate('(async()=>{const m=await import("/src/billingData.ts");return m.getPropertyBilling()})()');assert.equal(summary.balances.find(row=>row.resident.id===appId).balance,2900);assert.equal(summary.balances.find(row=>row.resident.id===appId).paid,0)
   })
   await login(email,password);await b.navigate('/resident/payments')
   await b.check('Resident billing matches the posted accepted rent without fabricating payments',async()=>{

@@ -6,6 +6,7 @@ type Props = {
   dismissOnBackdrop?: boolean
   preserveDraftOnClose?: boolean
   protectEdits?: boolean
+  hasUnsavedChanges?: boolean
   busy?: boolean
   className?: string
   footerNote?: string
@@ -15,11 +16,11 @@ type Props = {
   children: ReactNode
 }
 
-export default function ResidentDialog({ title, eyebrow, onClose, children, footerNote, dismissOnBackdrop = true, preserveDraftOnClose = false, protectEdits = true, busy = false, className = '' }: Props) {
+export default function ResidentDialog({ title, eyebrow, onClose, children, footerNote, dismissOnBackdrop = true, preserveDraftOnClose = false, protectEdits = true, hasUnsavedChanges, busy = false, className = '' }: Props) {
   const dialog = useRef<HTMLDialogElement>(null)
   const opener = useRef(document.activeElement)
   const titleElement = useRef<HTMLHeadingElement>(null)
-  const edited = useRef(false)
+  const editedForms = useRef(new Set<HTMLFormElement>())
   const [confirmDiscard, setConfirmDiscard] = useState(false)
   const titleId = useId()
   const descriptionId = useId()
@@ -41,16 +42,20 @@ export default function ResidentDialog({ title, eyebrow, onClose, children, foot
     }
   }, [])
   const note = footerNote ?? 'Changes here are saved in this browser session.'
+  const dirty = () => hasUnsavedChanges ?? editedForms.current.size > 0
   function markEdited(target: EventTarget) {
-    if (protectEdits && target instanceof HTMLElement && target.closest('form')) edited.current = true
+    const form = target instanceof HTMLElement ? target.closest('form') : null
+    if (protectEdits && form) editedForms.current.add(form)
   }
   function requestClose() {
     if (busy) return
     if (confirmDiscard) { setConfirmDiscard(false); return }
-    if (edited.current && !preserveDraftOnClose) { setConfirmDiscard(true); return }
+    if (dirty() && !preserveDraftOnClose) { setConfirmDiscard(true); return }
     onClose()
   }
-  return <dialog ref={dialog} className={`resident-dialog ux-dialog ${className}`} aria-labelledby={titleId} aria-describedby={note ? descriptionId : undefined} onCancel={event => { event.preventDefault(); requestClose() }} onClick={event => { if (dismissOnBackdrop && !edited.current && event.target === event.currentTarget) requestClose() }} onInputCapture={event => markEdited(event.target)} onChangeCapture={event => markEdited(event.target)} onKeyDown={event => {
+  return <dialog ref={dialog} className={`resident-dialog ux-dialog ${className}`} aria-labelledby={titleId} aria-describedby={note ? descriptionId : undefined} onCancel={event => { event.preventDefault(); requestClose() }} onClick={event => { if (dismissOnBackdrop && !dirty() && event.target === event.currentTarget) requestClose() }} onInputCapture={event => markEdited(event.target)} onChangeCapture={event => markEdited(event.target)} onResetCapture={event => {
+    if (event.target instanceof HTMLFormElement) editedForms.current.delete(event.target)
+  }} onKeyDown={event => {
     if (event.key === 'Escape') {
       event.preventDefault()
       event.stopPropagation()
