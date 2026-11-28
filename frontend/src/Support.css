@@ -1,0 +1,9 @@
+.support-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-block: 10px; }
+.support-summary { display: grid; align-items: start; justify-items: start; gap: 4px; overflow-wrap: anywhere; }
+.support-summary h3, .support-summary p, .support-message { margin: 0; }
+.support-conversation { margin-block-start: 18px; }
+.support-message { white-space: pre-wrap; overflow-wrap: anywhere; }
+.support-refresh { justify-self: start; }
+.support-inbox { display: grid; gap: 16px; margin-top: 26px; }
+.support-inbox .support-actions { margin: 0; }
+.support-filters { grid-template-columns: repeat(auto-fit, minmax(min(100%, 185px), 1fr)); align-items: end; }

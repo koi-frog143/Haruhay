@@ -13,17 +13,21 @@ import { getVisitorRequests } from './visitorData'
 import { usePreviewData } from './previewStore'
 import { getSettings } from './settingsData'
 
-export type AdminSection = 'Dashboard' | 'Residents' | 'Visitor logbook' | 'Maintenance' | 'Holding station' | 'Billing & payments' | 'Announcements' | 'Settings' | 'Applications' | 'Property & rooms'
+export type AdminSection = 'Dashboard' | 'Residents' | 'Visitor logbook' | 'Maintenance' | 'Holding station' | 'Billing & payments' | 'Announcements' | 'Settings' | 'Applications' | 'Property & rooms' | 'Support'
 const navigation: Array<{ label: AdminSection; href: string; icon: string }> = [
   { label: 'Dashboard', href: '#/admin/dashboard', icon: 'imgIconHome' }, { label: 'Residents', href: '#/admin/residents', icon: 'imgIconUsers' }, { label: 'Visitor logbook', href: '#/admin/logbook', icon: 'imgIconBook' }, { label: 'Maintenance', href: '#/admin/maintenance', icon: 'imgIconWrench' }, { label: 'Holding station', href: '#/admin/holding-station', icon: 'imgIconBox' }, { label: 'Billing & payments', href: '#/admin/billing', icon: 'imgIconWallet' }, { label: 'Announcements', href: '#/admin/announcements', icon: 'imgIconMegaphone' }, { label: 'Settings', href: '#/admin/settings', icon: 'imgIconSettings' },
 ]
 type Props = { active: AdminSection; node: string; children: ReactNode; notice?: string; onDismissNotice?: () => void }
 export default function AdminLayout({ active, node, children, notice = '', onDismissNotice }: Props) {
   const live = getWorkspaceSession()
-  const items = live ? [...navigation, { label: 'Applications' as const, href: '#/admin/applications', icon: 'imgIconUsers' }, { label: 'Property & rooms' as const, href: '#/admin/property', icon: 'imgIconSettings' }] : navigation
+  const items: typeof navigation = live ? [...navigation,
+    { label: 'Applications', href: '#/admin/applications', icon: 'imgIconUsers' },
+    { label: 'Property & rooms', href: '#/admin/property', icon: 'imgIconSettings' },
+    { label: 'Support', href: '#/admin/support', icon: 'imgIconBook' },
+  ] : navigation
   const groups: { title: string; links: AdminSection[] }[] = [
     { title: 'Overview', links: ['Dashboard', 'Applications', 'Residents'] },
-    { title: 'Operations', links: ['Visitor logbook', 'Maintenance', 'Holding station', 'Billing & payments'] },
+    { title: 'Operations', links: ['Visitor logbook', 'Maintenance', 'Holding station', 'Billing & payments', 'Support'] },
     { title: 'Property', links: ['Property & rooms', 'Announcements', 'Settings'] },
   ]
   const [liveError, setLiveError] = useState('')

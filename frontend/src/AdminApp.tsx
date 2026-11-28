@@ -6,6 +6,7 @@ import AdminSettings from './AdminSettings'
 import HoldingStation from './HoldingStation'
 import LiveLogbook from './LiveLogbook'
 import OwnerResidentAccess from './OwnerResidentAccess'
+import OwnerSupportInbox from './OwnerSupportInbox'
 import LivePaymentApprovals from './LivePaymentApprovals'
 import PaymentReceipt from './PaymentReceipt'
 import LiveMaintenance from './LiveMaintenance'
@@ -32,6 +33,7 @@ export default function AdminApp() {
   if (path === '/admin/payments/approvals') return isLiveWorkspace() ? <LivePaymentApprovals residentId={residentId} /> : <AdminPayments residentId={residentId} />
   if (path.startsWith('/admin/payments/receipt/') && isLiveWorkspace()) return <PaymentReceipt role="owner" id={recordId('/admin/payments/receipt/')} />
   if (path === '/admin/announcements') return <AdminAnnouncements />
+  if (path === '/admin/support' && isLiveWorkspace()) return <OwnerSupportInbox />
   if (path === '/admin/settings') return <AdminSettings />
   return <AdminLayout active="Dashboard" node="18:1676"><AdminEmpty title="Admin page not found">Choose an admin section from the navigation.</AdminEmpty></AdminLayout>
 }
