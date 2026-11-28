@@ -9,6 +9,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -32,20 +33,23 @@ import org.springframework.web.filter.OncePerRequestFilter;
 public class SecurityConfig {
     private static final class AccountUser extends User {
         private final UUID accountId;
-        AccountUser(UUID id,String email,String hash,String role) {
+        private final long credentialVersion;
+        AccountUser(UUID id,String email,String hash,String role,long credentialVersion) {
             super(email,hash,List.of(new SimpleGrantedAuthority("ROLE_"+role)));
             this.accountId=id;
+            this.credentialVersion=credentialVersion;
         }
     }
 
     @Bean PasswordEncoder passwords() { return new BCryptPasswordEncoder(12); }
     @Bean UserDetailsService users(JdbcTemplate db) {
-        return email -> db.query("SELECT id,email,password_hash,role FROM accounts WHERE email=?",
+        return email -> db.query("SELECT id,email,password_hash,role,credential_version FROM accounts WHERE email=?",
             (r,n) -> new AccountUser(r.getObject("id",UUID.class),r.getString("email"),
-                r.getString("password_hash"),r.getString("role")), email.trim().toLowerCase(java.util.Locale.ROOT))
+                r.getString("password_hash"),r.getString("role"),r.getLong("credential_version")), email.trim().toLowerCase(java.util.Locale.ROOT))
             .stream().findFirst().orElseThrow(() -> new UsernameNotFoundException("Invalid credentials"));
     }
-    @Bean SecurityFilterChain securityFilterChain(HttpSecurity http, AttemptLimiter limiter, JdbcTemplate db) throws Exception {
+    @Bean SecurityFilterChain securityFilterChain(HttpSecurity http, AttemptLimiter limiter,
+            @Qualifier("passwordRecoveryIpLimiter") AttemptLimiter recoveryLimiter, JdbcTemplate db) throws Exception {
         // Masked, session-backed CSRF tokens come from /api/auth/csrf, including after login/logout.
         http.authorizeHttpRequests(a -> a
             .requestMatchers("/api/public/**", "/api/auth/csrf", "/api/auth/login").permitAll()
@@ -82,7 +86,8 @@ public class SecurityConfig {
                     throws ServletException,IOException {
                 var authentication=SecurityContextHolder.getContext().getAuthentication();
                 if (authentication!=null && authentication.getPrincipal() instanceof AccountUser user &&
-                    db.queryForObject("SELECT count(*) FROM accounts WHERE id=? AND email=?",Integer.class,user.accountId,user.getUsername())==0) {
+                    db.queryForObject("SELECT count(*) FROM accounts WHERE id=? AND email=? AND credential_version=?",
+                        Integer.class,user.accountId,user.getUsername(),user.credentialVersion)==0) {
                     var session=q.getSession(false);
                     if (session!=null) session.invalidate();
                     SecurityContextHolder.clearContext();
@@ -93,12 +98,13 @@ public class SecurityConfig {
         http.addFilterBefore(new OncePerRequestFilter() {
             @Override protected void doFilterInternal(HttpServletRequest q, HttpServletResponse s, FilterChain chain)
                     throws ServletException, IOException {
+                boolean recoveryRequest=q.getRequestURI().equals("/api/public/password-reset/request");
                 if ((q.getRequestURI().startsWith("/api/public/") && !q.getRequestURI().endsWith("/health"))
                         || q.getRequestURI().equals("/api/auth/login") || q.getRequestURI().equals("/api/account/verification")
                         || q.getRequestURI().equals("/api/resident/profile/email")
                         || q.getRequestURI().matches("/api/(account|owner)/admissions/[^/]+/(activate|resend)")
                         || q.getRequestURI().matches("/api/logbook/properties/[^/]+/(scan|visits/[^/]+/movement)")) {
-                    if (!limiter.allow(q.getRemoteAddr())) {
+                    if (!(recoveryRequest?recoveryLimiter:limiter).allow(q.getRemoteAddr())) {
                         s.setStatus(429); s.setHeader("Retry-After", "600"); s.setContentType("application/json");
                         s.getWriter().write("{\"message\":\"Too many attempts. Try again in ten minutes.\"}"); return;
                     }

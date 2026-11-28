@@ -52,8 +52,11 @@ Existing account passwords are hashes and cannot be recovered. Changing DEV_OWNE
 
 - Email-verification link: **.local/mail/ACCOUNT_ID.txt**
 - Approval notification (no action required): **.local/mail/ACCOUNT_ID.approval.txt**
+- Password reset link requested from **Forgot password?** on live sign-in: **.local/mail/ACCOUNT_ID.password-reset.txt**
 
 Each file identifies its recipient. The account ID is available from GET /api/account after login. Open the verification link, then wait for owner approval. Development files are ignored by Git; keep them private.
+
+Password recovery uses the same SMTP configuration as account verification. A reset link expires after 30 minutes by default. Set `PASSWORD_RESET_TTL` to change its lifetime, for example `15m`. Completing a reset signs out the current browser and invalidates older sessions for that account on their next request.
 
 ### Gmail setup for earldomingo165@gmail.com
 

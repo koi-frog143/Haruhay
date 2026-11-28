@@ -105,6 +105,7 @@ public class ResidentProfileController {
             throw emailInUse();
         }
         db.update("DELETE FROM account_email_changes WHERE account_id=?",account);
+        db.update("DELETE FROM account_password_resets WHERE account_id=?",account);
         audit(account,"SIGN_IN_EMAIL_CHANGED",current+" → "+address);
         return Map.of("message","Email updated. Sign in with your new email address.");
     }

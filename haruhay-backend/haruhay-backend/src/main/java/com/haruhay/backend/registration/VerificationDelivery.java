@@ -29,6 +29,15 @@ public class VerificationDelivery {
             "\nIf you did not request this change, you can ignore this message.";
         return send(account,email,"Confirm your new Haruhay sign-in email",text,".email-change.txt");
     }
+    public String deliverPasswordReset(UUID account,String email,String token) {
+        String link=frontend.replaceAll("/+$","")+"/#/reset-password?token="+token;
+        return send(account,email,"Reset your Haruhay password",
+            "Choose a new Haruhay password using this link:\n"+link+
+            "\nIf you did not request a password reset, you can ignore this message.",".password-reset.txt");
+    }
+    public boolean isLocalDelivery() {
+        return "local-file".equals(mode) && environment.matchesProfiles("dev","test");
+    }
     public String deliverApproval(UUID account,String email,String property,String room) {
         String text="Your Haruhay application has been approved.\nProperty: "+property+"\nRoom: "+room+
             "\nYour tenancy is now active. No additional verification or activation code is needed.\nView your account: "+frontend+"/#/account/status";
@@ -37,7 +46,7 @@ public class VerificationDelivery {
     public String deliverUpdate(UUID account,String email,String subject,String text) { return send(account,email,subject,text,".update.txt"); }
     private String send(UUID account,String email,String subject,String text,String suffix) {
         try {
-            if (mode.equals("local-file") && environment.matchesProfiles("dev", "test")) {
+            if (isLocalDelivery()) {
                 Path dir=Path.of(folder); Files.createDirectories(dir);
                 Files.writeString(dir.resolve(account+suffix), "LOCAL DEVELOPMENT ONLY — no email sent.\nTo: "+email+"\n"+text+"\n",
                     StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
