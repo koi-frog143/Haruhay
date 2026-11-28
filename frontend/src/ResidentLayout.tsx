@@ -4,6 +4,7 @@ import type { FormEvent, MouseEvent, ReactNode } from 'react'
 import './ResidentDashboard.css'
 import { getResidentProfile, profileInitials } from './profileData'
 import ResidentTools from './ResidentTools'
+import LiveResidentSupport from './LiveResidentSupport'
 import ResidentInbox from './ResidentInbox'
 import { getNotifications } from './residentToolsData'
 import { api } from './registrationApi'
@@ -232,7 +233,8 @@ export default function ResidentLayout({ activeSection, breadcrumb, notice, onNo
       <div className="ux-workspace-content" id="resident-main" tabIndex={-1}>{children}</div>
       {!limited && tool && (live && tool === 'notifications'
         ? <ResidentInbox onClose={() => setTool(null)} onUnreadChange={setLiveUnread} />
-        : <ResidentTools mode={tool} initialQuery={search} onClose={() => setTool(null)} />)}
+        : live && tool === 'support' ? <LiveResidentSupport onClose={() => setTool(null)} />
+          : <ResidentTools mode={tool} initialQuery={search} onClose={() => setTool(null)} />)}
 
       <div className={'resident-status ux-toast ' + (notice ? 'is-visible' : '')} role="status" aria-live="polite">
         {notice}
