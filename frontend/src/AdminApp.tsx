@@ -5,6 +5,7 @@ import { AdminAnnouncements, AdminBilling, AdminDashboard, AdminLogbook, AdminMa
 import AdminSettings from './AdminSettings'
 import HoldingStation from './HoldingStation'
 import LiveLogbook from './LiveLogbook'
+import OwnerResidentAccess from './OwnerResidentAccess'
 import LivePaymentApprovals from './LivePaymentApprovals'
 import PaymentReceipt from './PaymentReceipt'
 import LiveMaintenance from './LiveMaintenance'
@@ -21,6 +22,7 @@ export default function AdminApp() {
   if (path === '/admin/residents') return <AdminResidents />
   if (path.startsWith('/admin/residents/')) return <AdminResidentDetails id={recordId('/admin/residents/')} />
   if (path === '/admin/logbook') return isLiveWorkspace() ? <LiveLogbook staff residentId={residentId} /> : <AdminLogbook residentId={residentId} />
+  if (path === '/admin/logbook/resident-access' && isLiveWorkspace()) return <OwnerResidentAccess initialProperty={new URLSearchParams(query).get('property') ?? ''} />
   if (path === '/admin/maintenance') return isLiveWorkspace() ? <LiveMaintenance role="owner" /> : <AdminMaintenance />
   if (path.startsWith('/admin/maintenance/')) return isLiveWorkspace()
     ? <LiveMaintenance role="owner" id={recordId('/admin/maintenance/')} />

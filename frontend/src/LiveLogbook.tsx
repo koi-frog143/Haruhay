@@ -9,6 +9,7 @@ import AdminLayout from './AdminLayout'
 import ResidentLayout from './ResidentLayout'
 import ResidentDialog from './ResidentDialog'
 import PropertyStaffRoster from './PropertyStaffRoster'
+import RecordResidentMovement from './RecordResidentMovement'
 import { useFormFeedback } from './FormFeedback'
 import { ShareVisitorLink, VisitorPassCard } from './GuestVisitorPass'
 import logo from './landing-artwork.json'
@@ -31,7 +32,7 @@ export default function LiveLogbook({staff=false,register=false,residentId=''}:{
   const [properties,setProperties]=useState<LogProperty[]>([]),[property,setProperty]=useState(''),[records,setRecords]=useState<VisitorRecord[]>([]),[hosts,setHosts]=useState<Host[]>([])
   const [error,setError]=useState(''),[notice,setNotice]=useState(''),[loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[query,setQuery]=useState(''),[filter,setFilter]=useState<VisitState|''>('')
   const [declining,setDeclining]=useState(false)
-  const [dialog,setDialog]=useState<'scan'|'request'|'walkin'|'verify'|'pass'|'review'|'amend'|'guards'|'history'|'activity'|'cancel'|null>(register?'request':null),[selected,setSelected]=useState<VisitorRecord|null>(null)
+  const [dialog,setDialog]=useState<'scan'|'request'|'walkin'|'verify'|'pass'|'review'|'amend'|'guards'|'history'|'activity'|'cancel'|'resident-movement'|null>(register?'request':null),[selected,setSelected]=useState<VisitorRecord|null>(null)
   const [scanToken,setScanToken]=useState(''),[pass,setPass]=useState<SharedPass|null>(null),[passAction,setPassAction]=useState<'replace'|'revoke'|null>(null),[history,setHistory]=useState<History[]>([])
   const [propertyRetry,setPropertyRetry]=useState(0)
   const searchInput=useRef<HTMLInputElement>(null)
@@ -101,7 +102,10 @@ export default function LiveLogbook({staff=false,register=false,residentId=''}:{
   return <Frame staff={staff} guard={guard} notice={notice} setNotice={setNotice}><div className={'visitor-live'+(!staff?' resident-content':'')}>
     <header className="visitor-heading resident-page-heading">
       <div><h1>{staff?'Visitor logbook':'Your logbook'}</h1><p>{staff?'Review visits and confirm arrivals and departures for the selected property.':'Invite a guest, then share their pass when the visit is approved.'}</p></div>
-      {!staff&&<button className="admin-primary" onClick={()=>setDialog('request')}>Invite a guest</button>}
+      {!staff&&<div className="visitor-actions">
+        <a className="admin-secondary" href="#/resident/logbook/access-history">Access history</a>
+        <button className="admin-primary" onClick={()=>setDialog('request')}>Invite a guest</button>
+      </div>}
     </header>
     {staff&&<>
       <div className="visitor-actions visitor-desk-actions">
@@ -109,11 +113,13 @@ export default function LiveLogbook({staff=false,register=false,residentId=''}:{
         <button className="admin-secondary" disabled={!property||busy} onClick={findGuest}>Find guest</button>
         <button className="admin-secondary" disabled={!property||busy} onClick={()=>focusQueue('CHECKED_IN')}>Who’s inside?</button>
         {canReview&&<button className="admin-secondary" disabled={!property||busy} onClick={()=>setDialog('walkin')}>Register walk-in</button>}
+        <button className="admin-secondary" disabled={!property||busy} onClick={()=>setDialog('resident-movement')}>Record resident entry or exit</button>
       </div>
       <div className="visitor-property-bar">
         <label>Property <select aria-label="Logbook property" disabled={busy} value={property} onChange={e=>{scope.current++;clearVisitorRecords();setRecords([]);setHosts([]);close();setQuery('');setFilter('');setProperty(e.target.value)}}>{properties.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
         <button className="admin-secondary" disabled={!property||busy} onClick={()=>void run(async()=>{setHistory(await api<History[]>('/logbook/properties/'+property+'/activity'));setDialog('activity')})}>Property activity</button>
         {!guard&&<button className="admin-secondary" disabled={!property||busy} onClick={()=>setDialog('guards')}>Manage guards</button>}
+        {!guard&&property&&<a className="admin-secondary" href={`#/admin/logbook/resident-access?property=${property}`}>Resident access history</a>}
       </div>
     </>}
     <div className="visitor-metrics" aria-label="Visit queues">{(Object.entries(queueIcons) as [VisitState,string][]).map(([state,icon])=><button type="button" className="visitor-queue" key={state} aria-pressed={filter===state} onClick={()=>filter===state?setFilter(''):focusQueue(state)}><img src={'./assets/dashboard/'+icon} alt=""/><strong>{scoped.filter(r=>r.display_status===state).length}</strong><span>{state==='PENDING'&&staff&&canReview?'Needs review':visitLabels[state]}</span></button>)}</div>
@@ -199,6 +205,8 @@ export default function LiveLogbook({staff=false,register=false,residentId=''}:{
   {dialog==='guards'&&<ResidentDialog busy={busy} title="Property guards" eyebrow="NARROW LOGBOOK ACCESS" onClose={close} footerNote="Dedicated guard accounts access only the assigned property’s logbook. Share credentials privately.">
     <PropertyStaffRoster property={property} kind="guard" busy={busy} setBusy={setBusy} />
   </ResidentDialog>}
+  {dialog==='resident-movement'&&<RecordResidentMovement property={property} propertyName={properties.find(item=>item.id===property)?.name??''}
+    onClose={close} onRecorded={message=>{close();setNotice(message)}} />}
   </Frame>
 }
 function VisitBadge({record}:{record:VisitorRecord}){

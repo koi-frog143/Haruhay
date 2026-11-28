@@ -30,7 +30,7 @@ export function usePreviewData<T>(read: () => T): T {
 export function downloadCsv(filename: string, rows: string[][]) {
   const cell = (value: string) => {
     // Prevent user-entered cells from being evaluated as spreadsheet formulas.
-    const safe = /^[=+@\-\t\r]/u.test(value) ? `'${value}` : value
+    const safe = /^[\t\r\n]/u.test(value) || /^[=+@\-＝＋＠－]/u.test(value.trimStart()) ? `'${value}` : value
     return `"${safe.replaceAll('"', '""')}"`
   }
   downloadBlob(filename, new Blob(['\uFEFF' + rows.map(row => row.map(cell).join(',')).join('\r\n')], { type: 'text/csv;charset=utf-8' }))

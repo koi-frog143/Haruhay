@@ -84,6 +84,9 @@
   line-height: 16px;
 }
 .access-empty { height: 180px; text-align: center !important; }
+.access-location { display: block; overflow-wrap: anywhere; }
+.access-pagination { margin-top: 16px; }
+.visitor-toolbar.access-owner-filters { grid-template-columns: repeat(auto-fit, minmax(min(100%, 145px), 1fr)); }
 
 .access-privacy-note {
   display: flex;
