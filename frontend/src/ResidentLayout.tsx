@@ -67,10 +67,17 @@ export default function ResidentLayout({ activeSection, breadcrumb, notice, onNo
   useEffect(() => {
     if (!liveAccount || limited) return
     let active = true
-    api<{ unread: number }>('/resident/notifications/unread-count').then(result => {
-      if (active) setLiveUnread(current => current ?? result.unread)
-    }).catch(() => { /* The inbox shows an error and retry if records are unavailable. */ })
-    return () => { active = false }
+    let request = 0
+    function refresh(initial: boolean) {
+      const version = ++request
+      api<{ unread: number }>('/resident/notifications/unread-count').then(result => {
+        if (active && version === request) setLiveUnread(current => initial ? current ?? result.unread : result.unread)
+      }).catch(() => { /* The inbox shows an error and retry if records are unavailable. */ })
+    }
+    const preferencesUpdated = () => refresh(false)
+    refresh(true)
+    window.addEventListener('haruhay-notification-preferences-updated', preferencesUpdated)
+    return () => { active = false; window.removeEventListener('haruhay-notification-preferences-updated', preferencesUpdated) }
   }, [liveAccount, limited])
   useEffect(() => {
     const media = window.matchMedia('(max-width: 980px)')

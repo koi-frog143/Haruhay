@@ -2,6 +2,7 @@ export type MonthlyBill = {
   id: string; application_id: string; period: string; due_date: string; rent: number; fixed_charges: number
   total: number; paid: number; balance: number; bill_status: keyof typeof billStatus
   property_name: string; room_label: string
+  billing_grace_days?: number; billing_grace_through?: string
   application_balance: number; application_total: number; application_paid: number
   account_balance: number; account_total: number; account_paid: number
 }

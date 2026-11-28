@@ -15,6 +15,8 @@
 .registration-card p { line-height:1.6; }
 .registration-form { display:grid; gap:16px; max-width:560px; }
 .registration-form label { display:grid; gap:7px; font-size:14px; font-weight:600; }
+.registration-form .settings-check { display:flex; align-items:center; gap:12px; min-height:32px; }
+.settings-check input { flex:0 0 auto; width:18px; height:18px; margin:0; accent-color:var(--blue); }
 .registration-form input:not([type=checkbox]):not([type=radio]):not([type=hidden]),.registration-form select,.registration-form textarea,.registration-link { width:100%; border:1px solid #a8bfd1; border-radius:9px; background:#fff; color:var(--ink); padding:12px; font:inherit; min-height:46px; }
 .registration-shell button { cursor:pointer; }
 .registration-shell button:disabled { opacity:.6; cursor:wait; }

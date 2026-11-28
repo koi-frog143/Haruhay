@@ -8,6 +8,7 @@ import type { Host,LogProperty,SharedPass,VisitorRecord,VisitState } from './vis
 import AdminLayout from './AdminLayout'
 import ResidentLayout from './ResidentLayout'
 import ResidentDialog from './ResidentDialog'
+import PropertyStaffRoster from './PropertyStaffRoster'
 import { useFormFeedback } from './FormFeedback'
 import { ShareVisitorLink, VisitorPassCard } from './GuestVisitorPass'
 import logo from './landing-artwork.json'
@@ -15,7 +16,6 @@ const VisitorScanner=lazy(()=>import('./VisitorScanner'))
 import './LiveLogbook.css'
 
 type Outcome={allowed:boolean;message?:string;record?:VisitorRecord}
-type Guard={id:string;email:string;full_name:string;can_review:boolean;enabled:boolean}
 type History={event:string;occurred_at:string;actor:string;reason:string|null}
 const queueIcons={PENDING:'icon-users-metric.svg',EXPECTED:'icon-book-nav.svg',CHECKED_IN:'icon-user-nav.svg',CHECKED_OUT:'icon-shield.svg'}
 const message=(e:unknown)=>e instanceof Error?e.message:'Unable to save. Check your connection and try again.'
@@ -32,7 +32,7 @@ export default function LiveLogbook({staff=false,register=false,residentId=''}:{
   const [error,setError]=useState(''),[notice,setNotice]=useState(''),[loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[query,setQuery]=useState(''),[filter,setFilter]=useState<VisitState|''>('')
   const [declining,setDeclining]=useState(false)
   const [dialog,setDialog]=useState<'scan'|'request'|'walkin'|'verify'|'pass'|'review'|'amend'|'guards'|'history'|'activity'|'cancel'|null>(register?'request':null),[selected,setSelected]=useState<VisitorRecord|null>(null)
-  const [scanToken,setScanToken]=useState(''),[pass,setPass]=useState<SharedPass|null>(null),[passAction,setPassAction]=useState<'replace'|'revoke'|null>(null),[guards,setGuards]=useState<Guard[]>([]),[history,setHistory]=useState<History[]>([])
+  const [scanToken,setScanToken]=useState(''),[pass,setPass]=useState<SharedPass|null>(null),[passAction,setPassAction]=useState<'replace'|'revoke'|null>(null),[history,setHistory]=useState<History[]>([])
   const [propertyRetry,setPropertyRetry]=useState(0)
   const searchInput=useRef<HTMLInputElement>(null)
   const resultsHeading=useRef<HTMLHeadingElement>(null)
@@ -87,7 +87,6 @@ export default function LiveLogbook({staff=false,register=false,residentId=''}:{
       close();setNotice(action==='APPROVE'?'Visit approved. The resident can share the pass.':'Visit declined. The resident can see your reason.')
     })
   }
-  async function viewGuards(){await run(async()=>{setGuards(await api<Guard[]>('/logbook/properties/'+property+'/guards'));setDialog('guards')})}
   function csv(){downloadCsv('visitor-logbook.csv',[['Visitor','Host','Room','Purpose','Planned date (PHT)','Entry window start (PHT)','Entry window end (PHT)','Status','Actual arrival (PHT)','Actual departure (PHT)'],...visible.map(r=>[r.full_name,r.host_name,r.room_label,r.purpose,r.planned_date||'',philippineTime(r.arrival),philippineTime(r.departure),visitLabel(r),philippineTime(r.checked_in),philippineTime(r.checked_out)])])}
   function visitActions(r:VisitorRecord){
     return <div className="visitor-actions">
@@ -114,7 +113,7 @@ export default function LiveLogbook({staff=false,register=false,residentId=''}:{
       <div className="visitor-property-bar">
         <label>Property <select aria-label="Logbook property" disabled={busy} value={property} onChange={e=>{scope.current++;clearVisitorRecords();setRecords([]);setHosts([]);close();setQuery('');setFilter('');setProperty(e.target.value)}}>{properties.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
         <button className="admin-secondary" disabled={!property||busy} onClick={()=>void run(async()=>{setHistory(await api<History[]>('/logbook/properties/'+property+'/activity'));setDialog('activity')})}>Property activity</button>
-        {!guard&&<button className="admin-secondary" disabled={!property||busy} onClick={()=>void viewGuards()}>Manage guards</button>}
+        {!guard&&<button className="admin-secondary" disabled={!property||busy} onClick={()=>setDialog('guards')}>Manage guards</button>}
       </div>
     </>}
     <div className="visitor-metrics" aria-label="Visit queues">{(Object.entries(queueIcons) as [VisitState,string][]).map(([state,icon])=><button type="button" className="visitor-queue" key={state} aria-pressed={filter===state} onClick={()=>filter===state?setFilter(''):focusQueue(state)}><img src={'./assets/dashboard/'+icon} alt=""/><strong>{scoped.filter(r=>r.display_status===state).length}</strong><span>{state==='PENDING'&&staff&&canReview?'Needs review':visitLabels[state]}</span></button>)}</div>
@@ -197,7 +196,9 @@ export default function LiveLogbook({staff=false,register=false,residentId=''}:{
   {dialog==='verify'&&selected&&<ResidentDialog busy={busy} title={selected.visit_status==='CHECKED_IN'?'Confirm checkout':'Verify check-in'} eyebrow={scanToken?'PASS VERIFIED':'MANUAL VERIFICATION'} onClose={close} footerNote={footer}><Summary record={selected}/><form className="visitor-form" onSubmit={e=>{e.preventDefault();const f=new FormData(e.currentTarget);void run(async()=>{const result=await api<Outcome>('/logbook/properties/'+property+'/visits/'+selected.visit_id+'/movement',{action:selected.visit_status==='CHECKED_IN'?'EXIT':'ENTRY',method:scanToken?'QR':'MANUAL',token:scanToken||null,identityConfirmed:f.get('identity')==='on',idType:f.get('idType')||null,idLastFour:f.get('idLastFour')||null,reason:f.get('reason')||null});if(!result.allowed)throw new Error(result.message);close();setNotice(result.message||'Movement saved.')})}}>{selected.visit_status!=='CHECKED_IN'&&<><label>ID type<input name="idType" required maxLength={80} placeholder="e.g. Driver’s license"/></label><label>Last four ID characters (optional)<input name="idLastFour" maxLength={4} pattern="[A-Za-z0-9]{4}" autoComplete="off"/></label><label className="visitor-check"><input type="checkbox" name="identity" required/>I checked the visitor’s presented identity against this record.</label></>}{!scanToken&&<label>Manual verification reason<textarea name="reason" required maxLength={1000} placeholder="Explain how the visit was identified and verified."/></label>}{error&&<p role="alert">{error}</p>}<button className="admin-primary" disabled={busy}>Confirm {selected.visit_status==='CHECKED_IN'?'checkout':'check-in'}</button></form></ResidentDialog>}
   {dialog==='amend'&&selected&&<ResidentDialog busy={busy} title="Record an audited change" eyebrow="HISTORY IS RETAINED" onClose={close} footerNote={footer}><Summary record={selected}/><form className="visitor-form" onSubmit={e=>{e.preventDefault();const f=new FormData(e.currentTarget);void run(async()=>{await api('/logbook/properties/'+property+'/visits/'+selected.visit_id+'/amend',{action:f.get('action'),reason:f.get('reason')});close();setNotice('Change recorded in visit history.')})}}><label>Action<select name="action"><option value="CORRECTION">Append correction note</option><option value="REVOKE">Revoke pass (open checkout remains available)</option><option value="VOID">Void record (retain entry and exit evidence)</option></select></label><label>Reason<textarea name="reason" required maxLength={1000}/></label>{error&&<p role="alert">{error}</p>}<button className="admin-primary" disabled={busy}>Record change</button></form></ResidentDialog>}
   {(dialog==='activity'||dialog==='history'&&selected)&&<ResidentDialog busy={busy} title={dialog==='activity'?'Recent property activity':'Visit activity history'} eyebrow={dialog==='activity'?'LATEST 250 AUDIT EVENTS':selected!.full_name} onClose={close} footerNote={footer}>{history.map((h,i)=><article className="visitor-card" key={i}><strong>{h.event.replaceAll('_',' ')}</strong><p>{h.actor} · {philippineTime(h.occurred_at)}</p>{h.reason&&<p className="visitor-note">{h.reason}</p>}</article>)}</ResidentDialog>}
-  {dialog==='guards'&&<ResidentDialog busy={busy} title="Property guards" eyebrow="NARROW LOGBOOK ACCESS" onClose={close} footerNote="Dedicated guard accounts access only the assigned property’s logbook. Credentials must be shared privately; this form sends no email."><div className="visitor-form">{guards.map(g=><article className="visitor-card" key={g.id}><strong>{g.full_name}</strong><p>{g.email}</p><div className="visitor-actions"><button className="admin-secondary" disabled={busy} onClick={()=>void run(async()=>{await api('/logbook/properties/'+property+'/guards/'+g.id,{enabled:!g.enabled,canReview:g.can_review});setGuards(await api<Guard[]>('/logbook/properties/'+property+'/guards'))})}>{g.enabled?'Disable':'Enable'}</button><button className="admin-secondary" disabled={busy} onClick={()=>void run(async()=>{await api('/logbook/properties/'+property+'/guards/'+g.id,{enabled:g.enabled,canReview:!g.can_review});setGuards(await api<Guard[]>('/logbook/properties/'+property+'/guards'))})}>{g.can_review?'Remove review permission':'Allow request review'}</button></div></article>)}<form className="visitor-form" onSubmit={e=>{e.preventDefault();const form=e.currentTarget,f=new FormData(form);void run(async()=>{await api('/logbook/properties/'+property+'/guards',{fullName:f.get('fullName'),email:f.get('email'),password:f.get('password'),canReview:f.get('canReview')==='on'});form.reset();setGuards(await api<Guard[]>('/logbook/properties/'+property+'/guards'));setNotice('Guard account created. No email was sent.')})}}><h2>Add a guard</h2><label>Full name<input name="fullName" required maxLength={100}/></label><label>Dedicated staff email<input type="email" name="email" required maxLength={254}/></label><label>Initial password<input type="password" name="password" required minLength={12} maxLength={72} autoComplete="new-password"/></label><label className="visitor-check"><input name="canReview" type="checkbox"/>Can approve or decline visitor requests and authorize walk-ins</label>{error&&<p role="alert">{error}</p>}<button className="admin-primary" disabled={busy}>Create guard account</button></form></div></ResidentDialog>}
+  {dialog==='guards'&&<ResidentDialog busy={busy} title="Property guards" eyebrow="NARROW LOGBOOK ACCESS" onClose={close} footerNote="Dedicated guard accounts access only the assigned property’s logbook. Share credentials privately.">
+    <PropertyStaffRoster property={property} kind="guard" busy={busy} setBusy={setBusy} />
+  </ResidentDialog>}
   </Frame>
 }
 function VisitBadge({record}:{record:VisitorRecord}){

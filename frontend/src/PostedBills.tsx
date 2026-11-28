@@ -18,7 +18,8 @@ export default function PostedBills({ onNotice }: { onNotice: (message: string) 
       const waiting = (workspace?.payments ?? []).filter(payment => payment.bill_id === bill.id && payment.status === 'PENDING').length
       return { key: bill.id, cells: [
         <div>{periodLabel(bill.period)}<br /><small>{bill.property_name} · {bill.room_label}</small></div>,
-        paymentDateLabel(bill.due_date), money(bill.total), money(bill.balance),
+        <div>{paymentDateLabel(bill.due_date)}{bill.billing_grace_through && <><br /><small>Grace through {paymentDateLabel(bill.billing_grace_through)}</small></>}</div>,
+        money(bill.total), money(bill.balance),
         <div className="payment-state-stack"><AdminStatus>{billStatus[bill.bill_status]}</AdminStatus>
           {waiting > 0 && <a href="#/resident/payments/history">{waiting} waiting for verification</a>}</div>,
         bill.balance > 0 ? <button className="admin-secondary" onClick={() => setSelected(bill)}>Report a payment</button> : <a href="#/resident/payments/history">View history</a>,

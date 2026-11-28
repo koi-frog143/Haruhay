@@ -223,4 +223,34 @@ class OnboardingTests {
         finally{executor.shutdownNow();}
         assertThat(count("monthly_bills")).isEqualTo(1);
     }
+
+    @Test void billingDefaultsPersistAndApplyOnlyToNewBills() throws Exception {
+        UUID app=verifiedSignup(residentEmail);
+        flow.approve(ownerEmail,app,room,"Accepted");
+        var before=bills.post(()->ownerEmail,new MonthlyBillController.PostBill(app,"2026-11",null));
+        assertThat(before).containsEntry("due_date",java.time.LocalDate.of(2026,11,1))
+            .containsEntry("billing_grace_days",0).doesNotContainKey("billing_grace_through");
+
+        String settings="/api/owner/properties/"+property+"/settings";
+        mvc.perform(put(settings+"/billing").with(user(ownerEmail).roles("OWNER")).with(csrf())
+            .contentType("application/json").content("""
+                {"dueDay":12,"graceDays":4}
+                """)).andExpect(status().isNoContent());
+        mvc.perform(get(settings).with(user(ownerEmail).roles("OWNER"))).andExpect(status().isOk())
+            .andExpect(jsonPath("$.billing.dueDay").value(12)).andExpect(jsonPath("$.billing.graceDays").value(4));
+        mvc.perform(get("/api/owner/properties").with(user(ownerEmail).roles("OWNER"))).andExpect(status().isOk())
+            .andExpect(jsonPath("$[0].billing_due_day").value(12)).andExpect(jsonPath("$[0].billing_grace_days").value(4));
+        mvc.perform(post("/api/owner/bills").with(user(ownerEmail).roles("OWNER")).with(csrf())
+            .contentType("application/json").content("""
+                {"applicationId":"%s","period":"2026-12","dueDate":null}
+                """.formatted(app))).andExpect(status().isOk()).andExpect(jsonPath("$.due_date").value("2026-12-12"))
+            .andExpect(jsonPath("$.billing_grace_through").value("2026-12-16")).andExpect(jsonPath("$.rent").value(2500));
+
+        var original=bills.post(()->ownerEmail,new MonthlyBillController.PostBill(app,"2026-11",null));
+        assertThat(original).containsEntry("id",before.get("id")).containsEntry("due_date",before.get("due_date"))
+            .containsEntry("billing_grace_days",0);
+        var override=bills.post(()->ownerEmail,new MonthlyBillController.PostBill(app,"2027-01",java.time.LocalDate.of(2027,1,30)));
+        assertThat(override).containsEntry("due_date",java.time.LocalDate.of(2027,1,30))
+            .containsEntry("billing_grace_through",java.time.LocalDate.of(2027,2,3));
+    }
 }

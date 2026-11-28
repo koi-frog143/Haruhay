@@ -1,6 +1,8 @@
 package com.haruhay.backend.maintenance;
 
 import com.haruhay.backend.registration.FlowException;
+import com.haruhay.backend.settings.PropertySettingsAudit;
+import com.haruhay.backend.settings.PropertySettingsAudit.Action;
 import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
 import java.time.Clock;
@@ -42,10 +44,13 @@ public class MaintenanceService {
     private final Clock clock;
     private final PasswordEncoder passwords;
 
-    public MaintenanceService(JdbcTemplate db, Clock clock, PasswordEncoder passwords) {
+    private final PropertySettingsAudit settingsAudit;
+
+    public MaintenanceService(JdbcTemplate db, Clock clock, PasswordEncoder passwords, PropertySettingsAudit settingsAudit) {
         this.db=db;
         this.clock=clock;
         this.passwords=passwords;
+        this.settingsAudit=settingsAudit;
     }
 
     public record Report(UUID requestKey, UUID tenancyId, String category, String description, boolean sharedArea, String location) {}
@@ -90,8 +95,12 @@ public class MaintenanceService {
         var account=one("SELECT id,role FROM accounts WHERE email=?",email);
         UUID user=id(account,"id");
         if ("OWNER".equals(account.get("role"))) return new Actor(user,Role.OWNER);
-        if (exists("SELECT EXISTS(SELECT 1 FROM maintenance_staff WHERE account_id=?)",user))
+        if (exists("SELECT EXISTS(SELECT 1 FROM maintenance_staff WHERE account_id=? AND enabled=TRUE)",user))
             return new Actor(user,Role.TECHNICIAN);
+        if (exists("""
+            SELECT EXISTS(SELECT 1 FROM maintenance_staff WHERE account_id=?)
+                OR EXISTS(SELECT 1 FROM property_guard_assignments WHERE account_id=?)
+            """,user,user)) throw forbidden();
         if (exists("SELECT EXISTS(SELECT 1 FROM tenancies WHERE account_id=? AND status='ACTIVE')",user))
             return new Actor(user,Role.RESIDENT);
         throw forbidden();
@@ -387,12 +396,17 @@ public class MaintenanceService {
             throw error(409,"MAINTENANCE_STAFF","This email already has a Haruhay account. Use a dedicated technician email.");
         }
         db.update("INSERT INTO maintenance_staff(account_id,property_id,created_by,created_at) VALUES(?,?,?,?)",id,property,actor.id(),at);
+        settingsAudit.record(property,actor.id(),Action.TECHNICIAN_CREATED,name+" · Enabled");
     }
     @Transactional
     public void staffStatus(String email, UUID property, UUID staff, StaffStatus status) {
-        requireOwner(actor(email),property);
-        if (db.update("UPDATE maintenance_staff SET enabled=? WHERE account_id=? AND property_id=?",status.enabled(),staff,property)!=1)
-            throw missing();
+        Actor owner=actor(email);
+        requireOwner(owner,property);
+        var current=one("SELECT enabled FROM maintenance_staff WHERE account_id=? AND property_id=? FOR UPDATE",staff,property);
+        if (Boolean.valueOf(status.enabled()).equals(current.get("enabled"))) return;
+        db.update("UPDATE maintenance_staff SET enabled=? WHERE account_id=? AND property_id=?",status.enabled(),staff,property);
+        String name=db.queryForObject("SELECT full_name FROM accounts WHERE id=?",String.class,staff);
+        settingsAudit.record(property,owner.id(),Action.TECHNICIAN_UPDATED,name+" · "+(status.enabled()?"Enabled":"Disabled"));
     }
 
     private static final String NOTICES = """

@@ -2,6 +2,8 @@ package com.haruhay.backend.visitor;
 
 import com.haruhay.backend.registration.FlowException;
 import com.haruhay.backend.registration.RegistrationService;
+import com.haruhay.backend.settings.PropertySettingsAudit;
+import com.haruhay.backend.settings.PropertySettingsAudit.Action;
 import java.time.*;
 import java.util.*;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -14,7 +16,10 @@ public class VisitorService {
     private static final ZoneId PHILIPPINE_TIME = ZoneId.of("Asia/Manila");
     private final JdbcTemplate db; private final Clock clock; private final PasswordEncoder passwords;
     private final VisitorPassKeys passKeys;
-    public VisitorService(JdbcTemplate db, Clock clock, PasswordEncoder passwords, VisitorPassKeys passKeys) { this.db=db; this.clock=clock; this.passwords=passwords; this.passKeys=passKeys; }
+    private final PropertySettingsAudit settingsAudit;
+    public VisitorService(JdbcTemplate db, Clock clock, PasswordEncoder passwords, VisitorPassKeys passKeys, PropertySettingsAudit settingsAudit) {
+        this.db=db; this.clock=clock; this.passwords=passwords; this.passKeys=passKeys; this.settingsAudit=settingsAudit;
+    }
     private OffsetDateTime now() { return clock.instant().atOffset(ZoneOffset.UTC); }
     private List<Map<String,Object>> rows(String sql,Object... args) {
         var result=db.queryForList(sql,args);
@@ -62,17 +67,38 @@ public class VisitorService {
         return rows("SELECT t.id,a.full_name,r.label,p.name AS property_name,p.id AS property_id FROM tenancies t JOIN accounts a ON a.id=t.account_id JOIN rooms r ON r.id=t.room_id JOIN properties p ON p.id=r.property_id WHERE t.status='ACTIVE' AND "+(property==null?"t.account_id=?":"p.id=?")+" ORDER BY a.full_name",property==null?a:property);
     }
     public List<Map<String,Object>> guards(String email,UUID property) { owner(email,property);return rows("SELECT a.id,a.email,a.full_name,g.can_review,g.enabled FROM property_guard_assignments g JOIN accounts a ON a.id=g.account_id WHERE g.property_id=?",property); }
-    private void owner(String email,UUID property) { if(!yes("SELECT count(*) FROM properties WHERE id=? AND owner_id=?",property,actor(email)))throw error(403,"Property owner access required."); }
+    private UUID owner(String email,UUID property) {
+        return db.query("""
+            SELECT a.id FROM properties p JOIN accounts a ON a.id=p.owner_id WHERE p.id=? AND a.email=? AND a.role='OWNER'
+            """,(row,index)->row.getObject(1,UUID.class),property,email).stream().findFirst()
+            .orElseThrow(()->error(403,"Property owner access required."));
+    }
     @Transactional public void createGuard(String email,UUID property,Guard g) {
-        owner(email,property); String address=required(g.email(),254).toLowerCase(Locale.ROOT);
+        UUID owner=owner(email,property); String address=required(g.email(),254).toLowerCase(Locale.ROOT);
         if(!address.matches("[^\\s@]+@[^\\s@]+\\.[^\\s@]+"))throw error(400,"Enter a valid email address.");
         if(g.password()==null||g.password().length()<12||g.password().getBytes(java.nio.charset.StandardCharsets.UTF_8).length>72)throw error(400,"Use at least 12 characters and at most 72 UTF-8 bytes.");
         if(yes("SELECT count(*) FROM accounts WHERE email=?",address))throw error(409,"This email already has an account. Use a dedicated staff email.");
-        UUID a=UUID.randomUUID();db.update("INSERT INTO accounts(id,email,password_hash,full_name,contact,role,email_verified,created_at) VALUES(?,?,?,?,?,'APPLICANT',TRUE,?)",a,address,passwords.encode(g.password()),required(g.fullName(),100),"",now());
-        db.update("INSERT INTO property_guard_assignments(account_id,property_id,can_review,enabled,created_by,created_at) VALUES(?,?,?,TRUE,?,?)",a,property,g.canReview(),actor(email),now());audit(property,null,actor(email),"GUARD_CREATED",address);
+        String name=required(g.fullName(),100);
+        UUID a=UUID.randomUUID();db.update("INSERT INTO accounts(id,email,password_hash,full_name,contact,role,email_verified,created_at) VALUES(?,?,?,?,?,'APPLICANT',TRUE,?)",a,address,passwords.encode(g.password()),name,"",now());
+        db.update("INSERT INTO property_guard_assignments(account_id,property_id,can_review,enabled,created_by,created_at) VALUES(?,?,?,TRUE,?,?)",a,property,g.canReview(),owner,now());
+        audit(property,null,owner,"GUARD_CREATED",address);
+        settingsAudit.record(property,owner,Action.GUARD_CREATED,guardDetails(name,new Assignment(true,g.canReview())));
     }
     @Transactional public void assignment(String email,UUID property,UUID guard,Assignment g) {
-        owner(email,property);if(db.update("UPDATE property_guard_assignments SET enabled=?,can_review=? WHERE account_id=? AND property_id=?",g.enabled(),g.canReview(),guard,property)!=1)throw error(404,"Guard assignment not found.");audit(property,null,actor(email),"GUARD_UPDATED",guard.toString());
+        UUID owner=owner(email,property);
+        var current=db.queryForList("""
+            SELECT enabled,can_review FROM property_guard_assignments WHERE account_id=? AND property_id=? FOR UPDATE
+            """,guard,property).stream().findFirst().orElseThrow(()->error(404,"Guard assignment not found."));
+        if (Boolean.valueOf(g.enabled()).equals(current.get("enabled")) &&
+                Boolean.valueOf(g.canReview()).equals(current.get("can_review"))) return;
+        db.update("UPDATE property_guard_assignments SET enabled=?,can_review=? WHERE account_id=? AND property_id=?",g.enabled(),g.canReview(),guard,property);
+        audit(property,null,owner,"GUARD_UPDATED",guard.toString());
+        String name=db.queryForObject("SELECT full_name FROM accounts WHERE id=?",String.class,guard);
+        settingsAudit.record(property,owner,Action.GUARD_UPDATED,guardDetails(name,g));
+    }
+    private String guardDetails(String name,Assignment assignment) {
+        return name+" · "+(assignment.enabled()?"Enabled":"Disabled")+" · "+
+            (assignment.canReview()?"Visitor review allowed":"Visitor review disabled");
     }
     @Transactional public UUID request(String email,Request r) { return createRequest(actor(email),r,false); }
     private UUID createRequest(UUID a,Request r,boolean walkin) {

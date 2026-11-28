@@ -2,7 +2,7 @@ import { getWorkspaceSession, isLiveWorkspace } from './workspaceSession'
 import { readPreview, savePreview, manilaInputDate } from './previewStore'
 import { CURRENT_RESIDENT_ID, getResidents } from './residentsData'
 import { getSettings } from './settingsData'
-import { paymentMethod } from './paymentApi'
+import { paymentDateLabel, paymentMethod } from './paymentApi'
 
 export const money = (amount: number) => new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', maximumFractionDigits: 2 }).format(amount)
 export type LedgerPayment = { id: string; residentId: string; period: string; date: string; method: string; amount: number; reference: string; evidence: string; status: 'Needs review' | 'Approved' | 'Rejected' | 'Reversed'; reviewNote: string; reviewedAt: string }
@@ -62,8 +62,17 @@ function liveBill(residentId:string){
   const balance=bill?Number(owner?bill.application_balance:bill.account_balance):0
   const outstanding=bill?Math.max(0,balance-Number(bill.balance)):0
   const due=bill?.due_date||''
-  const days=bill?Math.round((Date.parse(due+'T00:00:00+08:00')-Date.parse(manilaInputDate().slice(0,10)+'T00:00:00+08:00'))/86400000):0
-  return {period:periodLabel(period),periodKey:period,due,dueLabel:bill?new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Manila',month:'long',day:'numeric'}).format(new Date(due+'T00:00:00+08:00')):'No bill posted',rent:bill?Number(bill.rent):rent,utilities:bill?Number(bill.fixed_charges):fixed,outstanding,total,paid,credit:0,balance,timing:bill?(balance===0?'All posted bills paid':days<0?(-days)+' days overdue':days===0?'Due today':days+' days remaining'):'Awaiting a posted bill',posted:Boolean(bill),agreedMonthly:rent+fixed,hasAgreement:Boolean(terms),variableCharges:(terms?.charges||[]).some(c=>['USAGE_BASED','TO_CONFIRM'].includes(c.basis))}
+  const today=manilaInputDate().slice(0,10)
+  const days=bill?Math.round((Date.parse(due+'T00:00:00+08:00')-Date.parse(today+'T00:00:00+08:00'))/86400000):0
+  let timing='Awaiting a posted bill'
+  if (bill) {
+    if (balance===0) timing='All posted bills paid'
+    else if (days===0) timing='Due today'
+    else if (days>0) timing=`${days} days remaining`
+    else if (bill.billing_grace_through && bill.billing_grace_through>=today) timing=`Grace period through ${paymentDateLabel(bill.billing_grace_through)}`
+    else timing=`${-days} days overdue`
+  }
+  return {period:periodLabel(period),periodKey:period,due,dueLabel:bill?new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Manila',month:'long',day:'numeric'}).format(new Date(due+'T00:00:00+08:00')):'No bill posted',rent:bill?Number(bill.rent):rent,utilities:bill?Number(bill.fixed_charges):fixed,outstanding,total,paid,credit:0,balance,timing,posted:Boolean(bill),agreedMonthly:rent+fixed,hasAgreement:Boolean(terms),variableCharges:(terms?.charges||[]).some(c=>['USAGE_BASED','TO_CONFIRM'].includes(c.basis))}
 }
 export function getResidentPayments() {
   return getLedgerPayments().filter(payment => payment.residentId === CURRENT_RESIDENT_ID).map(payment => ({ id: payment.id, period: periodLabel(payment.period), date: new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Manila', month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(payment.date + 'T00:00:00+08:00')), method: payment.method, amount: money(payment.amount), status: payment.status === 'Approved' ? 'Paid' : payment.status === 'Rejected' ? 'Rejected' : payment.status === 'Reversed' ? 'Reversed' : 'Pending', reviewNote: payment.reviewNote }))

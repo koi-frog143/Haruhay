@@ -60,8 +60,10 @@ public class SecurityConfig {
             .requestMatchers("/api/logbook/**").access((authentication, context) -> new AuthorizationDecision(
                 db.queryForObject("""
                     SELECT count(*) FROM accounts a WHERE a.email=? AND (a.role='OWNER' OR
-                    EXISTS(SELECT 1 FROM tenancies t WHERE t.account_id=a.id AND t.status='ACTIVE') OR
-                    EXISTS(SELECT 1 FROM property_guard_assignments g WHERE g.account_id=a.id AND g.enabled=TRUE))
+                    EXISTS(SELECT 1 FROM property_guard_assignments g WHERE g.account_id=a.id AND g.enabled=TRUE) OR
+                    (EXISTS(SELECT 1 FROM tenancies t WHERE t.account_id=a.id AND t.status='ACTIVE')
+                      AND NOT EXISTS(SELECT 1 FROM property_guard_assignments g WHERE g.account_id=a.id)
+                      AND NOT EXISTS(SELECT 1 FROM maintenance_staff s WHERE s.account_id=a.id)))
                     """,Integer.class,authentication.get().getName())>0))
             .requestMatchers("/api/account", "/api/account/**", "/api/auth/logout", "/api/maintenance/**").authenticated()
             .anyRequest().denyAll())

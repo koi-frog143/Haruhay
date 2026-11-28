@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { FormEvent, ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import AdminLayout from './AdminLayout'
 import { AdminHeading, AdminMetrics, AdminStatus, AdminTable } from './AdminUI'
 import ResidentLayout from './ResidentLayout'
@@ -7,12 +7,12 @@ import ResidentDialog from './ResidentDialog'
 import LiveMaintenanceDetail from './LiveMaintenanceDetail'
 import MaintenanceReport from './MaintenanceReport'
 import MaintenanceNotifications from './MaintenanceNotifications'
-import { api } from './registrationApi'
+import PropertyStaffRoster from './PropertyStaffRoster'
 import { downloadCsv, usePreviewData } from './previewStore'
 import { getWorkspaceSession, signOutWorkspace } from './workspaceSession'
 import { philippineTime } from './visitorApi'
 import { isArchived, maintenanceError, maintenancePriority, maintenanceSnapshot, maintenanceStatus, refreshMaintenance, ticketPath, ticketTitle } from './maintenanceApi'
-import type { MaintenanceRole, Technician } from './maintenanceApi'
+import type { MaintenanceRole } from './maintenanceApi'
 import art from './landing-artwork.json'
 import './Maintenance.css'
 import './LiveMaintenance.css'
@@ -154,68 +154,12 @@ function StaffManager({ onClose }: { onClose: () => void }) {
   const properties = getWorkspaceSession()?.properties ?? []
   const [property, setProperty] = useState(properties[0]?.id || '')
   const [busy, setBusy] = useState(false)
-  const [error, setError] = useState('')
-  const [notice, setNotice] = useState('')
   return <ResidentDialog title="Manage technicians" busy={busy} onClose={onClose} footerNote="">
     {properties.length === 0 ? <p>Create a property before adding technicians.</p> : <>
-      <label className="maintenance-staff-property">Property<select value={property} disabled={busy} onChange={event => { setError(''); setNotice(''); setProperty(event.target.value) }}>
+      <label className="maintenance-staff-property">Property<select value={property} disabled={busy} onChange={event => setProperty(event.target.value)}>
         {properties.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
       </select></label>
-      <StaffRoster key={property} property={property} busy={busy} setBusy={setBusy} setError={setError} setNotice={setNotice} />
+      <PropertyStaffRoster key={property} property={property} kind="technician" busy={busy} setBusy={setBusy} onUpdated={() => void refreshMaintenance()} />
     </>}
-    {error && <p className="ux-status" data-tone="error" role="alert">{error}</p>}
-    {notice && <p role="status">{notice}</p>}
   </ResidentDialog>
-}
-
-function StaffRoster({ property, busy, setBusy, setError, setNotice }: {
-  property: string; busy: boolean; setBusy: (value: boolean) => void; setError: (value: string) => void; setNotice: (value: string) => void
-}) {
-  const [staff, setStaff] = useState<Technician[]>()
-  const [retry, setRetry] = useState(0)
-  const path = '/maintenance/properties/' + property + '/technicians'
-  useEffect(() => {
-    let active = true
-    api<Technician[]>(path).then(value => { if (active) setStaff(value) })
-      .catch(error => { if (active) { setError(maintenanceError(error)); setStaff(undefined) } })
-    return () => { active = false }
-  }, [path, retry, setError])
-  async function run(work: () => Promise<unknown>, success: string) {
-    setError('')
-    setNotice('')
-    setBusy(true)
-    try {
-      await work()
-      setNotice(success)
-      setRetry(value => value + 1)
-      await refreshMaintenance()
-    } catch (error) {
-      setError(maintenanceError(error))
-    } finally {
-      setBusy(false)
-    }
-  }
-  function add(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    const form = event.currentTarget
-    const data = new FormData(form)
-    void run(async () => {
-      await api(path, { name: data.get('name'), email: data.get('email'), password: data.get('password') })
-      form.reset()
-    }, 'Technician account created. Share their login details privately.')
-  }
-  return <>
-    {staff?.length ? <ul className="dialog-list">{staff.map(member => <li key={member.id}>
-      <strong>{member.full_name}</strong><small>{member.email}</small>
-      <button className="admin-secondary" disabled={busy} onClick={() => void run(() => api(path + '/' + member.id, { enabled: !member.enabled }), member.enabled ? 'Technician access removed. Open jobs can be reassigned.' : 'Technician access enabled.')}>{member.enabled ? 'Disable' : 'Enable'} {member.full_name}</button>
-    </li>)}</ul> : <p>{staff ? 'No technicians for this property yet.' : 'Technician roster unavailable while loading.'}</p>}
-    {!staff && <button type="button" className="admin-secondary" disabled={busy} onClick={() => setRetry(value => value + 1)}>Reload technicians</button>}
-    <form className="admin-form maintenance-live-form" onSubmit={add}>
-      <h3>Add a technician</h3>
-      <label>Full name<input name="name" required maxLength={100} /></label>
-      <label>Dedicated staff email<input name="email" type="email" required maxLength={254} /></label>
-      <label>Initial password<input name="password" type="password" required minLength={12} maxLength={72} autoComplete="new-password" /></label>
-      <button className="admin-primary" disabled={busy}>Create technician</button>
-    </form>
-  </>
 }

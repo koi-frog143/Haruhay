@@ -1,18 +1,67 @@
 import { useState } from 'react'
+import type { FormEvent } from 'react'
 import ResidentDialog from './ResidentDialog'
 import { api } from './registrationApi'
 import { getWorkspaceSession, loadWorkspaceSession } from './workspaceSession'
 import { money } from './billingData'
 import { manilaInputDate } from './previewStore'
 
-export default function PostMonthlyBill({onClose,onSaved}:{onClose:()=>void;onSaved:(message:string)=>void}){
-  const applications=getWorkspaceSession()?.applications.filter(a=>a.tenancy_status==='ACTIVE'&&a.tenancy_offer?.accepted_at)||[]
-  const [id,setId]=useState(applications[0]?.id||''),[error,setError]=useState(''),[busy,setBusy]=useState(false)
-  const terms=applications.find(a=>a.id===id)?.tenancy_offer?.terms
-  const monthly=terms?.applicant_monthly_rent
-  const fixed=(terms?.charges||[]).filter(c=>c.basis==='FIXED_MONTHLY').reduce((sum,c)=>sum+Number(c.amount||0),0)
-  return <ResidentDialog dismissOnBackdrop={false} title="Post monthly bill" eyebrow="BILLING & PAYMENTS" footerNote="Bills are saved to property records. Posting a bill does not record or process a payment." onClose={()=>{if(!busy)onClose()}}><form className="registration-form" onSubmit={async e=>{e.preventDefault();setBusy(true);setError('');const data=new FormData(e.currentTarget);try{await api('/owner/bills',{applicationId:id,period:data.get('period'),dueDate:data.get('dueDate')});await loadWorkspaceSession();onSaved('Monthly bill is posted and visible to the resident. Existing bills are kept without duplication.')}catch(error){setError(error instanceof Error?error.message:'Could not post the bill.')}finally{setBusy(false)}}}>
-    {!applications.length?<p>No active tenancies with accepted room terms.</p>:<><label>Resident<select required value={id} onChange={e=>setId(e.target.value)}>{applications.map(a=><option value={a.id} key={a.id}>{a.full_name} / {a.room_label}</option>)}</select></label><div className="room-review-summary"><p>Accepted monthly rent: <strong>{monthly==null?'To be confirmed':money(Number(monthly))}</strong></p><p>Fixed monthly charges: <strong>{money(fixed)}</strong></p><p>Bill total: <strong>{monthly==null?'To be confirmed':money(Number(monthly)+fixed)}</strong></p><small>Metered and unconfirmed charges are excluded. Deposit and advance rent are not charged again. A posted bill keeps the rate in effect when it was posted.</small></div><label>Billing month<input name="period" type="month" required defaultValue={manilaInputDate().slice(0,7)}/></label><label>Due date<input name="dueDate" type="date" required/></label><p>One bill per resident agreement and month, including after a transfer. Reposting keeps the existing bill.</p></>}
-    {error&&<p role="alert" className="form-error">{error}</p>}<button className="dialog-primary" disabled={busy||!id||monthly==null}>{busy?'Posting...':'Post bill'}</button>
-  </form></ResidentDialog>
+export default function PostMonthlyBill({ onClose, onSaved }: { onClose: () => void; onSaved: (message: string) => void }) {
+  const workspace = getWorkspaceSession()
+  const applications = workspace?.applications.filter(item => item.tenancy_status === 'ACTIVE' && item.tenancy_offer?.accepted_at) ?? []
+  const [id, setId] = useState(applications[0]?.id ?? '')
+  const [period, setPeriod] = useState(() => manilaInputDate().slice(0, 7))
+  const [dueDate, setDueDate] = useState<string | null>(null)
+  const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
+  const application = applications.find(item => item.id === id)
+  const terms = application?.tenancy_offer?.terms
+  const property = workspace?.properties.find(item => item.id === application?.property_id)
+  const defaultDueDay = property?.billing_due_day ?? 1
+  const graceDays = property?.billing_grace_days ?? 0
+  const defaultDueDate = period ? `${period}-${String(defaultDueDay).padStart(2, '0')}` : ''
+  const monthly = terms?.applicant_monthly_rent
+  const fixed = (terms?.charges ?? []).filter(charge => charge.basis === 'FIXED_MONTHLY').reduce((sum, charge) => sum + Number(charge.amount ?? 0), 0)
+
+  async function post(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setBusy(true)
+    setError('')
+    try {
+      await api('/owner/bills', { applicationId: id, period, dueDate })
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Could not post the bill.')
+      setBusy(false)
+      return
+    }
+    try { await loadWorkspaceSession() }
+    catch { onSaved('Monthly bill saved. Refresh billing to see the latest records.'); return }
+    onSaved('Monthly bill is available to the resident. A bill for this month can only be posted once.')
+  }
+
+  return <ResidentDialog busy={busy} dismissOnBackdrop={false} title="Post monthly bill" eyebrow="BILLING & PAYMENTS"
+    footerNote="Posting saves the bill to property records. Residents can report their payments from Billing &amp; payments." onClose={onClose}>
+    <form className="registration-form" onSubmit={post}>
+      {!applications.length ? <p>No active tenancies with accepted room terms.</p> : <>
+        <label>Resident<select required value={id} disabled={busy} onChange={event => { setId(event.target.value); setDueDate(null) }}>
+          {applications.map(item => <option value={item.id} key={item.id}>{item.full_name} · {item.property_name} / {item.room_label}</option>)}
+        </select></label>
+        <div className="room-review-summary">
+          <p>Accepted monthly rent <strong>{monthly == null ? 'To be confirmed' : money(Number(monthly))}</strong></p>
+          <p>Fixed monthly charges <strong>{money(fixed)}</strong></p>
+          <p>Bill total <strong>{monthly == null ? 'To be confirmed' : money(Number(monthly) + fixed)}</strong></p>
+          <small>Deposit, advance rent, metered and unconfirmed charges are excluded from the monthly total.</small>
+        </div>
+        <label>Billing month<input name="period" type="month" required disabled={busy} value={period} onChange={event => { setPeriod(event.target.value); setDueDate(null) }} /></label>
+        <label>Due date<input name="dueDate" type="date" required disabled={busy || !period} value={dueDate ?? defaultDueDate}
+          onChange={event => setDueDate(event.target.value)} />
+          <small>Property default is day {defaultDueDay}. You can change the date within the billing month.</small>
+        </label>
+        <p>{graceDays ? `Property grace period is ${graceDays} ${graceDays === 1 ? 'day' : 'days'} after the due date.` : 'This property has no billing grace period.'}</p>
+        <p>Each resident agreement has one bill per month, including after a transfer.</p>
+      </>}
+      {error && <p role="alert" className="form-error">{error}</p>}
+      <button className="dialog-primary" disabled={busy || !id || monthly == null}>{busy ? 'Posting…' : 'Post bill'}</button>
+    </form>
+  </ResidentDialog>
 }
