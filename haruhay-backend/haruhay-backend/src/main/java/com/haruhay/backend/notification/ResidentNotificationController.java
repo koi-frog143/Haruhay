@@ -30,7 +30,7 @@ public class ResidentNotificationController {
     private static final String RESIDENT = """
         SELECT a.id FROM accounts a WHERE a.email=? AND a.role='APPLICANT'
           AND EXISTS(SELECT 1 FROM tenancies t WHERE t.account_id=a.id AND t.status='ACTIVE')
-          AND NOT EXISTS(SELECT 1 FROM property_guard_assignments g WHERE g.account_id=a.id AND g.enabled=TRUE)
+          AND NOT EXISTS(SELECT 1 FROM property_guard_assignments g WHERE g.account_id=a.id)
           AND NOT EXISTS(SELECT 1 FROM maintenance_staff s WHERE s.account_id=a.id)
         """;
 
@@ -44,14 +44,18 @@ public class ResidentNotificationController {
               'ANNOUNCEMENT' AS event_type,n.id AS target_id,n.title,p.name AS context_label,
               n.published_at AS created_at,CAST(NULL AS TIMESTAMP WITH TIME ZONE) AS maintenance_read_at
             FROM property_announcements n JOIN properties p ON p.id=n.property_id
-            WHERE n.status='PUBLISHED' AND p.sample=FALSE
+            WHERE n.status='PUBLISHED' AND p.sample=FALSE AND p.notify_announcements=TRUE
               AND EXISTS(SELECT 1 FROM tenancies t JOIN rooms r ON r.id=t.room_id
-                WHERE t.account_id=:accountId AND t.status='ACTIVE' AND r.property_id=n.property_id)
+                JOIN accounts resident ON resident.id=t.account_id
+                WHERE t.account_id=:accountId AND t.status='ACTIVE' AND r.property_id=n.property_id
+                  AND resident.notify_announcements=TRUE)
             UNION ALL
             SELECT 'maintenance:' || CAST(n.id AS VARCHAR(36)), 'MAINTENANCE',t.id,n.message,p.name,n.created_at,n.read_at
             FROM maintenance_notifications n JOIN maintenance_tickets t ON t.id=n.ticket_id
             JOIN tenancies original ON original.id=t.tenancy_id JOIN properties p ON p.id=t.property_id
+            JOIN accounts resident ON resident.id=n.recipient_id
             WHERE n.recipient_id=:accountId AND t.resident_id=n.recipient_id AND p.sample=FALSE
+              AND p.notify_maintenance=TRUE AND resident.notify_maintenance=TRUE
               AND EXISTS(SELECT 1 FROM tenancies current_stay WHERE current_stay.application_id=original.application_id
                 AND current_stay.account_id=n.recipient_id AND current_stay.status='ACTIVE')
             UNION ALL
@@ -61,8 +65,9 @@ public class ResidentNotificationController {
               p.name || ' · ' || b.period,review.reviewed_at,CAST(NULL AS TIMESTAMP WITH TIME ZONE)
             FROM bill_payment_reviews review JOIN bill_payment_submissions s ON s.id=review.payment_id
             JOIN monthly_bills b ON b.id=s.bill_id JOIN properties p ON p.id=b.property_id
-            JOIN tenancies original ON original.id=b.tenancy_id
+            JOIN tenancies original ON original.id=b.tenancy_id JOIN accounts resident ON resident.id=original.account_id
             WHERE original.account_id=:accountId AND p.sample=FALSE
+              AND p.notify_payments=TRUE AND resident.notify_payments=TRUE
               AND EXISTS(SELECT 1 FROM tenancies current_stay WHERE current_stay.application_id=original.application_id
                 AND current_stay.account_id=original.account_id AND current_stay.status='ACTIVE')
           ) e LEFT JOIN resident_notification_reads r
@@ -89,6 +94,22 @@ public class ResidentNotificationController {
     public Count count(Principal user) {
         return new Count(queries.queryForObject("SELECT COUNT(*) "+INBOX+" WHERE read_at IS NULL",
             Map.of("accountId",resident(user,false)),Long.class));
+    }
+
+    @GetMapping("/preferences")
+    public NotificationPreferences preferences(Principal user) {
+        return db.queryForObject("""
+            SELECT notify_announcements,notify_maintenance,notify_payments FROM accounts WHERE id=?
+            """,(row,index)->NotificationPreferences.read(row),resident(user,false));
+    }
+
+    @PutMapping("/preferences")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Transactional
+    public void savePreferences(Principal user,@Valid @RequestBody NotificationPreferences request) {
+        UUID resident=resident(user,true);
+        db.update("UPDATE accounts SET notify_announcements=?,notify_maintenance=?,notify_payments=? WHERE id=?",
+            request.announcements(),request.maintenance(),request.payments(),resident);
     }
 
     @PostMapping("/read")

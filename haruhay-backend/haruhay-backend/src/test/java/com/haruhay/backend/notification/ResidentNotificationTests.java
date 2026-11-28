@@ -160,6 +160,52 @@ class ResidentNotificationTests {
         mvc.perform(get("/api/resident/payments/"+approved+"/receipt").with(user(RESIDENT))).andExpect(status().isOk());
     }
 
+    @Test
+    void propertyAndAccountPreferencesFilterAllSourcesWithoutChangingReadsOrRecordAccess() throws Exception {
+        String address="/api/owner/properties/"+property+"/settings/notifications";
+        UUID notice=announcement(property,true), other=announcement(otherProperty,true);
+        stay(residentId,otherProperty);
+        UUID ticket=maintenance.report(RESIDENT,new MaintenanceService.Report(UUID.randomUUID(),mainStay.id(),"PLUMBING","Water leak",false,null));
+        UUID maintenanceId=UUID.randomUUID(), payment=report(bill(),"GC-MUTED");
+        db.update("INSERT INTO maintenance_notifications(id,ticket_id,recipient_id,message,created_at) VALUES(?,?,?,?,?)",
+            maintenanceId,ticket,residentId,"Maintenance update",OffsetDateTime.now());
+        payments.review(OWNER,payment,"APPROVED",new PaymentService.Review(true,null,new BigDecimal("2500")));
+        inboxCount(RESIDENT,4);
+        read(RESIDENT,"announcement:"+notice).andExpect(status().isNoContent());
+
+        var owner=user(OWNER).roles("OWNER");
+        var resident=user(RESIDENT);
+        var off="""
+            {"announcements":false,"maintenance":false,"payments":false}
+            """;
+        var on="""
+            {"announcements":true,"maintenance":true,"payments":true}
+            """;
+        mvc.perform(put(address).with(owner).with(csrf()).contentType("application/json").content(off)).andExpect(status().isNoContent());
+        inbox(RESIDENT).andExpect(jsonPath("$[*].id",contains("announcement:"+other)));
+        inboxCount(RESIDENT,1);
+        inboxCount(ROOMMATE,0);
+        read(RESIDENT,"maintenance:"+maintenanceId).andExpect(status().isNotFound());
+        mvc.perform(get("/api/resident/announcements/"+notice).with(resident)).andExpect(status().isOk());
+        mvc.perform(get("/api/maintenance/tickets/"+ticket).with(resident)).andExpect(status().isOk());
+        mvc.perform(get("/api/resident/payments/"+payment+"/receipt").with(resident)).andExpect(status().isOk());
+
+        mvc.perform(put(PATH+"/preferences").with(resident).with(csrf()).contentType("application/json").content(off)).andExpect(status().isNoContent());
+        mvc.perform(put(address).with(owner).with(csrf()).contentType("application/json").content(on)).andExpect(status().isNoContent());
+        inbox(RESIDENT).andExpect(content().json("[]"));
+        inboxCount(RESIDENT,0);
+        inboxCount(ROOMMATE,1);
+        mvc.perform(get(PATH+"/preferences").with(resident)).andExpect(status().isOk())
+            .andExpect(jsonPath("$.announcements").value(false))
+            .andExpect(jsonPath("$.maintenance").value(false))
+            .andExpect(jsonPath("$.payments").value(false));
+        mvc.perform(get(PATH+"/preferences").with(user(PENDING))).andExpect(status().isForbidden());
+
+        mvc.perform(put(PATH+"/preferences").with(resident).with(csrf()).contentType("application/json").content(on)).andExpect(status().isNoContent());
+        inboxCount(RESIDENT,3);
+        inbox(RESIDENT).andExpect(jsonPath("$[?(@.id == 'announcement:"+notice+"')].readAt",hasSize(1)));
+    }
+
     private ResultActions inbox(String account) throws Exception {
         return mvc.perform(get(PATH).with(user(account))).andExpect(status().isOk());
     }

@@ -164,7 +164,7 @@ class MaintenanceTests {
         UUID ticket=service.report(RESIDENT,report());
         ready(ticket);
         service.staffStatus(OWNER,property,tech,new MaintenanceService.StaffStatus(false));
-        assertThat(service.list(TECH)).isEmpty();
+        assertThatThrownBy(()->service.list(TECH)).isInstanceOf(FlowException.class);
         assertThat(registration.account(TECH)).containsEntry("role","TECHNICIAN");
         service.change(RESIDENT,ticket,action(3,"REOPEN","Leak reappeared."));
         assertThat(service.detail(OWNER,ticket)).containsEntry("status","SUBMITTED").containsEntry("needs_assignment",true);

@@ -4,6 +4,7 @@ import { api } from './registrationApi'
 import type { Account, Delivery } from './registrationApi'
 import { ResidentTransferOffers } from './ResidentTenancy'
 import ResidentDialog from './ResidentDialog'
+import ResidentPreferencesDialog from './ResidentPreferencesDialog'
 import { useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import ResidentLayout from './ResidentLayout'
@@ -30,6 +31,7 @@ export default function ResidentProfile() {
   const [mode, setMode] = useState<DialogMode>('edit')
   const [busy, setBusy] = useState(false)
   const [changeEmail, setChangeEmail] = useState(false)
+  const [livePreferences, setLivePreferences] = useState(false)
   const dialog = useRef<HTMLDialogElement>(null)
   const form = useRef<HTMLFormElement>(null)
   const live = isLiveWorkspace()
@@ -137,7 +139,7 @@ export default function ResidentProfile() {
           </section>
           <section className="profile-panel profile-preferences" aria-labelledby="profile-preferences-title">
             <h2 id="profile-preferences-title">Your preferences</h2>
-            <button type="button" onClick={() => openDialog('preferences')}>
+            <button type="button" onClick={() => live ? setLivePreferences(true) : openDialog('preferences')}>
               <img src="./assets/dashboard/profile-bell.svg" width="22" height="22" alt="" />
               <span>Notification preferences &amp; reminders</span>
             </button>
@@ -176,6 +178,8 @@ export default function ResidentProfile() {
       </form>
     </dialog>
     {changeEmail && <EmailChangeDialog onClose={() => setChangeEmail(false)} onSaved={message => { setNotice(message); setChangeEmail(false) }} />}
+    {livePreferences && <ResidentPreferencesDialog onClose={() => setLivePreferences(false)}
+      onSaved={() => { setNotice('Your notification preferences were saved.'); setLivePreferences(false) }} />}
   </ResidentLayout>
 }
 

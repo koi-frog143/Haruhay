@@ -7,7 +7,7 @@ export type IssuedInvitation = { id: string; token: string; link: string; expire
 export type InvitationInfo = { propertyName: string; roomLabel: string; capacity: number; sample: boolean; expiresAt: string }
 export type Delivery = { delivery: 'LOCAL_FILE' | 'SMTP_ACCEPTED' | 'NOT_REQUIRED' | 'FAILED' }
 export type AuditEvent = { event: string; occurred_at: string; actor_email: string | null; reason: string | null }
-export type Property = { id: string; name: string; sample?: boolean }
+export type Property = { id: string; name: string; sample?: boolean; billing_due_day?: number; billing_grace_days?: number }
 export type Admission = Application & { offers?:RoomOffer[]; reviewed_at: string | null; property_id: string; room_id: string | null; activation_pending: boolean; code_expires_at: string | null; failed_attempts: number | null; tenancy_id: string | null; tenancy_status: 'ACTIVE' | 'ENDED' | null; tenancy_started_at: string | null; tenancy_ended_at: string | null; tenancy_offer?: RoomOffer | null }
 export class ApiError extends Error {
   status: number

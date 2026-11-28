@@ -17,27 +17,34 @@ public class MonthlyBillController {
     private final RoomAgreementService agreements;
     private final Clock clock;
     public MonthlyBillController(JdbcTemplate db,RoomAgreementService agreements,Clock clock){this.db=db;this.agreements=agreements;this.clock=clock;}
-    public record PostBill(@NotNull UUID applicationId,@NotNull @Pattern(regexp="\\d{4}-(0[1-9]|1[0-2])") String period,@NotNull LocalDate dueDate){}
+    public record PostBill(@NotNull UUID applicationId,@NotNull @Pattern(regexp="\\d{4}-(0[1-9]|1[0-2])") String period,LocalDate dueDate){}
     private static final String VIEW="""
-        SELECT b.*,u.full_name,u.email,r.label AS room_label,p.name AS property_name,
+        SELECT b.*,m.grace_days AS billing_grace_days,u.full_name,u.email,r.label AS room_label,p.name AS property_name,
             SUM(b.balance) OVER(PARTITION BY b.application_id) AS application_balance,
             SUM(b.total) OVER(PARTITION BY b.application_id) AS application_total,
             SUM(b.paid) OVER(PARTITION BY b.application_id) AS application_paid,
             SUM(b.balance) OVER(PARTITION BY t.account_id) AS account_balance,
             SUM(b.total) OVER(PARTITION BY t.account_id) AS account_total,
             SUM(b.paid) OVER(PARTITION BY t.account_id) AS account_paid
-        FROM billing_balances b JOIN tenancies t ON t.id=b.tenancy_id JOIN accounts u ON u.id=t.account_id
+        FROM billing_balances b JOIN monthly_bills m ON m.id=b.id
+        JOIN tenancies t ON t.id=b.tenancy_id JOIN accounts u ON u.id=t.account_id
         JOIN rooms r ON r.id=t.room_id JOIN properties p ON p.id=b.property_id
         """;
     private List<Map<String,Object>> rows(String sql,Object...args){
         var result=db.queryForList(sql,args);
-        result.forEach(row->row.replaceAll((k,v)->v instanceof java.sql.Date d?d.toLocalDate():v instanceof java.sql.Timestamp t?t.toInstant().atOffset(ZoneOffset.UTC):v));return result;
+        result.forEach(row->{
+            row.replaceAll((k,v)->v instanceof java.sql.Date d?d.toLocalDate():v instanceof java.sql.Timestamp t?t.toInstant().atOffset(ZoneOffset.UTC):v);
+            int graceDays=((Number)row.get("billing_grace_days")).intValue();
+            if(graceDays>0 && row.get("due_date") instanceof LocalDate due) row.put("billing_grace_through",due.plusDays(graceDays));
+        });
+        return result;
     }
     @GetMapping("/owner/bills") public List<Map<String,Object>> owner(Principal u){return rows(VIEW+" WHERE p.owner_id=(SELECT id FROM accounts WHERE email=?) ORDER BY b.due_date,b.id",u.getName());}
     @GetMapping("/resident/bills") public List<Map<String,Object>> resident(Principal u){return rows(VIEW+" WHERE u.email=? ORDER BY b.due_date,b.id",u.getName());}
     @PostMapping("/owner/bills") @Transactional public Map<String,Object> post(Principal user,@Valid @RequestBody PostBill request){
-        if(request.period()==null||request.dueDate()==null||!request.period().matches("\\d{4}-(0[1-9]|1[0-2])"))throw new FlowException(400,"BILL_DATE","Choose a valid billing month and due date.");
-        if(!YearMonth.from(request.dueDate()).toString().equals(request.period()))throw new FlowException(400,"BILL_DATE","The due date must belong to the billing month.");
+        if(request.period()==null||!request.period().matches("\\d{4}-(0[1-9]|1[0-2])"))throw new FlowException(400,"BILL_DATE","Choose a valid billing month.");
+        YearMonth month=YearMonth.parse(request.period());
+        if(request.dueDate()!=null&&!YearMonth.from(request.dueDate()).equals(month))throw new FlowException(400,"BILL_DATE","The due date must belong to the billing month.");
         var tenants=db.queryForList("""
             SELECT t.* FROM tenancies t WHERE t.application_id=? AND t.status='ACTIVE' AND EXISTS (
               SELECT 1 FROM rooms r JOIN properties p ON p.id=r.property_id JOIN accounts u ON u.id=p.owner_id
@@ -56,7 +63,16 @@ public class MonthlyBillController {
         BigDecimal fixed=new BigDecimal(terms.get("fixed_monthly_charges").toString());
         UUID id=UUID.randomUUID();var now=OffsetDateTime.ofInstant(clock.instant(),ZoneOffset.UTC);
         UUID owner=db.queryForObject("SELECT id FROM accounts WHERE email=?",UUID.class,user.getName());
-        db.update("INSERT INTO monthly_bills(id,tenancy_id,application_id,property_id,offer_id,period,due_date,rent,fixed_charges,posted_by,posted_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)",id,tenancy.get("id"),request.applicationId(),UUID.fromString(terms.get("property_id").toString()),offer.get("id"),request.period(),request.dueDate(),rent,fixed,owner,now);
+        var rules=db.queryForMap("""
+            SELECT p.id,p.billing_due_day,p.billing_grace_days FROM rooms r JOIN properties p ON p.id=r.property_id
+            WHERE r.id=?
+            """,tenancy.get("room_id"));
+        LocalDate due=request.dueDate()==null?month.atDay(((Number)rules.get("billing_due_day")).intValue()):request.dueDate();
+        db.update("""
+            INSERT INTO monthly_bills(id,tenancy_id,application_id,property_id,offer_id,period,due_date,rent,fixed_charges,posted_by,posted_at,grace_days)
+            VALUES(?,?,?,?,?,?,?,?,?,?,?,?)
+            """,id,tenancy.get("id"),request.applicationId(),rules.get("id"),offer.get("id"),request.period(),due,
+            rent,fixed,owner,now,rules.get("billing_grace_days"));
         db.update("INSERT INTO registration_audit(id,entity_id,event,actor_id,occurred_at,reason) VALUES(?,?,?,?,?,?)",UUID.randomUUID(),id,"MONTHLY_BILL_POSTED",owner,now,"Accepted offer "+offer.get("version")+"; period "+request.period()+"; metered and unconfirmed costs excluded");
         return rows(VIEW+" WHERE b.id=?",id).getFirst();
     }

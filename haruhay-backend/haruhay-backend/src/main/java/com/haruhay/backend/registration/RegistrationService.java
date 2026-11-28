@@ -58,7 +58,7 @@ public class RegistrationService {
     }
     public Map<String,Object> account(String email) {
         var account=one("SELECT id,email,full_name,contact,role,email_verified FROM accounts WHERE email=?",email);
-        if (!account.get("role").equals("OWNER") && db.queryForObject("SELECT count(*) FROM property_guard_assignments WHERE account_id=? AND enabled=TRUE",Integer.class,account.get("id"))>0) account.put("role","GUARD");
+        if (!account.get("role").equals("OWNER") && db.queryForObject("SELECT count(*) FROM property_guard_assignments WHERE account_id=?",Integer.class,account.get("id"))>0) account.put("role","GUARD");
         if ("APPLICANT".equals(account.get("role")) && db.queryForObject("SELECT count(*) FROM maintenance_staff WHERE account_id=?",Integer.class,account.get("id"))>0) account.put("role","TECHNICIAN");
         return account;
     }
@@ -165,7 +165,7 @@ public class RegistrationService {
         UUID user;
         if (authenticatedEmail!=null) {
             Map<String,Object> a=account(authenticatedEmail); user=id(a,"id");
-            if ("TECHNICIAN".equals(a.get("role"))) throw new FlowException(403,"STAFF_ACCOUNT","Use a separate resident account to apply.");
+            if (Set.of("TECHNICIAN","GUARD").contains(a.get("role"))) throw new FlowException(403,"STAFF_ACCOUNT","Use a separate resident account to apply.");
             if (!str(a,"email").equals(normalized)) throw new FlowException(403,"EMAIL_MISMATCH","Sign in using the invited email address.");
         } else {
             if (db.queryForObject("SELECT count(*) FROM accounts WHERE email=?",Integer.class,normalized)>0)

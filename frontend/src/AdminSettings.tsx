@@ -9,22 +9,25 @@ import { downloadCsv, manilaInputDate } from './previewStore'
 import { reportRows } from './adminReports'
 import type { ReportKind } from './adminReports'
 import LiveReportDialog from './LiveReportDialog'
+import LivePropertySettings from './LivePropertySettings'
 import { isLiveWorkspace } from './workspaceSession'
 
 export type SettingsKind = 'property' | 'staff' | 'billing' | 'notifications' | 'security' | 'reports'
 const sections: Array<{ kind: SettingsKind; title: string; description: string; icon: string; eyebrow: string }> = [
   { kind: 'property', title: 'Property setup', description: 'Rooms, amenities, rules and contact details', icon: 'imgIconBuilding', eyebrow: 'PROPERTY ADMINISTRATION' },
-  { kind: 'staff', title: 'Staff & permissions', description: 'Admin roles and authorized access', icon: 'imgIconUsers1', eyebrow: 'PROPERTY ADMINISTRATION' },
-  { kind: 'billing', title: 'Monthly billing rules', description: 'Rent prices, due dates and grace periods', icon: 'imgIconCalendar', eyebrow: 'FINANCE CONFIGURATION' },
-  { kind: 'notifications', title: 'Notification preferences', description: 'Resident reminders and announcements', icon: 'imgIconBell1', eyebrow: 'PROPERTY ADMINISTRATION' },
+  { kind: 'staff', title: 'Staff & permissions', description: 'Staff assignments and authorized access', icon: 'imgIconUsers1', eyebrow: 'PROPERTY ADMINISTRATION' },
+  { kind: 'billing', title: 'Monthly billing rules', description: 'Default due dates and grace periods', icon: 'imgIconCalendar', eyebrow: 'FINANCE CONFIGURATION' },
+  { kind: 'notifications', title: 'Notification preferences', description: 'Updates that appear in the resident inbox', icon: 'imgIconBell1', eyebrow: 'PROPERTY ADMINISTRATION' },
   { kind: 'security', title: 'Security & records', description: 'Access logs, privacy and data retention', icon: 'imgIconShield1', eyebrow: 'SECURITY MANAGEMENT' },
   { kind: 'reports', title: 'Export & reports', description: 'Resident, payment and visitor summaries', icon: 'imgIconDownload', eyebrow: 'REPORTING TOOLS' },
 ]
 type SettingsDialogProps = { kind: SettingsKind; onClose: () => void; onSaved: (message: string) => void }
 
 export function SettingsDialog(props: SettingsDialogProps) {
-  if (props.kind === 'reports' && isLiveWorkspace()) {
-    return <LiveReportDialog onClose={props.onClose} onDownload={props.onSaved} />
+  if (isLiveWorkspace()) {
+    if (props.kind === 'reports') return <LiveReportDialog onClose={props.onClose} onDownload={props.onSaved} />
+    const { title, eyebrow } = sections.find(section => section.kind === props.kind)!
+    return <LivePropertySettings {...props} kind={props.kind} title={title} eyebrow={eyebrow} />
   }
   return <LocalSettingsDialog {...props} />
 }

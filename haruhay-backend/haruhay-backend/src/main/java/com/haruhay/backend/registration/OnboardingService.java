@@ -49,7 +49,9 @@ public class OnboardingService {
             UUID.randomUUID(),entity,event,actor,now(),reason);
     }
     public List<Map<String,Object>> publicProperties() { return rows("SELECT id,name FROM properties WHERE sample=FALSE ORDER BY name"); }
-    public List<Map<String,Object>> properties(String email) { return rows("SELECT id,name,sample FROM properties WHERE owner_id=? ORDER BY name",owner(email)); }
+    public List<Map<String,Object>> properties(String email) {
+        return rows("SELECT id,name,sample,billing_due_day,billing_grace_days FROM properties WHERE owner_id=? ORDER BY name",owner(email));
+    }
     @Transactional public Map<String,Object> createProperty(String email,String name) {
         UUID actor=owner(email), property=UUID.randomUUID();
         db.update("INSERT INTO properties(id,owner_id,name,sample) VALUES(?,?,?,FALSE)",property,actor,name.trim());
@@ -70,7 +72,7 @@ public class OnboardingService {
         String normalized=email.trim().toLowerCase(Locale.ROOT); UUID account;
         if(authenticatedEmail!=null) {
             var a=identities.account(authenticatedEmail);
-            if ("TECHNICIAN".equals(a.get("role"))) throw new FlowException(403,"STAFF_ACCOUNT","Use a separate resident account to apply.");
+            if (Set.of("TECHNICIAN","GUARD").contains(a.get("role"))) throw new FlowException(403,"STAFF_ACCOUNT","Use a separate resident account to apply.");
             if(!normalized.equals(a.get("email"))) throw new FlowException(403,"EMAIL_MISMATCH","Use your signed-in email.");
             account=id(a,"id");
         } else {
