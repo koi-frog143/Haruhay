@@ -52,6 +52,10 @@ public class RegistrationService {
         try { return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(token.getBytes(StandardCharsets.UTF_8))); }
         catch (Exception e) { throw new IllegalStateException(e); }
     }
+    static void requirePassword(String password) {
+        if (password==null || password.length()<12 || password.length()>72 || password.getBytes(StandardCharsets.UTF_8).length>72)
+            throw new FlowException(400,"PASSWORD","Use a password with at least 12 characters and at most 72 UTF-8 bytes.");
+    }
     private void audit(UUID entity,String event,UUID actor,String reason) {
         db.update("INSERT INTO registration_audit(id,entity_id,event,actor_id,occurred_at,reason) VALUES(?,?,?,?,?,?)",
             UUID.randomUUID(),entity,event,actor,now(),reason);
@@ -170,8 +174,7 @@ public class RegistrationService {
         } else {
             if (db.queryForObject("SELECT count(*) FROM accounts WHERE email=?",Integer.class,normalized)>0)
                 throw new FlowException(409,"ACCOUNT_EXISTS","An account already exists. Sign in, then accept this invitation.");
-            if (password==null || password.length()<12 || password.getBytes(StandardCharsets.UTF_8).length>72)
-                throw new FlowException(400,"PASSWORD","Use a password with at least 12 characters and at most 72 UTF-8 bytes.");
+            requirePassword(password);
             user=UUID.randomUUID();
             db.update("INSERT INTO accounts(id,email,password_hash,full_name,contact,role,email_verified,created_at) VALUES(?,?,?,?,?,'APPLICANT',FALSE,?)",
                 user,normalized,passwords.encode(password),name.trim(),contact.trim(),now());

@@ -19,6 +19,7 @@ import AccessHistory from './AccessHistory'
 import CommunityBoard from './CommunityBoard'
 import AdminApp from './AdminApp'
 import RegistrationFlow from './RegistrationFlow'
+import PasswordRecovery from './PasswordRecovery'
 import WorkspaceGate from './WorkspaceGate'
 import type { WorkspaceKind } from './WorkspaceGate'
 import { VerifySignInEmail } from './ResidentTenancy'
@@ -33,7 +34,7 @@ type Route = Screen | 'guard' | 'account' | 'admin' | 'home' | 'resident-dashboa
 function currentScreen(): Route {
   const route = window.location.hash.replace('#', '')
   if (route === '/guard/logbook') return 'guard'
-  if (route === '/login' || route === '/register') return 'account'
+  if (route.split('?')[0] === '/login' || route === '/register') return 'account'
   if (route === '/preview/login') return 'login'
   if (route === '/preview/register') return 'register'
   if (route === '/account' || route.startsWith('/account/')) return 'account'
@@ -45,7 +46,7 @@ function currentScreen(): Route {
   if (route === '/resident/logbook/access-history') return 'resident-access-history'
   if (route === '/resident/community' || route.startsWith('/resident/community/')) return 'resident-community'
   return route === '/register' ? 'register'
-    : route === '/forgot-password' ? 'reset'
+    : route === '/preview/forgot-password' ? 'reset'
       : route === '/login' ? 'login'
         : route === '/resident/dashboard' ? 'resident-dashboard'
           : route === '/resident/logbook' ? 'resident-logbook'
@@ -116,7 +117,7 @@ function AuthForm({ screen }: { screen: Screen }) {
             </select>
           </div>
         </div>}
-        {screen === 'login' && <a className="forgot-link" href="#/forgot-password">Forgot password?</a>}
+        {screen === 'login' && <a className="forgot-link" href="#/preview/forgot-password">Forgot password?</a>}
         {error && <p className="form-error" role="alert">{error}</p>}
         <button className="primary-button" type="submit">{content.action}</button>
         <div className="form-notice" role="status" aria-live="polite">{notice}</div>
@@ -161,6 +162,9 @@ export default function App() {
   }
   if (screen === 'guard') return guard(<LiveLogbook staff />, 'guard')
   if (screen === 'admin') return guard(<AdminApp key={routeHash} />, 'admin')
+  if (routeHash === '#/forgot-password') return <PasswordRecovery key={routeHash} />
+  if (routeHash.split('?')[0] === '#/reset-password') return <PasswordRecovery key={routeHash}
+    token={new URLSearchParams(routeHash.split('?')[1]).get('token') ?? ''} />
   if (routeHash.split('?')[0] === '#/account/verify-email-change') return <VerifySignInEmail key={routeHash} />
   if (screen === 'account') return ['/account/status', '/account/property', '/account/activate'].includes(window.location.hash.split('?')[0].slice(1)) ? guard(<RegistrationFlow key={routeHash} />, 'account') : <RegistrationFlow key={routeHash} />
   if (screen === 'resident-holding') return guard(<HoldingStation key='resident' />, 'resident')

@@ -51,6 +51,7 @@ haruhay:
   visitor-pass-key: ${VISITOR_PASS_KEY:}
   invitation-ttl: ${INVITATION_TTL:72h}
   verification-ttl: ${VERIFICATION_TTL:24h}
+  password-reset-ttl: ${PASSWORD_RESET_TTL:30m}
   activation-ttl: ${ACTIVATION_TTL:24h}
   frontend-url: ${FRONTEND_URL:http://localhost:5173}
   mail-from: ${MAIL_FROM:no-reply@localhost}

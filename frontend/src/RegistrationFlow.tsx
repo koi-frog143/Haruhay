@@ -40,7 +40,8 @@ function Workspace({ account, children, message, dismiss }: { account: Account; 
 
 export default function RegistrationFlow() {
   const route = window.location.hash.split('?')[0]
-  const token = new URLSearchParams(window.location.hash.split('?')[1] || '').get('token') || ''
+  const params = new URLSearchParams(window.location.hash.split('?')[1])
+  const token = params.get('token') || ''
   const signup = route === '#/register' || route === '#/account/register'
   const verify = route === '#/account/verify'
   const [account, setAccount] = useState<Account | null>(null)
@@ -52,7 +53,8 @@ export default function RegistrationFlow() {
   const [propertyLoad, setPropertyLoad] = useState<'loading'|'ready'|'error'>('loading')
   const [propertyRetry, setPropertyRetry] = useState(0)
   const [error, setError] = useState('')
-  const [notice, setNotice] = useState('')
+  const [notice, setNotice] = useState(() => route === '#/login' && params.get('password-reset') === 'complete'
+    ? 'Password updated. Sign in with your new password.' : '')
   const [busy, setBusy] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [verified, setVerified] = useState(false)
@@ -118,7 +120,7 @@ export default function RegistrationFlow() {
             {signup && <><AuthField id="live-full-name" name="fullName" {...feedback.fieldProps('fullName')} error={feedback.fieldError('fullName')} label="Full name" icon={artwork.register.IconUser} placeholder="Your full name" defaultValue={account?.full_name} autoComplete="name" maxLength={100} /><AuthField id="live-contact" name="contact" {...feedback.fieldProps('contact')} error={feedback.fieldError('contact')} label="Contact number" icon={artwork.register.IconUser} placeholder="Your contact number" defaultValue={account?.contact} type="tel" autoComplete="tel" maxLength={100} /></>}
             <AuthField id="live-email" name="email" {...feedback.fieldProps('email')} error={feedback.fieldError('email')} label="Email address" icon={artwork.login.IconMail} placeholder="you@example.com" type="email" autoComplete="email" defaultValue={account?.email} readOnly={Boolean(account)} maxLength={254} />
             {!(signup && account) && <AuthField id="live-password" name="password" {...feedback.fieldProps('password')} error={feedback.fieldError('password')} label={signup ? 'Password (at least 12 characters)' : 'Password'} icon={artwork.login.IconLock} type="password" placeholder={signup ? 'Create a secure password' : 'Enter your password'} autoComplete={signup ? 'new-password' : 'current-password'} minLength={signup ? 12 : undefined} maxLength={72} />}
-            {!signup && <p className="onboarding-login-help">Need help signing in? Contact your property owner.</p>}
+            {!signup && <a className="forgot-link" href="#/forgot-password">Forgot password?</a>}
             <button className="primary-button" disabled={busy || (signup && (properties.length === 0 || !chosenRoom))}>{busy ? 'Please wait…' : signup ? account ? 'Submit my application' : 'Create an account' : 'Sign in to Haruhay'}</button>
           </form>}
       {!verify && <nav className="auth-nav" aria-label="Account">{signup ? <a href="#/login">Already registered? <strong>Log in</strong></a> : <a href="#/register">New here? <strong>Create an account</strong></a>}</nav>}

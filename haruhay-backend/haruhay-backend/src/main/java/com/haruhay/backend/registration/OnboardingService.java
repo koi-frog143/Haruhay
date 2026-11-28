@@ -1,6 +1,5 @@
 package com.haruhay.backend.registration;
 
-import java.nio.charset.StandardCharsets;
 import java.time.*;
 import java.util.*;
 import org.springframework.beans.factory.annotation.Value;
@@ -78,8 +77,7 @@ public class OnboardingService {
         } else {
             if(db.queryForObject("SELECT count(*) FROM accounts WHERE email=?",Integer.class,normalized)>0)
                 throw new FlowException(409,"ACCOUNT_EXISTS","This email already has an account. Sign in to apply.");
-            if(password==null || password.length()<12 || password.getBytes(StandardCharsets.UTF_8).length>72)
-                throw new FlowException(400,"PASSWORD","Use at least 12 characters and at most 72 UTF-8 bytes.");
+            RegistrationService.requirePassword(password);
             account=UUID.randomUUID();
             db.update("INSERT INTO accounts(id,email,password_hash,full_name,contact,role,email_verified,created_at) VALUES(?,?,?,?,?,'APPLICANT',FALSE,?)",
                 account,normalized,passwords.encode(password),name.trim(),contact.trim(),now());
