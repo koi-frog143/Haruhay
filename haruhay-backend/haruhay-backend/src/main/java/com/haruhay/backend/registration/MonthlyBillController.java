@@ -2,21 +2,18 @@ package com.haruhay.backend.registration;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
-import java.math.BigDecimal;
 import java.security.Principal;
 import java.time.*;
 import java.util.*;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api")
 public class MonthlyBillController {
     private final JdbcTemplate db;
-    private final RoomAgreementService agreements;
-    private final Clock clock;
-    public MonthlyBillController(JdbcTemplate db,RoomAgreementService agreements,Clock clock){this.db=db;this.agreements=agreements;this.clock=clock;}
+    private final MonthlyBillingService billing;
+    public MonthlyBillController(JdbcTemplate db,MonthlyBillingService billing){this.db=db;this.billing=billing;}
     public record PostBill(@NotNull UUID applicationId,@NotNull @Pattern(regexp="\\d{4}-(0[1-9]|1[0-2])") String period,LocalDate dueDate){}
     private static final String VIEW="""
         SELECT b.*,m.grace_days AS billing_grace_days,u.full_name,u.email,r.label AS room_label,p.name AS property_name,
@@ -41,39 +38,11 @@ public class MonthlyBillController {
     }
     @GetMapping("/owner/bills") public List<Map<String,Object>> owner(Principal u){return rows(VIEW+" WHERE p.owner_id=(SELECT id FROM accounts WHERE email=?) ORDER BY b.due_date,b.id",u.getName());}
     @GetMapping("/resident/bills") public List<Map<String,Object>> resident(Principal u){return rows(VIEW+" WHERE u.email=? ORDER BY b.due_date,b.id",u.getName());}
-    @PostMapping("/owner/bills") @Transactional public Map<String,Object> post(Principal user,@Valid @RequestBody PostBill request){
+    @PostMapping("/owner/bills") public Map<String,Object> post(Principal user,@Valid @RequestBody PostBill request){
         if(request.period()==null||!request.period().matches("\\d{4}-(0[1-9]|1[0-2])"))throw new FlowException(400,"BILL_DATE","Choose a valid billing month.");
         YearMonth month=YearMonth.parse(request.period());
         if(request.dueDate()!=null&&!YearMonth.from(request.dueDate()).equals(month))throw new FlowException(400,"BILL_DATE","The due date must belong to the billing month.");
-        var tenants=db.queryForList("""
-            SELECT t.* FROM tenancies t WHERE t.application_id=? AND t.status='ACTIVE' AND EXISTS (
-              SELECT 1 FROM rooms r JOIN properties p ON p.id=r.property_id JOIN accounts u ON u.id=p.owner_id
-              WHERE r.id=t.room_id AND u.email=? AND u.role='OWNER') FOR UPDATE
-            """,request.applicationId(),user.getName());
-        if(tenants.isEmpty())throw new FlowException(404,"NOT_FOUND","Active tenancy not found for your property.");
-        var tenancy=tenants.getFirst();
-        var existing=rows(VIEW+" WHERE b.application_id=? AND b.period=?",request.applicationId(),request.period());
-        if(!existing.isEmpty())return existing.getFirst();
-        var offers=agreements.tenancyOffers(tenancy);
-        if(offers.isEmpty()||offers.getFirst().get("accepted_at")==null)throw new FlowException(409,"TERMS_REQUIRED","Accepted room terms are required before posting a bill.");
-        var offer=offers.getFirst();
-        @SuppressWarnings("unchecked") var terms=(Map<String,Object>)offer.get("terms");
-        if(terms.get("applicant_monthly_rent")==null)throw new FlowException(409,"QUOTE_REQUIRED","The accepted agreement needs an explicit monthly rent.");
-        BigDecimal rent=new BigDecimal(terms.get("applicant_monthly_rent").toString());
-        BigDecimal fixed=new BigDecimal(terms.get("fixed_monthly_charges").toString());
-        UUID id=UUID.randomUUID();var now=OffsetDateTime.ofInstant(clock.instant(),ZoneOffset.UTC);
-        UUID owner=db.queryForObject("SELECT id FROM accounts WHERE email=?",UUID.class,user.getName());
-        var rules=db.queryForMap("""
-            SELECT p.id,p.billing_due_day,p.billing_grace_days FROM rooms r JOIN properties p ON p.id=r.property_id
-            WHERE r.id=?
-            """,tenancy.get("room_id"));
-        LocalDate due=request.dueDate()==null?month.atDay(((Number)rules.get("billing_due_day")).intValue()):request.dueDate();
-        db.update("""
-            INSERT INTO monthly_bills(id,tenancy_id,application_id,property_id,offer_id,period,due_date,rent,fixed_charges,posted_by,posted_at,grace_days)
-            VALUES(?,?,?,?,?,?,?,?,?,?,?,?)
-            """,id,tenancy.get("id"),request.applicationId(),rules.get("id"),offer.get("id"),request.period(),due,
-            rent,fixed,owner,now,rules.get("billing_grace_days"));
-        db.update("INSERT INTO registration_audit(id,entity_id,event,actor_id,occurred_at,reason) VALUES(?,?,?,?,?,?)",UUID.randomUUID(),id,"MONTHLY_BILL_POSTED",owner,now,"Accepted offer "+offer.get("version")+"; period "+request.period()+"; metered and unconfirmed costs excluded");
+        UUID id=billing.manual(user.getName(),request.applicationId(),month,request.dueDate());
         return rows(VIEW+" WHERE b.id=?",id).getFirst();
     }
 }

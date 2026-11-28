@@ -2,6 +2,7 @@ package com.haruhay.backend.settings;
 
 import com.haruhay.backend.notification.NotificationPreferences;
 import com.haruhay.backend.registration.FlowException;
+import com.haruhay.backend.registration.MonthlyBillingService;
 import com.haruhay.backend.settings.PropertySettingsAudit.Action;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
@@ -20,17 +21,20 @@ public class PropertySettingsController {
                           @NotNull @Size(max=1000) String amenities,@NotNull @Size(max=2000) String houseRules) {
         Details normalized() { return new Details(name.strip(),contact.strip(),amenities.strip(),houseRules.strip()); }
     }
-    public record Billing(@NotNull @Min(1) @Max(28) Integer dueDay,@NotNull @Min(0) @Max(30) Integer graceDays) {}
+    public record Billing(@NotNull @Min(1) @Max(28) Integer dueDay,@NotNull @Min(0) @Max(30) Integer graceDays,
+                          Boolean automaticEnabled,@Min(1) @Max(28) Integer postingDay) {}
     public record Records(@Min(1) @Max(3650) Integer retentionDays) {}
     public record Settings(Details details,Billing billing,NotificationPreferences notifications,Records records) {}
     private record Owned(UUID owner,Settings settings) {}
 
     private final JdbcTemplate db;
     private final PropertySettingsAudit audit;
+    private final MonthlyBillingService monthlyBilling;
 
-    public PropertySettingsController(JdbcTemplate db,PropertySettingsAudit audit) {
+    public PropertySettingsController(JdbcTemplate db,PropertySettingsAudit audit,MonthlyBillingService monthlyBilling) {
         this.db=db;
         this.audit=audit;
+        this.monthlyBilling=monthlyBilling;
     }
 
     @GetMapping
@@ -55,10 +59,24 @@ public class PropertySettingsController {
     @Transactional
     public void billing(Principal owner,@PathVariable UUID property,@Valid @RequestBody Billing request) {
         var current=owned(owner,property,true);
-        if (current.settings().billing().equals(request)) return;
-        db.update("UPDATE properties SET billing_due_day=?,billing_grace_days=? WHERE id=?",request.dueDay(),request.graceDays(),property);
+        var before=current.settings().billing();
+        var updated=new Billing(request.dueDay(),request.graceDays(),request.automaticEnabled()==null?before.automaticEnabled():request.automaticEnabled(),
+            request.postingDay()==null?before.postingDay():request.postingDay());
+        if (before.equals(updated)) return;
+        boolean scheduleChanged=!before.automaticEnabled().equals(updated.automaticEnabled()) || !before.postingDay().equals(updated.postingDay());
+        db.update("""
+            UPDATE properties SET billing_due_day=?,billing_grace_days=?,auto_billing_enabled=?,auto_billing_posting_day=?,
+              auto_billing_first_period=CASE WHEN ? THEN ? ELSE auto_billing_first_period END WHERE id=?
+            """,updated.dueDay(),updated.graceDays(),updated.automaticEnabled(),updated.postingDay(),scheduleChanged,
+            scheduleChanged && updated.automaticEnabled()?monthlyBilling.firstPeriod(updated.postingDay()):null,property);
         audit.record(property,current.owner(),Action.BILLING_RULES,
-            "Default due day "+request.dueDay()+" · Grace period "+request.graceDays()+" days");
+            "Default due day "+updated.dueDay()+" · Grace period "+updated.graceDays()+" days · "+
+                (updated.automaticEnabled()?"Automatic posting on day "+updated.postingDay():"Automatic posting off"));
+    }
+
+    @GetMapping("/billing/runs")
+    public MonthlyBillingService.ScheduleStatus billingRuns(Principal owner,@PathVariable UUID property) {
+        return monthlyBilling.status(owner.getName(),property);
     }
 
     @PutMapping("/notifications")
@@ -96,7 +114,8 @@ public class PropertySettingsController {
               SELECT id FROM accounts WHERE email=? AND role='OWNER')
             """+(lock?" FOR UPDATE":""),(row,index)->new Owned(row.getObject("owner_id",UUID.class),
                 new Settings(new Details(row.getString("name"),row.getString("contact_details"),row.getString("amenities"),
-                    row.getString("property_house_rules")),new Billing(row.getInt("billing_due_day"),row.getInt("billing_grace_days")),
+                    row.getString("property_house_rules")),new Billing(row.getInt("billing_due_day"),row.getInt("billing_grace_days"),
+                    row.getBoolean("auto_billing_enabled"),row.getInt("auto_billing_posting_day")),
                     NotificationPreferences.read(row),new Records(row.getObject("retention_days",Integer.class)))),
             property,user.getName()).stream().findFirst()
             .orElseThrow(()->new FlowException(404,"SETTINGS_PROPERTY_NOT_FOUND","Choose a property you manage."));

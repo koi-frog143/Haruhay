@@ -149,8 +149,8 @@ public class RoomAgreementService {
         int version=db.queryForObject("SELECT COALESCE(MAX(version),0)+1 FROM application_offers WHERE application_id=?",Integer.class,app);
         return insertOffer(app,details,actor,"Room transfer",quote,false,version);
     }
-    List<Map<String,Object>> tenancyOffers(Map<String,Object> tenancy){
-        return tenancy.get("offer_id")==null?offers(id(tenancy,"application_id")):List.of(offer(id(tenancy,"offer_id")));
+    List<Map<String,Object>> tenancyOffers(UUID application,UUID acceptedOffer){
+        return acceptedOffer==null?offers(application):List.of(offer(acceptedOffer));
     }
     public void enrich(Map<String,Object> app){
         var admissionOffers=offers(id(app,"id"));
@@ -216,6 +216,7 @@ public class RoomAgreementService {
     }
     public List<Map<String,Object>> agreements(String email){
         return db.queryForList("SELECT t.application_id,t.offer_id FROM tenancies t JOIN accounts u ON u.id=t.account_id WHERE u.email=? AND t.status='ACTIVE' ORDER BY t.started_at DESC",email)
-            .stream().map(this::tenancyOffers).filter(list->!list.isEmpty()).map(List::getFirst).toList();
+            .stream().map(stay->tenancyOffers(id(stay,"application_id"),(UUID)stay.get("offer_id")))
+            .filter(list->!list.isEmpty()).map(List::getFirst).toList();
     }
 }

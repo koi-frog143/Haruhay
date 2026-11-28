@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
+import AutomaticBillingSettings from './AutomaticBillingSettings'
+import type { BillingScheduleStatus } from './AutomaticBillingSettings'
 import NotificationPreferencesFields from './NotificationPreferencesFields'
 import type { NotificationPreferences } from './NotificationPreferencesFields'
 import PropertyStaffRoster from './PropertyStaffRoster'
@@ -13,7 +15,7 @@ type Kind = Exclude<SettingsKind, 'reports'>
 type Props = { kind: Kind; title: string; eyebrow: string; onClose: () => void; onSaved: (message: string) => void }
 type Settings = {
   details: { name: string; contact: string; amenities: string; houseRules: string }
-  billing: { dueDay: number; graceDays: number }
+  billing: { dueDay: number; graceDays: number; automaticEnabled: boolean; postingDay: number }
   notifications: NotificationPreferences
   records: { retentionDays: number | null }
 }
@@ -47,14 +49,19 @@ function SettingsForm({ property, kind, busy, setBusy, onSaved }: {
   const path = `/owner/properties/${property}/settings`
   const [settings, setSettings] = useState<Settings>()
   const [history, setHistory] = useState<AuditEntry[]>([])
+  const [schedule, setSchedule] = useState<BillingScheduleStatus>()
   const [loadError, setLoadError] = useState('')
   const [error, setError] = useState('')
   const [retry, setRetry] = useState(0)
 
   useEffect(() => {
     let current = true
-    Promise.all([api<Settings>(path), kind === 'security' ? api<AuditEntry[]>(path + '/history') : []]).then(([data, entries]) => {
-      if (current) { setSettings(data); setHistory(entries); setLoadError('') }
+    Promise.all([
+      api<Settings>(path),
+      kind === 'security' ? api<AuditEntry[]>(path + '/history') : [],
+      kind === 'billing' ? api<BillingScheduleStatus>(path + '/billing/runs') : undefined,
+    ]).then(([data, entries, schedule]) => {
+      if (current) { setSettings(data); setHistory(entries); setSchedule(schedule); setLoadError('') }
     }).catch(error => {
       if (current) setLoadError(error instanceof Error ? error.message : 'Could not load settings.')
     })
@@ -66,7 +73,11 @@ function SettingsForm({ property, kind, busy, setBusy, onSaved }: {
     const data = new FormData(event.currentTarget)
     const body = {
       property: { name: data.get('name'), contact: data.get('contact'), amenities: data.get('amenities'), houseRules: data.get('houseRules') },
-      billing: { dueDay: Number(data.get('dueDay')), graceDays: Number(data.get('graceDays')) },
+      billing: {
+        dueDay: Number(data.get('dueDay')), graceDays: Number(data.get('graceDays')),
+        automaticEnabled: data.has('automaticEnabled'),
+        postingDay: data.has('postingDay') ? Number(data.get('postingDay')) : undefined,
+      },
       notifications: { announcements: data.has('announcements'), maintenance: data.has('maintenance'), payments: data.has('payments') },
       security: { retentionDays: data.get('retentionDays') ? Number(data.get('retentionDays')) : null },
     }[kind]
@@ -102,9 +113,10 @@ function SettingsForm({ property, kind, busy, setBusy, onSaved }: {
         <p>Manage capacity, availability and pricing in <a href="#/admin/property">Property &amp; rooms</a>.</p>
       </>}
       {kind === 'billing' && <>
-        <p>Haruhay uses these defaults when you post a new bill. Rent and charges come from the resident’s accepted room agreement.</p>
-        <label>Default due day<input type="number" name="dueDay" min={1} max={28} required defaultValue={billing.dueDay} /><small>Choose a day from 1 through 28 so it works every month.</small></label>
+        <p>Manual and automatic bills use these defaults. Rent and charges come from the resident’s accepted room agreement.</p>
+        <label>Default due day<input type="number" name="dueDay" min={1} max={28} required defaultValue={billing.dueDay} /><small>Choose the default payment deadline day from 1 through 28.</small></label>
         <label>Grace period (days)<input type="number" name="graceDays" min={0} max={30} required defaultValue={billing.graceDays} /><small>Starts after the due date. Use 0 for no grace period.</small></label>
+        {schedule && <AutomaticBillingSettings enabled={billing.automaticEnabled} postingDay={billing.postingDay} schedule={schedule} busy={busy} />}
       </>}
       {kind === 'notifications' && <>
         <p>Choose what appears in residents’ Haruhay inboxes for this property. Residents can also set their own preferences.</p>
