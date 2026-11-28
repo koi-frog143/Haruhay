@@ -99,7 +99,7 @@ try {
   })
   await b.check('Resident form protects unsaved input and links visit date errors to the field', async () => {
     const residents = await b.evaluate('(async()=>await(await fetch("/api/owner/admissions")).json())()')
-    const resident = residents.find(account => account.status === 'APPROVED' && account.email.startsWith('resident-'))
+    const resident = residents.find(account => account.tenancy_status === 'ACTIVE' && account.email.startsWith('resident-'))
     assert.ok(resident)
     await login(resident.email, 'Browser-resident-password42')
     await route('/resident/dashboard')

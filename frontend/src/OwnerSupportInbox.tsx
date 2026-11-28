@@ -34,6 +34,7 @@ function PropertyInbox({ property }: { property: string }) {
   const [error, setError] = useState('')
   const [selected, setSelected] = useState<SupportSummary>()
   const [busy, setBusy] = useState(false)
+  const [replyDraft, setReplyDraft] = useState(false)
   useEffect(() => {
     let current = true
     const params = new URLSearchParams(filters)
@@ -99,10 +100,10 @@ function PropertyInbox({ property }: { property: string }) {
         <button type="button" className="admin-secondary" disabled={!data.hasNext} onClick={() => movePage(page + 1)}>Next</button>
       </div>}
     </>}
-    {selected && <ResidentDialog title="Support conversation" eyebrow="RESIDENT SUPPORT" busy={busy}
-      onClose={() => setSelected(undefined)} dismissOnBackdrop={false} footerNote="">
+    {selected && <ResidentDialog title="Support conversation" eyebrow="RESIDENT SUPPORT" busy={busy} hasUnsavedChanges={replyDraft}
+      onClose={() => { setReplyDraft(false); setSelected(undefined) }} dismissOnBackdrop={false} footerNote="">
       <SupportConversation key={selected.id} role="owner" id={selected.id} busy={busy} setBusy={setBusy}
-        onChanged={() => { setPage(0); refresh() }} />
+        onDraftChange={setReplyDraft} onChanged={() => { setPage(0); refresh() }} />
     </ResidentDialog>}
   </>
 }

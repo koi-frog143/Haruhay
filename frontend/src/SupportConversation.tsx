@@ -7,9 +7,9 @@ import { supportStatus } from './supportApi'
 import { philippineTime } from './visitorApi'
 import './Support.css'
 
-export default function SupportConversation({ role, id, initialDetail, busy, setBusy, onChanged }: {
+export default function SupportConversation({ role, id, initialDetail, busy, setBusy, onChanged, onDraftChange }: {
   role: SupportRole; id: string; initialDetail?: SupportDetail; busy: boolean
-  setBusy: (value: boolean) => void; onChanged?: () => void
+  setBusy: (value: boolean) => void; onChanged?: () => void; onDraftChange: (dirty: boolean) => void
 }) {
   const [detail, setDetail] = useState(initialDetail)
   const [loadError, setLoadError] = useState('')
@@ -52,6 +52,7 @@ export default function SupportConversation({ role, id, initialDetail, busy, set
     try {
       setDetail(await api<SupportDetail>(path + '/replies', { requestId: replyKey.current, message: text }))
       setMessage('')
+      onDraftChange(false)
       replyKey.current = null
       setNotice('Reply sent.')
       onChanged?.()
@@ -90,11 +91,11 @@ export default function SupportConversation({ role, id, initialDetail, busy, set
   const { request, events } = detail
   const resolved = request.status === 'RESOLVED'
   return <section className="registration-form support-conversation" aria-label="Support conversation">
-    <header className="support-summary">
+    <div className="support-summary">
       <h3>{request.subject}</h3>
       <p>{request.propertyName}{role === 'owner' && ` · ${request.residentName}`}</p>
       <AdminStatus>{supportStatus[request.status]}</AdminStatus>
-    </header>
+    </div>
     <div className="support-actions">
       <button type="button" className="admin-secondary" disabled={busy} onClick={refresh}>Refresh conversation</button>
       {resolved ? <button type="button" className="admin-primary" disabled={busy} onClick={() => void changeStatus('OPEN')}>Reopen request</button> :
@@ -117,7 +118,7 @@ export default function SupportConversation({ role, id, initialDetail, busy, set
     {resolved ? <p>Reopen this request to continue the conversation.</p> :
       <form className="registration-form" onSubmit={sendReply}>
         <label>Your reply<textarea required maxLength={1000} rows={3} value={message} disabled={busy}
-          onChange={event => setMessage(event.target.value)} /></label>
+          onChange={event => { setMessage(event.target.value); onDraftChange(event.target.value.length > 0) }} /></label>
         <button className="dialog-primary" disabled={busy}>{busy ? 'Saving…' : 'Send reply'}</button>
       </form>}
   </section>
